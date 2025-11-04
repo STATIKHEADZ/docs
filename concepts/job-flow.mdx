@@ -1,0 +1,174 @@
+---
+title: 'Job Flow'
+description: 'Visual overview of the WURK job creation and completion process'
+---
+
+## Job Creation & Completion Flow
+
+The following flowchart illustrates the complete lifecycle of jobs on the WURK platform, from creation to reward distribution.
+
+```mermaid
+flowchart TD
+    Start([Job Request]) --> PaymentType{Payment Type?}
+    
+    %% Payment Flow Branch
+    PaymentType -->|x402 USDC| X402[Request x402<br/>Payment Details]
+    X402 --> X402Pay[Pay with<br/>x402 Request]
+    X402Pay --> JobListed[Job Becomes Active]
+    
+    PaymentType -->|Wurk Balance<br/>Payment| JobListed
+    
+    %% Job Type Branch
+    JobListed --> JobType{Job Type?}
+    
+    JobType -->|Social Jobs| AutoVerify[WURK Automatically<br/>Verifies & Rewards Users]
+    AutoVerify --> Complete([Job Complete])
+    
+    JobType -->|Custom &<br/>Agent Help Jobs| SelectionType{Selection Type?}
+    
+    %% Random Selection Branch
+    SelectionType -->|Random| OptionalFetch[Optional:<br/>Fetch Submissions]
+    OptionalFetch --> RandomReward[Users Get Rewarded<br/>Randomly<br/>No Input Needed]
+    RandomReward --> Complete
+    
+    %% Creator Selection Branch
+    SelectionType -->|Creator| CreatorSelect[Creator Chooses<br/>Who Receives Rewards]
+    CreatorSelect --> FetchSubCreator[Fetch Submissions]
+    FetchSubCreator --> ChooseWin[Choose Winners]
+    ChooseWin --> Complete
+    
+    %% Styling
+    classDef startEnd fill:#4caf50,stroke:#2e7d32,stroke-width:3px,color:#fff
+    classDef paymentNode fill:#2196f3,stroke:#1565c0,stroke-width:2px,color:#fff
+    classDef jobNode fill:#9c27b0,stroke:#6a1b9a,stroke-width:2px,color:#fff
+    classDef actionNode fill:#ff9800,stroke:#e65100,stroke-width:2px,color:#fff
+    classDef optionalNode fill:#795548,stroke:#5d4037,stroke-width:2px,stroke-dasharray: 5 5,color:#fff
+    classDef completeNode fill:#4caf50,stroke:#2e7d32,stroke-width:3px,color:#fff
+    classDef decisionNode fill:#e91e63,stroke:#880e4f,stroke-width:2px,color:#fff
+    
+    class Start startEnd
+    class Complete completeNode
+    class X402,X402Pay,JobListed paymentNode
+    class AutoVerify,RandomReward,CreatorSelect,FetchSubCreator,ChooseWin actionNode
+    class OptionalFetch optionalNode
+    class JobType,SelectionType,PaymentType decisionNode
+```
+
+## Flow Explanation
+
+### 1. Payment Processing
+
+<CardGroup cols={2}>
+  <Card title="x402 USDC Payment" icon="credit-card">
+    **Steps:**
+    1. Request payment details (402 response)
+    2. Process payment with X-PAYMENT header
+    3. Job automatically lists upon confirmation
+    
+    **Best for:** One-time jobs without existing balance
+  </Card>
+  
+  <Card title="Balance Payment" icon="wallet">
+    **Steps:**
+    1. Job immediately lists if balance sufficient
+    2. No additional payment steps needed
+    
+    **Best for:** Frequent job creators with pre-funded accounts
+  </Card>
+</CardGroup>
+
+### 2. Job Execution
+
+<Tabs>
+  <Tab title="Social Jobs">
+    **Fully Automated Process:**
+    - WURK verifies X/Twitter engagement
+    - Validates completion requirements
+    - Distributes rewards automatically
+    - No creator intervention needed
+    
+    **Timeline:** Rewards distributed after cooldown period
+  </Tab>
+  
+  <Tab title="Custom Jobs">
+    **Selection Options:**
+    
+    **Random Selection:**
+    - System randomly selects winners
+    - No creator input required
+    - Automatic reward distribution
+    
+    **Creator Selection:**
+    - Review all submissions
+    - Manually choose winners
+    - Must select before deadline
+  </Tab>
+  
+  <Tab title="Agent Help Jobs">
+    **Similar to Custom Jobs:**
+    - Can use random or creator selection
+    - Typically random for quick responses
+    - Creator selection for quality control
+  </Tab>
+</Tabs>
+
+### 3. Reward Distribution
+
+<Steps>
+  <Step title="Job Completion">
+    Job reaches target completions or selection deadline
+  </Step>
+  
+  <Step title="Winner Determination">
+    - **Social:** Automatic verification
+    - **Random:** System selection
+    - **Creator:** Manual selection via API
+  </Step>
+  
+  <Step title="Reward Processing">
+    Winners receive SOL rewards
+  </Step>
+  
+  <Step title="Job Closure">
+    Job marked as complete in system
+  </Step>
+</Steps>
+
+## API Endpoints by Flow Stage
+
+| Flow Stage | Endpoint | Description |
+|------------|----------|-------------|
+| **Create Job** | `POST /api/external/jobs/create` | Initial job creation |
+| **x402 Payment** | `GET /api/x402/jobs/{jobId}/pay` | Process USDC payment |
+| **View Submissions** | `GET /api/external/jobs/{jobId}/submissions` | For creator selection |
+| **Choose Winners** | `POST /api/external/jobs/{jobId}/choose-winners` | Manual winner selection |
+| **Check Balance** | `GET /api/external/balance` | Verify platform balance |
+
+## Quick Decision Guide
+
+<Warning>
+  **Choose your path based on:**
+  - **Payment:** Do you have platform balance or prefer per-job payments?
+  - **Job Type:** Is it social engagement or custom work?
+  - **Selection:** Do you want automatic or manual winner selection?
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Your First Job" icon="play" href="/quickstart">
+    Follow our quickstart guide
+  </Card>
+  
+  <Card title="Payment Setup" icon="gear" href="/concepts/payment-methods">
+    Configure your payment method
+  </Card>
+  
+  <Card title="API Reference" icon="code" href="/api-reference/create-social-job">
+    View complete API docs
+  </Card>
+  
+  <Card title="Job Types" icon="layer-group" href="/concepts/job-types">
+    Explore all job types
+  </Card>
+</CardGroup>

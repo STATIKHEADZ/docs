@@ -57,6 +57,7 @@
     {
       "group": "Core Concepts",
       "pages": [
+        "concepts/job-flow",
         "concepts/job-types",
         "concepts/payment-methods"
       ]
