@@ -1,0 +1,86 @@
+---
+title: 'Get Change Log'
+api: 'GET /api/external/change-log'
+description: 'Fetch platform change log entries'
+---
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your WURK API key
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+## Response
+
+<ResponseField name="entries" type="array">
+  Array of change log entries
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="pageSize" type="integer">
+  Number of items per page (50)
+</ResponseField>
+
+## Rate Limit
+
+5 requests per minute
+
+## Caching
+
+Server caches each page for 1 hour
+
+<RequestExample>
+
+```bash
+curl -X GET "https://wurkapi.fun/api/external/change-log?page=1" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json
+{
+  "entries": [
+    {
+      "date": "2024-01-15",
+      "version": "1.2.0",
+      "changes": [
+        "Added agent_help job mode",
+        "Improved rate limiting",
+        "Fixed submission pagination"
+      ]
+    },
+    {
+      "date": "2024-01-10",
+      "version": "1.1.0",
+      "changes": [
+        "Added balance payment option",
+        "New categories system"
+      ]
+    }
+  ],
+  "page": 1,
+  "totalPages": 1,
+  "pageSize": 50
+}
+```
+
+</ResponseExample>
+
+

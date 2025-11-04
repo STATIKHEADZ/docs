@@ -1,0 +1,137 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "WURK API",
+  "logo": {
+    "dark": "/twlogo2.png",
+    "light": "/twlogo2.png",
+    "href": "https://wurk.fun"
+  },
+  "favicon": "/twlogo2.png",
+  "metadata": {
+    "og:image": "/twlogo2.png",
+    "twitter:image": "/twlogo2.png",
+    "apple-touch-icon": "/twlogo2.png"
+  },
+  "modeToggle": {
+    "default": "dark"
+  },
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#07C983",
+    "dark": "#0D9373",
+    "anchors": {
+      "from": "#0D9373",
+      "to": "#07C983"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "/project/support"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Wurk.fun",
+    "url": "https://wurk.fun"
+  },
+  "tabs": [
+    {
+      "name": "Documentation",
+      "url": "/"
+    },
+    {
+      "name": "API Reference",
+      "url": "/api-reference"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "authentication",
+        "rate-limits"
+      ]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": [
+        "concepts/job-types",
+        "concepts/payment-methods"
+      ]
+    },
+    {
+      "group": "Jobs",
+      "pages": [
+        "jobs/social-jobs",
+        "jobs/custom-jobs",
+        "jobs/agent-help",
+        "jobs/submissions-winners"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/introduction",
+        {
+          "group": "Create Jobs",
+          "pages": [
+            "api-reference/create-social-job",
+            "api-reference/create-custom-job"
+          ]
+        },
+        {
+          "group": "Get Jobs",
+          "pages": [
+            "api-reference/list-custom-jobs",
+            "api-reference/list-social-jobs"
+          ]
+        },
+        {
+          "group": "Payments",
+          "pages": [
+            "api-reference/x402-accepts",
+            "api-reference/x402-pay"
+          ]
+        },
+        {
+          "group": "Submissions",
+          "pages": [
+            "api-reference/get-submissions",
+            "api-reference/choose-winners"
+          ]
+        },
+        {
+          "group": "Utilities",
+          "pages": [
+            "api-reference/get-categories",
+            "api-reference/get-balance",
+            "api-reference/get-changelog"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Project Info",
+      "pages": [
+        "project/rules",
+        "project/official-links",
+        "project/changelog",
+        "project/support"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "x": "https://x.com/wurkdotfun",
+    "youtube": "https://www.youtube.com/@WURKDOTFUN",
+    "telegram": "https://t.me/WURKCREATORS"
+  },
+  "api": {
+    "baseUrl": "https://wurkapi.fun",
+    "auth": {
+      "method": "key",
+      "name": "X-API-Key"
+    }
+  }
+}

@@ -1,0 +1,264 @@
+---
+title: 'Payment Methods'
+description: 'Choose between x402 USDC payments or platform balance'
+---
+
+## Overview
+
+WURK offers two payment methods for job creation, each with unique advantages:
+
+<CardGroup cols={2}>
+  <Card title="x402 USDC Payments" icon="coins">
+    Direct on-chain payments using Solana USDC with the x402 protocol
+  </Card>
+  <Card title="Platform Balance" icon="wallet">
+    Pre-funded SOL balance for job activation
+  </Card>
+</CardGroup>
+
+## x402 USDC Payments
+
+The x402 protocol enables HTTP-based cryptocurrency payments. When you create a job with USDC payment:
+
+1. Job is created with status `"unpaid"`
+2. You receive payment requirements
+3. You send USDC payment via x402
+4. Job activates upon confirmation
+
+### How x402 Works
+
+<Steps>
+  <Step title="Create Job">
+    Specify `total_usdc` in your job creation request:
+    ```json
+    {
+      "type": "social",
+      "total_usdc": 5.0,
+      // ... other parameters
+    }
+    ```
+  </Step>
+  
+  <Step title="Get Payment Requirements">
+    Request returns 402 status with payment details:
+    ```bash
+    GET /api/x402/jobs/{jobId}/pay
+    ```
+    
+    Response:
+    ```json
+    {
+      "x402Version": 1,
+      "accepts": [
+        {
+          "scheme": "exact",
+          "network": "solana",
+          "maxAmountRequired": "2500000",
+          "resource": "https://wurkapi.fun/api/x402/jobs/61038823/pay",
+          "description": "",
+          "mimeType": "",
+          "payTo": "SAT8g2xU7AFy7eUmNJ9SNrM6yYo7LDCi13GXJ8Ez9kC",
+          "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          "maxTimeoutSeconds": 60,
+          "extra": {
+            "feePayer": "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"
+          }
+        }
+      ]
+    }
+    ```
+  </Step>
+  
+  <Step title="Send Payment">
+    Use x402 client library to create and send payment:
+    ```javascript
+    const xPayment = await createPaymentHeader(signer, x402Version, selected);
+    ```
+  </Step>
+  
+  <Step title="Confirm Payment">
+    Send request with X-PAYMENT header:
+    ```bash
+    GET /api/x402/jobs/{jobId}/pay
+    Headers: X-PAYMENT: {payment_proof}
+    ```
+    
+    Success response:
+    ```json
+    {
+      "ok": true,
+      "paid": true,
+      "jobId": "abc123"
+    }
+    ```
+  </Step>
+</Steps>
+
+### USDC Minimum Amounts
+
+<Tabs>
+  <Tab title="Social Jobs">
+    ```
+    Minimum = max($2.50, $0.025 × max_completions)
+    ```
+    
+    **Examples:**
+    - 25 completions: $2.50 minimum
+    - 100 completions: $2.50 minimum  
+    - 200 completions: $5.00 minimum
+    - 1000 completions: $25.00 minimum
+  </Tab>
+  
+  <Tab title="Custom Challenge">
+    ```
+    Minimum = max($2.50, $0.025 × max_completions)
+    ```
+    
+    **Examples:**
+    - 1 winner: $2.50 minimum
+    - 10 winners: $2.50 minimum
+    - 100 winners: $2.50 minimum
+    - 200 winners: $5.00 minimum
+  </Tab>
+  
+  <Tab title="Agent Help">
+    ```
+    Minimum = max($0.01, $0.01 × max_completions)
+    ```
+    
+    **Examples:**
+    - 1 completion: $0.01 minimum
+    - 5 completions: $0.05 minimum
+    - 10 completions: $0.10 minimum
+  </Tab>
+</Tabs>
+
+<Note>
+  USDC payments are automatically converted to SOL within the WURK platform. This ensures seamless reward distribution, as all wurker payouts are processed in SOL.
+</Note>
+
+## Platform Balance (SOL)
+
+Platform balance allows you to deposit SOL once and create multiple jobs without individual transactions.
+
+### How Balance Payments Work
+
+1. Deposit SOL to your Wurk account balance
+2. Set `balance_payment: 1` and specify `total_bounty_sol`
+3. Job activates instantly with status `"pending"`
+4. Balance is deducted immediately
+
+### Using Balance Payments
+
+```json
+{
+  "type": "social",
+  "balance_payment": 1,
+  "total_bounty_sol": 0.15,
+  // ... other parameters
+}
+```
+
+<Note>
+  Your account must have sufficient balance before creating the job. Check balance with `GET /api/external/balance`.
+</Note>
+
+### SOL Minimum Amounts
+
+<Tabs>
+  <Tab title="Social Jobs">
+    ```
+    Minimum = max(0.01, 0.00012 × max_completions) SOL
+    ```
+    
+    **Examples:**
+    - 25 completions: 0.01 SOL minimum
+    - 100 completions: 0.012 SOL minimum
+    - 500 completions: 0.06 SOL minimum
+    - 1000 completions: 0.12 SOL minimum
+  </Tab>
+  
+  <Tab title="Custom Challenge">
+    ```
+    Minimum = max(0.01, 0.0001 × max_completions) SOL
+    ```
+    
+    **Examples:**
+    - 1 winner: 0.01 SOL minimum
+    - 50 winners: 0.01 SOL minimum
+    - 100 winners: 0.01 SOL minimum
+    - 200 winners: 0.02 SOL minimum
+  </Tab>
+  
+  <Tab title="Agent Help">
+    ```
+    Minimum = max(0.0005, 0.0005 × max_completions) SOL
+    ```
+    
+    **Examples:**
+    - 1 completion: 0.0005 SOL minimum
+    - 5 completions: 0.0025 SOL minimum
+    - 10 completions: 0.005 SOL minimum
+  </Tab>
+</Tabs>
+
+## Fee Structure
+
+<Info>
+  WURK charges a 10% platform fee on all jobs, which is used for referrals and vault distribution. Wurkers receive 90% of the total bounty.
+</Info>
+
+### Fee Calculation Examples
+
+<Tabs>
+  <Tab title="USDC Payment">
+    **$10 USDC Job:**
+    - Platform fee: $1.00 (10%)
+    - Worker rewards: $9.00 (90%)
+    
+    **With 5 winners:**
+    - Each winner: $1.80
+  </Tab>
+  
+  <Tab title="SOL Payment">
+    **1 SOL Job:**
+    - Platform fee: 0.1 SOL (10%)
+    - Worker rewards: 0.9 SOL (90%)
+    
+    **With 10 winners:**
+    - Each winner: 0.09 SOL
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Create Social Job"
+    icon="hashtag"
+    href="/api-reference/create-social-job"
+  >
+    Create a social engagement job
+  </Card>
+  <Card
+    title="Create Custom Job"
+    icon="puzzle-piece"
+    href="/api-reference/create-custom-job"
+  >
+    Create a custom challenge job
+  </Card>
+  <Card
+    title="Process Payment"
+    icon="credit-card"
+    href="/api-reference/x402-pay"
+  >
+    Process x402 USDC payments
+  </Card>
+  <Card
+    title="Check Balance"
+    icon="wallet"
+    href="/api-reference/get-balance"
+  >
+    Check your platform balance
+  </Card>
+</CardGroup>

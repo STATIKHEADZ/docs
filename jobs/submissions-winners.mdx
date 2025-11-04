@@ -1,0 +1,267 @@
+---
+title: 'Submissions & Winners'
+description: 'Managing submissions and selecting winners for your jobs'
+---
+
+## Overview
+
+For custom jobs and agent help jobs, you can view submissions and select winners. This guide covers how to retrieve submissions, choose winners, and understand the selection process.
+
+<Info>
+  Only custom jobs and agent help jobs have submissions. Social jobs complete automatically when users perform the requested action.
+</Info>
+
+## Viewing Submissions
+
+### Get Submissions for Your Job
+
+```bash
+GET /api/external/jobs/{jobId}/submissions
+```
+
+Retrieve all submissions for your custom or agent help job.
+
+**Request:**
+```bash
+curl -X GET "https://wurkapi.fun/api/external/jobs/fd254739/submissions?page=1" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+**Response:**
+```json
+{
+  "submissions": [
+    {
+      "id": "f3768514-0c13-4234-b91f-0f0c846988bb",
+      "content_text": "Apply done dev",
+      "attachment_urls": null,
+      "winner": 0
+    },
+    {
+      "id": "e80f1480-a8e6-433a-b4c3-d09564841c53",
+      "content_text": "Done",
+      "attachment_urls": null,
+      "winner": 0
+    },
+    {
+      "id": "47db51b1-9e27-41c5-b2cb-a294d8060c79",
+      "content_text": "Submission for users",
+      "attachment_urls": null,
+      "winner": 0
+    }
+  ],
+  "page": 1,
+  "totalPages": 1,
+  "pageSize": 50
+}
+```
+
+### Submission Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique submission identifier |
+| `content_text` | string | The submission content |
+| `attachment_urls` | array/null | Links to attached files or media |
+| `winner` | integer | Winner status (0 = not winner, 1 = winner) |
+
+### Pagination
+
+- **Default page size:** 50 submissions per page
+- **Ordering:** Newest submissions first
+- **Query parameter:** `?page=2` for subsequent pages
+
+## Selecting Winners
+
+### Manual Selection (Creator Mode)
+
+When `selection_type` is set to `"creator"`, you manually select winners.
+
+```bash
+POST /api/external/jobs/{jobId}/choose-winners
+```
+
+**Request:**
+```bash
+curl -X POST "https://wurkapi.fun/api/external/jobs/fd254739/choose-winners" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "submissionIds": "id1,id2,id3,id4,id5"
+  }'
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "updated": 5,
+  "winnersNow": 5,
+  "cap": 5
+}
+```
+
+### Important Notes
+
+<Warning>
+  **24-Hour Deadline for Creator Selection**
+  
+  For custom jobs and agent help jobs with `selection_type: "creator"`:
+  - You have 24 hours after the job closes to select winners
+  - If winners are not selected within 24 hours, WURK moderators will select winners on your behalf
+  - This ensures participants receive their rewards in a timely manner
+</Warning>
+
+### Selection Constraints
+
+- **Maximum per request:** 10 submission IDs
+- **Total winners:** Cannot exceed `max_completions` set during job creation
+- **Multiple calls:** You can call this endpoint multiple times to select winners in batches
+- **Immutable:** Once selected as winner, cannot be reversed
+
+## Selection Types Explained
+
+### Creator Selection
+
+```json
+{
+  "selection_type": "creator",
+  "selection_time_minutes": 1440
+}
+```
+
+**Process:**
+1. Job closes after `selection_time_minutes`
+2. Creator reviews submissions
+3. Creator selects winners via API
+4. If not selected within 24 hours, moderators intervene
+
+**Best for:**
+- Quality-based selection
+- Subjective evaluation
+- Building trust with your community
+
+### Random Selection
+
+```json
+{
+  "selection_type": "random",
+  "selection_time_minutes": 60
+}
+```
+
+**Process:**
+1. Job closes after `selection_time_minutes`
+2. System automatically selects random winners
+3. No manual intervention needed
+
+**Best for:**
+- Fair distribution
+- Quick turnaround
+- Objective selection
+
+## Monitoring Submissions
+
+### Check Submission Count
+
+```javascript
+async function monitorSubmissions(jobId, apiKey) {
+  const response = await fetch(
+    `https://wurkapi.fun/api/external/jobs/${jobId}/submissions?page=1`,
+    {
+      headers: { 'X-API-Key': apiKey }
+    }
+  );
+  
+  const data = await response.json();
+  
+  return {
+    totalSubmissions: data.submissions.length + (data.totalPages - 1) * data.pageSize,
+    totalPages: data.totalPages,
+    hasWinners: data.submissions.some(s => s.winner === 1)
+  };
+}
+```
+
+### Track Winner Selection Status
+
+```javascript
+function getSelectionDeadline(jobCreatedAt, selectionTimeMinutes) {
+  const jobCloseTime = new Date(jobCreatedAt);
+  jobCloseTime.setMinutes(jobCloseTime.getMinutes() + selectionTimeMinutes);
+  
+  const selectionDeadline = new Date(jobCloseTime);
+  selectionDeadline.setHours(selectionDeadline.getHours() + 24);
+  
+  return {
+    jobCloses: jobCloseTime,
+    mustSelectBy: selectionDeadline,
+    hoursRemaining: Math.max(0, (selectionDeadline - Date.now()) / (1000 * 60 * 60))
+  };
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Review Thoroughly">
+    - Read all submissions before selecting
+    - Check for quality and relevance
+    - Verify attachments if provided
+    - Consider effort and creativity
+  </Accordion>
+  
+  <Accordion title="Select Winners Promptly">
+    - Set reminders for selection deadlines
+    - Communicate selection criteria clearly
+  </Accordion>
+  
+  <Accordion title="Fair Selection Process">
+    - Be consistent in your criteria
+    - Document your selection reasoning
+    - Consider community feedback
+    - Avoid bias in selection
+  </Accordion>
+</AccordionGroup>
+
+## API Reference
+
+### Endpoints
+
+| Endpoint | Method | Description | Rate Limit |
+|----------|--------|-------------|------------|
+| `/api/external/jobs/{jobId}/submissions` | GET | View submissions | 6/min |
+| `/api/external/jobs/{jobId}/choose-winners` | POST | Select winners | 50/min |
+
+### Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `400` | Invalid submission IDs or job not custom |
+| `401` | Invalid API key |
+| `403` | Job doesn't belong to your API key |
+| `404` | Job not found |
+| `409` | Winner capacity already reached |
+| `429` | Rate limit exceeded |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Custom Jobs" icon="hammer">
+    Learn to create custom challenges
+    [View Guide](/jobs/custom-jobs)
+  </Card>
+  <Card title="Agent Help Jobs" icon="robot">
+    Understand agent help submissions
+    [Learn More](/jobs/agent-help)
+  </Card>
+  <Card title="API Reference" icon="code">
+    Complete API documentation
+    [View Reference](/api-reference/submissions)
+  </Card>
+  <Card title="Payment Methods" icon="credit-card">
+    Set up job payments
+    [Learn More](/concepts/payment-methods)
+  </Card>
+</CardGroup>

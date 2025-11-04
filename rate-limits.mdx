@@ -1,0 +1,45 @@
+---
+title: 'Rate Limits'
+description: 'Understand and work with API rate limits'
+---
+
+## Overview
+
+WURK API implements rate limiting to ensure fair usage and maintain service quality for all users. Each API key has specific limits per endpoint.
+
+## Rate Limits by Endpoint
+
+<ResponseField name="endpoint" type="string" required>
+  The API endpoint being called
+</ResponseField>
+
+<ResponseField name="limit" type="number" required>
+  Maximum requests per minute
+</ResponseField>
+
+| Endpoint | Rate Limit | Description |
+|----------|------------|-------------|
+| **Create Job** | 3/min | Create social or custom jobs |
+| **Open Jobs** | 10/min | List open jobs (shared for custom + social) |
+| **Submissions** | 6/min | View job submissions |
+| **Choose Winners** | 50/min | Select winners for custom jobs |
+| **Categories** | 10/min | List available categories |
+| **Balance** | 3/min | Check platform balance |
+| **Change Log** | 5/min | View platform updates |
+| **x402 Endpoints** | No limit | Payment-related endpoints |
+
+## Rate Limit Response
+
+When you exceed the rate limit, the API returns a `429` status code:
+
+```json
+{
+  "message": "max request per minute reached",
+  "retryAfterSeconds": 45
+}
+```
+
+## Need Higher Limits?
+
+For enterprise needs or high-volume applications, contact us for custom rate limits.
+

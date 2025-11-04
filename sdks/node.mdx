@@ -1,0 +1,518 @@
+---
+title: 'Node.js SDK'
+description: 'Complete Node.js implementation for WURK API'
+---
+
+## Installation
+
+Install required dependencies:
+
+```bash
+npm install x402 x402-fetch bs58 dotenv
+```
+
+## Configuration
+
+Create a `.env` file:
+
+```bash
+# API Configuration
+WURK_API_KEY=your_api_key_here
+WURK_API_URL=https://wurkapi.fun
+
+# Payment Configuration (for x402)
+NETWORK=solana
+PK402=your_solana_private_key_base58
+HELIUSKEY=your_helius_api_key_optional
+```
+
+## Complete Implementation
+
+```typescript
+import 'dotenv/config';
+import bs58 from 'bs58';
+import { createSigner } from 'x402/types';
+import { selectPaymentRequirements, createPaymentHeader } from 'x402/client';
+
+class WurkAPI {
+  private apiKey: string;
+  private baseUrl: string;
+  private network: string;
+  private privateKey?: string;
+
+  constructor() {
+    this.apiKey = process.env.WURK_API_KEY || '';
+    this.baseUrl = process.env.WURK_API_URL || 'https://wurkapi.fun';
+    this.network = process.env.NETWORK || 'solana';
+    this.privateKey = process.env.PK402;
+
+    if (!this.apiKey) {
+      throw new Error('WURK_API_KEY is required');
+    }
+  }
+
+  /**
+   * Make authenticated API request
+   */
+  private async request(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<any> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'X-API-Key': this.apiKey,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`API Error (${response.status}): ${error}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Create a social job
+   */
+  async createSocialJob(params: {
+    tweetUrl: string;
+    minRank: number;
+    cooldownMinutes: number;
+    jobType: 'repost' | 'comment' | 'repost_comment';
+    maxCompletions: number;
+    messageMarkdown?: string;
+    payment: 
+      | { type: 'usdc'; amount: number }
+      | { type: 'balance'; amountSol: number };
+  }) {
+    const body: any = {
+      type: 'social',
+      tweet_url: params.tweetUrl,
+      min_rank: params.minRank,
+      cooldown_minutes: params.cooldownMinutes,
+      jobtype: params.jobType,
+      max_completions: params.maxCompletions,
+    };
+
+    if (params.messageMarkdown) {
+      body.message_markdown = params.messageMarkdown;
+    }
+
+    if (params.payment.type === 'usdc') {
+      body.total_usdc = params.payment.amount;
+    } else {
+      body.balance_payment = 1;
+      body.total_bounty_sol = params.payment.amountSol;
+    }
+
+    return this.request('/api/external/jobs/create', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  /**
+   * Create a custom job
+   */
+  async createCustomJob(params: {
+    jobMode: 'challenge' | 'agent_help';
+    maxCompletions: number;
+    messageMarkdown: string;
+    selectionTimeMinutes: number;
+    selectionType: 'creator' | 'random';
+    categoryMain?: string;
+    categorySub?: string;
+    community?: string;
+    payment:
+      | { type: 'usdc'; amount: number }
+      | { type: 'balance'; amountSol: number };
+  }) {
+    const body: any = {
+      type: 'custom',
+      job_mode: params.jobMode,
+      max_completions: params.maxCompletions,
+      message_markdown: params.messageMarkdown,
+      selection_time_minutes: params.selectionTimeMinutes,
+      selection_type: params.selectionType,
+    };
+
+    if (params.categoryMain) body.category_main = params.categoryMain;
+    if (params.categorySub) body.category_sub = params.categorySub;
+    if (params.community) body.community = params.community;
+
+    if (params.payment.type === 'usdc') {
+      body.total_usdc = params.payment.amount;
+    } else {
+      body.balance_payment = 1;
+      body.total_bounty_sol = params.payment.amountSol;
+    }
+
+    return this.request('/api/external/jobs/create', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  /**
+   * Pay for a job using x402 USDC
+   */
+  async payJobWithUSDC(jobId: string) {
+    if (!this.privateKey) {
+      throw new Error('PK402 private key required for USDC payments');
+    }
+
+    // Step 1: Get payment requirements
+    const payUrl = `${this.baseUrl}/api/x402/jobs/${jobId}/pay`;
+    const step1 = await fetch(payUrl, {
+      headers: { Accept: 'application/json' },
+    });
+
+    if (step1.status !== 402) {
+      const text = await step1.text();
+      throw new Error(`Expected 402, got ${step1.status}: ${text}`);
+    }
+
+    const { x402Version, accepts } = await step1.json();
+
+    // Step 2: Select payment requirements
+    const selected = selectPaymentRequirements(
+      accepts,
+      [this.network],
+      'exact'
+    );
+
+    // Step 3: Create signer
+    const secretBase58 = this.toBase58(this.privateKey);
+    const signer = await createSigner(this.network, secretBase58);
+
+    // Step 4: Create payment header
+    const xPayment = await createPaymentHeader(
+      signer,
+      x402Version,
+      selected,
+      {
+        svmConfig: {
+          rpcUrl: process.env.HELIUSKEY
+            ? `https://rpc.helius.xyz/?api-key=${process.env.HELIUSKEY}`
+            : undefined,
+        },
+      }
+    );
+
+    // Step 5: Send payment
+    const step2 = await fetch(payUrl, {
+      headers: {
+        Accept: 'application/json',
+        'X-PAYMENT': xPayment,
+      },
+    });
+
+    if (!step2.ok) {
+      const error = await step2.text();
+      throw new Error(`Payment failed (${step2.status}): ${error}`);
+    }
+
+    return step2.json();
+  }
+
+  /**
+   * Get open social jobs
+   */
+  async getOpenSocialJobs(page: number = 1) {
+    return this.request(`/api/external/jobs/open/social?page=${page}`);
+  }
+
+  /**
+   * Get open custom jobs
+   */
+  async getOpenCustomJobs(page: number = 1) {
+    return this.request(`/api/external/jobs/open/custom?page=${page}`);
+  }
+
+  /**
+   * Get submissions for a custom job
+   */
+  async getSubmissions(jobId: string, page: number = 1) {
+    return this.request(
+      `/api/external/jobs/${jobId}/submissions?page=${page}`
+    );
+  }
+
+  /**
+   * Choose winners for a custom job
+   */
+  async chooseWinners(jobId: string, submissionIds: string[]) {
+    return this.request(`/api/external/jobs/${jobId}/choose-winners`, {
+      method: 'POST',
+      body: JSON.stringify({
+        submissionIds: submissionIds.join(','),
+      }),
+    });
+  }
+
+  /**
+   * Get platform balance
+   */
+  async getBalance() {
+    return this.request('/api/external/balance');
+  }
+
+  /**
+   * Get available categories
+   */
+  async getCategories(page: number = 1) {
+    return this.request(`/api/external/categories?page=${page}`);
+  }
+
+  /**
+   * Health check
+   */
+  async health() {
+    return this.request('/api/external/health');
+  }
+
+  /**
+   * Convert private key to base58
+   */
+  private toBase58(input: string): string {
+    const raw = String(input || '').trim();
+    if (!raw) throw new Error('Missing private key');
+    if (raw.startsWith('[')) {
+      return bs58.encode(Uint8Array.from(JSON.parse(raw)));
+    }
+    return raw;
+  }
+}
+
+export default WurkAPI;
+```
+
+## Usage Examples
+
+### Create and Pay for a Social Job
+
+```typescript
+import WurkAPI from './wurk-api';
+
+const wurk = new WurkAPI();
+
+async function createRepostJob() {
+  try {
+    // Create job with USDC payment
+    const job = await wurk.createSocialJob({
+      tweetUrl: 'https://x.com/yourhandle/status/1234567890',
+      minRank: 1,
+      cooldownMinutes: 5,
+      jobType: 'repost',
+      maxCompletions: 100,
+      payment: { type: 'usdc', amount: 5.0 }
+    });
+    
+    console.log('Job created:', job.jobId);
+    
+    // Pay for the job
+    const payment = await wurk.payJobWithUSDC(job.jobId);
+    console.log('Payment successful:', payment);
+    
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+createRepostJob();
+```
+
+### Create Job with Platform Balance
+
+```typescript
+async function createJobWithBalance() {
+  try {
+    // Check balance first
+    const { balance } = await wurk.getBalance();
+    console.log('Current balance:', balance, 'SOL');
+    
+    // Create job with balance payment
+    const job = await wurk.createSocialJob({
+      tweetUrl: 'https://x.com/yourhandle/status/1234567890',
+      minRank: 1,
+      cooldownMinutes: 5,
+      jobType: 'comment',
+      maxCompletions: 50,
+      messageMarkdown: 'Share your thoughts!',
+      payment: { type: 'balance', amountSol: 0.05 }
+    });
+    
+    console.log('Job created and active:', job.jobId);
+    
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+```
+
+### Create Custom Challenge
+
+```typescript
+async function createChallenge() {
+  const job = await wurk.createCustomJob({
+    jobMode: 'challenge',
+    maxCompletions: 5,
+    messageMarkdown: `
+# Logo Design Challenge
+
+Create a modern logo for a tech startup called "TechFlow".
+
+## Requirements:
+- Modern, clean design
+- Include company name
+- Deliverable in SVG format
+- Color scheme: Blue and white
+
+## Submission:
+Upload your design and brief explanation.
+    `,
+    selectionTimeMinutes: 1440, // 24 hours
+    selectionType: 'creator',
+    categoryMain: 'Design',
+    categorySub: 'Logo',
+    payment: { type: 'usdc', amount: 50.0 }
+  });
+  
+  console.log('Challenge created:', job);
+  
+  // Pay for the job
+  await wurk.payJobWithUSDC(job.jobId);
+}
+```
+
+### Manage Submissions
+
+```typescript
+async function manageSubmissions(jobId: string) {
+  // Get submissions
+  const { submissions } = await wurk.getSubmissions(jobId);
+  
+  console.log(`Found ${submissions.length} submissions`);
+  
+  // Review submissions
+  submissions.forEach(sub => {
+    console.log(`ID: ${sub.id}`);
+    console.log(`Content: ${sub.content_text}`);
+    console.log(`Winner: ${sub.winner ? 'Yes' : 'No'}`);
+    console.log('---');
+  });
+  
+  // Choose winners (top 3)
+  const winnerIds = submissions
+    .slice(0, 3)
+    .map(s => s.id);
+  
+  const result = await wurk.chooseWinners(jobId, winnerIds);
+  console.log('Winners selected:', result);
+}
+```
+
+### Error Handling
+
+```typescript
+async function robustJobCreation() {
+  const maxRetries = 3;
+  let attempt = 0;
+  
+  while (attempt < maxRetries) {
+    try {
+      const job = await wurk.createSocialJob({
+        tweetUrl: 'https://x.com/user/status/123',
+        minRank: 1,
+        cooldownMinutes: 5,
+        jobType: 'repost',
+        maxCompletions: 50,
+        payment: { type: 'usdc', amount: 2.5 }
+      });
+      
+      return job;
+      
+    } catch (error: any) {
+      attempt++;
+      
+      if (error.message.includes('429')) {
+        // Rate limited - wait and retry
+        const wait = 60000; // 1 minute
+        console.log(`Rate limited. Waiting ${wait}ms...`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      
+      if (error.message.includes('409')) {
+        // Job already exists
+        console.log('Job already exists for this tweet');
+        break;
+      }
+      
+      // Other errors - don't retry
+      throw error;
+    }
+  }
+}
+```
+
+## TypeScript Types
+
+```typescript
+interface SocialJobParams {
+  tweetUrl: string;
+  minRank: 1 | 2 | 3;
+  cooldownMinutes: number;
+  jobType: 'repost' | 'comment' | 'repost_comment';
+  maxCompletions: number;
+  messageMarkdown?: string;
+  payment: PaymentOption;
+}
+
+interface CustomJobParams {
+  jobMode: 'challenge' | 'agent_help';
+  maxCompletions: number;
+  messageMarkdown: string;
+  selectionTimeMinutes: number;
+  selectionType: 'creator' | 'random';
+  categoryMain?: string;
+  categorySub?: string;
+  community?: string;
+  payment: PaymentOption;
+}
+
+type PaymentOption = 
+  | { type: 'usdc'; amount: number }
+  | { type: 'balance'; amountSol: number };
+
+interface JobResponse {
+  jobId: string;
+  customId?: string;
+  status: 'unpaid' | 'pending';
+  type: 'social' | 'custom';
+  balancePayment: 0 | 1;
+}
+
+interface Submission {
+  id: string;
+  content_text: string;
+  attachment_urls: string[] | null;
+  winner: 0 | 1;
+}
+```
+
+## Next Steps
+
+- Review [Authentication](/authentication) setup
+- Explore [Payment Methods](/concepts/payment-methods)
+- Check [Rate Limits](/rate-limits)
+- See [Python Examples](/sdks/python)
+
+
+

@@ -1,33 +1,79 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: 'API Overview'
+description: 'Complete reference for the WURK API endpoints'
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+## Base URL
 
-## Welcome
+All API requests should be made to:
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
-
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+```
+https://wurkapi.fun
+```
 
 ## Authentication
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+All endpoints require authentication using your API key in the `X-API-Key` header:
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" https://wurkapi.fun/api/external/...
+```
+
+## Available Endpoints
+
+### Create Jobs
+- **POST** `/api/external/jobs/create` - Create a social job (see [Social Jobs](/api-reference/create-social-job))
+- **POST** `/api/external/jobs/create` - Create a custom job (see [Custom Jobs](/api-reference/create-custom-job))
+
+### List Jobs
+- **GET** `/api/external/jobs/open/custom` - List your open custom jobs
+- **GET** `/api/external/jobs/open/social` - List your open social jobs
+
+### Payments (x402)
+- **GET** `/api/x402/jobs/:jobId/accepts` - Get payment requirements
+- **GET** `/api/x402/jobs/:jobId/pay` - Process USDC payment
+
+### Submissions
+- **GET** `/api/external/jobs/:jobId/submissions` - Get job submissions
+- **POST** `/api/external/jobs/:jobId/choose-winners` - Select winners
+
+### Utilities
+- **GET** `/api/external/categories` - List categories
+- **GET** `/api/external/balance` - Check platform balance
+- **GET** `/api/external/change-log` - View platform updates
+- **GET** `/api/external/health` - Health check
+
+## Response Format
+
+All responses are in JSON format:
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
-  }
-]
+{
+  "data": "...",
+  "status": "success"
+}
 ```
+
+## Error Handling
+
+Error responses include appropriate HTTP status codes:
+
+- `400` - Bad Request (invalid parameters)
+- `401` - Unauthorized (invalid API key)
+- `403` - Forbidden (blocked or no access)
+- `404` - Not Found
+- `409` - Conflict (duplicate job, etc.)
+- `429` - Too Many Requests (rate limited)
+
+Error response format:
+
+```json
+  {
+  "error": "Error message",
+  "status": 400
+  }
+```
+
+## Rate Limits
+
+See [Rate Limits](/rate-limits) for detailed information about API rate limits.

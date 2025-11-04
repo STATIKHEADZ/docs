@@ -1,0 +1,43 @@
+---
+title: 'Get Balance'
+api: 'GET /api/external/balance'
+description: 'Get your current WURK platform balance'
+---
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your WURK API key
+</ParamField>
+
+## Response
+
+<ResponseField name="balance" type="string">
+  Your current balance as a numeric string
+</ResponseField>
+
+## Rate Limit
+
+3 requests per minute
+
+<RequestExample>
+
+```bash
+curl -X GET "https://wurkapi.fun/api/external/balance" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json
+{
+  "balance": "125.50"
+}
+```
+
+</ResponseExample>
+
+

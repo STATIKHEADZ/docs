@@ -1,0 +1,137 @@
+---
+title: 'Get Job Submissions'
+api: 'GET /api/external/jobs/{jobId}/submissions'
+description: 'List submissions for a custom job using the job ID'
+---
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your WURK API key
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="jobId" type="string" required>
+  The job ID (8 character identifier like `f80a0038`)
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+## Response
+
+<ResponseField name="submissions" type="array">
+  Array of submissions with the following fields:
+  - `id`: Submission ID
+  - `content_text`: Submission text
+  - `attachment_urls`: Array of attachment URLs (if any)
+  - `winner`: Winner status (0 = not winner, 1 = winner)
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="pageSize" type="integer">
+  Number of items per page (50)
+</ResponseField>
+
+## Rate Limit
+
+6 requests per minute
+
+## Requirements
+
+- Job must be of type `custom`
+- Job must belong to your API key
+
+<Note>
+  To test this endpoint, you need a valid job ID from a custom job that belongs to your API key. 
+  First create a custom job using the [Create Custom Job](/api-reference/create-custom-job) endpoint, 
+  then use the returned `jobId` (not `customId`) here.
+</Note>
+
+<Warning>
+  **Try It Issues**: The "Try it" feature may not work correctly with path parameters. 
+  If you get "job not found" in the Try popup but the job exists:
+  - Use the curl command directly in your terminal
+  - Make sure to replace `{jobId}` with your actual job ID (e.g., `f80a0038`)
+  - Ensure you're using the correct API key that owns the job
+</Warning>
+
+<RequestExample>
+
+```bash
+curl -X GET "https://wurkapi.fun/api/external/jobs/{jobId}/submissions?page=1" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+```bash Working Example
+# This is a real job that exists and has submissions
+curl -X GET "https://wurkapi.fun/api/external/jobs/f80a0038/submissions?page=1" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success
+{
+  "submissions": [
+    {
+      "id": "f3768514-0c13-4234-b91f-0f0c846988bb",
+      "content_text": "Here's my creative meme about Web3!",
+      "attachment_urls": ["https://example.com/meme.jpg"],
+      "winner": 0
+    },
+    {
+      "id": "e80f1480-a8e6-433a-b4c3-d09564841c53",
+      "content_text": "My submission for the challenge",
+      "attachment_urls": null,
+      "winner": 0
+    },
+    {
+      "id": "47db51b1-9e27-41c5-b2cb-a294d8060c79",
+      "content_text": "Web3 to the moon! 🚀",
+      "attachment_urls": null,
+      "winner": 1
+    }
+  ],
+  "page": 1,
+  "totalPages": 1,
+  "pageSize": 50
+}
+```
+
+```json Job Not Found
+{
+  "message": "job not found"
+}
+```
+
+```json Not a Custom Job
+{
+  "error": "This endpoint only works for custom jobs",
+  "status": 400
+}
+```
+
+```json Not Your Job
+{
+  "error": "Job does not belong to your API key",
+  "status": 403
+}
+```
+
+</ResponseExample>

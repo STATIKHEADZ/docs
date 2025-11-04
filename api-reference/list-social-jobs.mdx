@@ -1,0 +1,91 @@
+---
+title: 'Get Your Open Social Jobs'
+api: 'GET /api/external/jobs/open/social'
+description: 'Retrieve all your open social jobs'
+---
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your WURK API key
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+## Response
+
+<ResponseField name="page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="pageSize" type="integer">
+  Number of items per page (25)
+</ResponseField>
+
+<ResponseField name="jobs" type="array">
+  Array of open social jobs with the following fields:
+  - `short_id`: Job ID (use this for API calls)
+  - `job_type`: Type of job (`repost`, `comment`, `repost_comment`)
+  - `tweet_url`: URL of the tweet
+  - `winners`: Number of max completions
+  - `description`: Job description/instructions
+  - `status`: Payment status (`paid`, `unpaid`)
+  - `created_at`: Creation timestamp
+  - `work_status`: Job status (`open`, `closed`)
+</ResponseField>
+
+## Rate Limit
+
+10 requests per minute (shared with custom jobs endpoint)
+
+<RequestExample>
+
+```bash
+curl -X GET "https://wurkapi.fun/api/external/jobs/open/social?page=1" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json
+{
+  "page": 1,
+  "totalPages": 1,
+  "pageSize": 25,
+  "jobs": [
+    {
+      "short_id": "97dd4824",
+      "job_type": "repost",
+      "tweet_url": "https://x.com/dewianasar203/status/1985498871926309362",
+      "winners": 100,
+      "description": "",
+      "status": "paid",
+      "created_at": "2025-11-04 01:12:00.332087",
+      "work_status": "open"
+    },
+    {
+      "short_id": "85bc3921",
+      "job_type": "comment",
+      "tweet_url": "https://x.com/user/status/1985498871926309363",
+      "winners": 50,
+      "description": "Share your thoughts about Web3!",
+      "status": "paid",
+      "created_at": "2025-11-04 00:45:00.123456",
+      "work_status": "open"
+    }
+  ]
+}
+```
+
+</ResponseExample>

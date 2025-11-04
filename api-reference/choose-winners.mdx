@@ -1,0 +1,89 @@
+---
+title: 'Choose Winners'
+api: 'POST /api/external/jobs/{jobId}/choose-winners'
+description: 'Select winners for a custom job with creator selection'
+---
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your WURK API key
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="jobId" type="string" required>
+  The job ID (from a custom job)
+</ParamField>
+
+## Request Body
+
+<ParamField body="submissionIds" type="string" required>
+  Comma-separated list of submission IDs to mark as winners (max 10 per request)
+</ParamField>
+
+## Response
+
+<ResponseField name="ok" type="boolean">
+  Always `true` on success
+</ResponseField>
+
+<ResponseField name="updated" type="integer">
+  Number of submissions updated
+</ResponseField>
+
+<ResponseField name="winnersNow" type="integer">
+  Current total number of winners
+</ResponseField>
+
+<ResponseField name="cap" type="integer">
+  Maximum number of winners allowed
+</ResponseField>
+
+## Rate Limit
+
+50 requests per minute
+
+## Requirements
+
+- Job must exist and belong to your API key
+- Job must have `selection_type = "creator"`
+- Cannot exceed `max_completions` winners
+
+<Note>
+  To test this endpoint, you need a valid job ID from a custom job with `selection_type = "creator"` that belongs to your API key.
+  You also need valid submission IDs from that job. Use the [Get Submissions](/api-reference/get-submissions) endpoint first to get submission IDs.
+</Note>
+
+<RequestExample>
+
+```bash
+curl -X POST "https://wurkapi.fun/api/external/jobs/{jobId}/choose-winners" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "submissionIds": "f3768514-0c13-4234-b91f-0f0c846988bb,e80f1480-a8e6-433a-b4c3-d09564841c53,a2f44011-cae9-45dd-9316-3b2bc0f83703"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success
+{
+  "ok": true,
+  "updated": 3,
+  "winnersNow": 3,
+  "cap": 5
+}
+```
+
+```json Error - Capacity Reached
+{
+  "error": "Winner capacity already reached",
+  "status": 409
+}
+```
+
+</ResponseExample>

@@ -1,0 +1,94 @@
+---
+title: 'Get Categories'
+api: 'GET /api/external/categories'
+description: 'List available categories and subcategories'
+---
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your WURK API key
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+## Response
+
+<ResponseField name="categories" type="array">
+  Array of categories with their subcategories
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="pageSize" type="integer">
+  Number of items per page (50)
+</ResponseField>
+
+## Rate Limit
+
+10 requests per minute
+
+## Caching
+
+Server caches each page for 1 hour
+
+<RequestExample>
+
+```bash
+curl -X GET "https://wurkapi.fun/api/external/categories?page=1" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json
+{
+  "categories": [
+    {
+      "main": "Creative",
+      "subcategories": [
+        "Meme Creation",
+        "Video Editing",
+        "Graphic Design",
+        "Content Writing"
+      ]
+    },
+    {
+      "main": "Research",
+      "subcategories": [
+        "Data Collection",
+        "Market Research",
+        "Fact Checking",
+        "Analysis"
+      ]
+    },
+    {
+      "main": "Others",
+      "subcategories": [
+        "General",
+        "Miscellaneous"
+      ]
+    }
+  ],
+  "page": 1,
+  "totalPages": 1,
+  "pageSize": 50
+}
+```
+
+</ResponseExample>
+
+

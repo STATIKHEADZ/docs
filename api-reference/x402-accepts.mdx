@@ -1,0 +1,84 @@
+---
+title: 'Get Payment Requirements'
+api: 'GET /api/x402/jobs/{jobId}/accepts'
+description: 'Prefetch payment requirements for x402 USDC payments'
+---
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your WURK API key
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="jobId" type="string" required>
+  The job ID (8 character identifier returned from job creation)
+</ParamField>
+
+## Response
+
+### Already Paid
+
+<ResponseField name="ok" type="boolean">
+  Always `true` when successful
+</ResponseField>
+
+<ResponseField name="alreadyConfirmed" type="boolean">
+  `true` if the job is already paid
+</ResponseField>
+
+<ResponseField name="jobId" type="string">
+  The job ID
+</ResponseField>
+
+### Payment Required
+
+<ResponseField name="x402Version" type="number">
+  x402 protocol version (currently 1)
+</ResponseField>
+
+<ResponseField name="accepts" type="array">
+  Array of payment requirements including:
+  - Payment amount
+  - Recipient address
+  - Token information
+  - Network details
+</ResponseField>
+
+<RequestExample>
+
+```bash
+curl -X GET "https://wurkapi.fun/api/x402/jobs/89e57c15/accepts" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Payment Required
+{
+  "x402Version": 1,
+  "accepts": [
+    {
+      "type": "spl-token",
+      "network": "solana",
+      "amount": "5000000",
+      "token": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "recipient": "8xHdJebEQkjZvB2BPVKzQwNTnrDu4Zny4gKVJdXXXXXX"
+    }
+  ]
+}
+```
+
+```json Already Paid
+{
+  "ok": true,
+  "alreadyConfirmed": true,
+  "jobId": "89e57c15"
+}
+```
+
+</ResponseExample>

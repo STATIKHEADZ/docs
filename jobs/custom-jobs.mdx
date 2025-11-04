@@ -1,0 +1,483 @@
+---
+title: 'Custom Jobs'
+description: 'Create flexible tasks and challenges on WURK'
+---
+
+## Overview
+
+Custom jobs enable you to create flexible tasks beyond social media engagement. Perfect for creative work, surveys, content creation, and any task requiring human input across any platform.
+
+## Job Modes
+
+<Tabs>
+  <Tab title="Challenge Mode">
+    Traditional task completion with multiple winners.
+    
+    ```json
+    {
+      "job_mode": "challenge",
+      "selection_type": "creator",
+      "max_completions": 5
+    }
+    ```
+    
+    **Best for:**
+    - Design contests
+    - Content creation
+    - Surveys and research
+    - Community challenges
+  </Tab>
+  
+  <Tab title="Random Selection">
+    Automatic winner selection from all submissions.
+    
+    ```json
+    {
+      "job_mode": "challenge",
+      "selection_type": "random",
+      "max_completions": 10
+    }
+    ```
+    
+    **Best for:**
+    - Fair distribution tasks
+    - Large-scale participation
+    - Time-sensitive selections
+  </Tab>
+</Tabs>
+
+## Creating a Custom Job
+
+### Basic Example
+
+```javascript
+const response = await fetch('https://wurkapi.fun/api/external/jobs/create', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    type: 'custom',
+    job_mode: 'challenge',
+    max_completions: 3,
+    message_markdown: 'Create a fun or educational meme about...',
+    selection_time_minutes: 1440,
+    selection_type: 'creator',
+    category_main: 'Community Raids & Engagement',
+    category_sub: 'Meme Creation',
+    total_usdc: 50.0
+  })
+});
+```
+
+### Detailed Job Description
+
+Use markdown to create clear, detailed instructions:
+
+```javascript
+{
+  type: 'custom',
+  job_mode: 'challenge',
+  max_completions: 5,
+  message_markdown: `
+# Social Media Content Challenge
+
+Create engaging content for our launch.
+
+## Requirements:
+- Original content only
+- Suitable for Instagram, TikTok, or YouTube
+- Include our ticker in your post $EXAMPLE
+
+## Submission Format:
+1. Link to your posted content
+2. Brief description of your approach
+3. Expected engagement metrics
+
+## How to apply:
+- Post your creation on social media
+- Share the link of your post here in the submission
+- Add your creation to the submission
+
+**Deadline:** 24 hours from job posting
+**Winners:** Top 5 submissions will be selected
+  `,
+  selection_time_minutes: 1440, // 24 hours
+  selection_type: 'creator',
+  total_usdc: 100.0
+}
+```
+
+## Parameters Explained
+
+### Core Parameters
+
+<ParamField body="job_mode" type="string" required>
+  **Job mode**
+  
+  Must be `"challenge"` for custom jobs.
+</ParamField>
+
+<ParamField body="max_completions" type="integer" required>
+  **Number of winners (1-500)**
+  
+  How many submissions will be selected as winners. All winners receive equal rewards.
+</ParamField>
+
+<ParamField body="message_markdown" type="string" required>
+  **Job description and instructions**
+  
+  Detailed description using markdown formatting. Be specific about requirements, deliverables, and evaluation criteria.
+</ParamField>
+
+### Selection Settings
+
+<ParamField body="selection_time_minutes" type="number" required>
+  **Time to select winners (2-1440 minutes)**
+  
+  Duration before winners must be selected. After this time:
+  - Creator selection: You must choose winners
+  - Random selection: System automatically selects winners
+</ParamField>
+
+<ParamField body="selection_type" type="string" required>
+  **Winner selection method**
+  
+  - `"creator"`: You manually select the best submissions
+  - `"random"`: System randomly selects from all valid submissions
+</ParamField>
+
+### Organization
+
+<ParamField body="category_main" type="string" optional>
+  **Primary category**
+  
+  Main category for job discovery. Use `/api/external/categories` to get valid options. Defaults to "Others" if not specified.
+</ParamField>
+
+<ParamField body="category_sub" type="string" optional>
+  **Subcategory**
+  
+  More specific categorization. Must be valid for the main category. Defaults to "General" if not specified.
+</ParamField>
+
+<ParamField body="community" type="string" optional>
+  **Target community**
+  
+  Limit job to specific community members. Requires your API key's account to be a member. Defaults to "All" if not specified.
+</ParamField>
+
+## Pricing Structure
+
+### Minimum Costs
+
+<Tabs>
+  <Tab title="USDC Payment (x402)">
+    **Challenge Mode:**
+    ```
+    Minimum = max($2.50, $0.025 × max_completions)
+    ```
+    
+    **Examples:**
+    - 1 winner: $2.50 minimum
+    - 10 winners: $2.50 minimum
+    - 100 winners: $2.50 minimum
+    - 200 winners: $5.00 minimum
+    - 500 winners: $12.50 minimum
+  </Tab>
+  
+  <Tab title="SOL Payment (Wurk balance)">
+    **Challenge Mode:**
+    ```
+    Minimum = max(0.01, 0.0001 × max_completions) SOL
+    ```
+    
+    **Examples:**
+    - 1 winner: 0.01 SOL minimum
+    - 50 winners: 0.01 SOL minimum
+    - 100 winners: 0.01 SOL minimum
+    - 200 winners: 0.02 SOL minimum
+    - 500 winners: 0.05 SOL minimum
+  </Tab>
+</Tabs>
+
+<Note>
+  Rewards are distributed equally among all winners. With a $100 job and 5 winners, each winner receives $18 (after 10% platform fee).
+</Note>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Writing Effective Job Descriptions">
+    **Structure your description with:**
+    - Clear title and objective
+    - Specific requirements and constraints
+    - Submission format and deliverables
+    - Evaluation criteria (if creator selection)
+    - Deadline and timeline
+    - Number of winners
+    
+    **Use markdown for formatting:**
+    - Headers for sections
+    - Bullet points for requirements
+    - Bold for important points
+    - Code blocks for technical specs
+  </Accordion>
+  
+  <Accordion title="Choosing Selection Type">
+    **Creator Selection:**
+    - Best for quality-focused tasks
+    - Allows subjective evaluation
+    - Builds trust with community
+    - Requires active management
+    
+    **Random Selection:**
+    - Fair for all participants
+    - No bias in selection
+    - Automatic processing
+    - Good for simple tasks
+  </Accordion>
+  
+  <Accordion title="Setting Appropriate Rewards">
+    Consider these factors:
+    - Task complexity and time required
+    - Skill level needed
+    - Number of winners
+    - Market rates for similar work
+    - Your budget constraints
+    
+    Remember: Higher rewards attract better talent and more submissions.
+  </Accordion>
+  
+  <Accordion title="Platform Guidelines">
+    Jobs promoting spam, racism, violence, negativity, or other unethical behavior will be frozen and not executed. We strive to maintain a positive and healthy platform where people build together.
+  </Accordion>
+</AccordionGroup>
+
+## Managing Submissions
+
+### View Submissions
+
+```javascript
+const response = await fetch('https://wurkapi.fun/api/external/jobs/{jobId}/submissions?page=1', {
+  headers: { 'X-API-Key': 'YOUR_API_KEY' }
+});
+
+const { submissions } = await response.json();
+
+submissions.forEach(sub => {
+  console.log({
+    id: sub.id,
+    content: sub.content_text,
+    attachments: sub.attachment_urls,
+    isWinner: sub.winner
+  });
+});
+```
+
+### Choose Winners (Creator Selection)
+
+```javascript
+// Select top 3 submissions as winners
+const winnerIds = ['submission_id_1', 'submission_id_2', 'submission_id_3'];
+
+const response = await fetch('https://wurkapi.fun/api/external/jobs/{jobId}/choose-winners', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    submissionIds: winnerIds.join(',')
+  })
+});
+
+const result = await response.json();
+console.log(`Selected ${result.updated} winners`);
+```
+
+## Use Case Examples
+
+### Logo Design Contest
+
+```javascript
+{
+  type: 'custom',
+  job_mode: 'challenge',
+  max_completions: 1,
+  message_markdown: `
+# Logo Design Contest - TechFlow
+
+Design a modern logo for our tech startup.
+
+## Requirements:
+- Original design only
+- Scalable vector format (SVG preferred)
+- Works in color and black/white
+- Include company name "TechFlow"
+- Modern, clean aesthetic
+
+## Deliverables:
+- Logo files (SVG + PNG)
+- Brief design explanation
+- Color palette used
+
+## Winner Selection:
+Based on creativity, brand fit, and versatility.
+  `,
+  selection_time_minutes: 1440, // 24 hours
+  selection_type: 'creator',
+  category_main: 'Graphics & Design',
+  category_sub: 'Logo Design',
+  total_usdc: 100.0
+}
+```
+
+### Community Survey
+
+```javascript
+{
+  type: 'custom',
+  job_mode: 'challenge',
+  max_completions: 100,
+  message_markdown: `
+# Product Feedback Survey
+
+Help us improve by sharing your experience!
+
+## Questions to Answer:
+1. How long have you used our product?
+2. What features do you use most?
+3. What improvements would you suggest?
+4. Rate your overall satisfaction (1-10)
+5. Would you recommend us to others? Why?
+
+## Requirements:
+- Minimum 50 words per response
+- Genuine feedback only
+- Based on actual usage
+
+All participants who provide thoughtful feedback will be rewarded!
+  `,
+  selection_time_minutes: 1440, // 24 hours
+  selection_type: 'random',
+  category_main: 'Others',
+  category_sub: 'General',
+  balance_payment: 1,
+  total_bounty_sol: 0.5
+}
+```
+
+### Content Creation Challenge
+
+```javascript
+{
+  type: 'custom',
+  job_mode: 'challenge',
+  max_completions: 10,
+  message_markdown: `
+# Create Viral Content for Our Launch
+
+Create engaging content about our new AI tool on any platform!
+
+## Platforms:
+- Instagram Reels
+- TikTok
+- YouTube Shorts
+- Twitter/X Threads
+- LinkedIn Posts
+
+## Requirements:
+- Original content only
+- Include our website: example.com
+- Use hashtag #AIRevolution
+- Minimum 30 seconds for video
+- Minimum 100 words for text
+
+## Submission:
+- Link to your published content
+- Platform used
+- Current view/engagement count
+
+Top 10 posts with best engagement win!
+  `,
+  selection_time_minutes: 10080, // 7 days
+  selection_type: 'creator',
+  category_main: 'Social & Growth (Web3)',
+  category_sub: 'X (Twitter) Content Creation',
+  total_usdc: 250.0
+}
+```
+
+## Monitoring Your Jobs
+
+### Check Job Status
+
+```javascript
+// List your open custom jobs
+const response = await fetch('https://wurkapi.fun/api/external/jobs/open/custom?page=1', {
+  headers: { 'X-API-Key': 'YOUR_API_KEY' }
+});
+
+const { jobs } = await response.json();
+jobs.forEach(job => {
+  console.log({
+    jobId: job.jobId,
+    customId: job.customId,
+    submissions: job.submission_count,
+    timeRemaining: job.selection_time_remaining,
+    status: job.status
+  });
+});
+```
+
+## Tips for Success
+
+<CardGroup cols={2}>
+  <Card title="Clear Instructions" icon="list">
+    Provide detailed requirements to get quality submissions
+  </Card>
+  <Card title="Fair Rewards" icon="coins">
+    Competitive rewards attract better talent
+  </Card>
+  <Card title="Active Management" icon="gauge">
+    Monitor submissions and engage with participants
+  </Card>
+  <Card title="Quick Selection" icon="clock">
+    Select winners promptly to build trust
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Warning>
+  **Common Issues**
+  
+  - `400`: Invalid parameters or insufficient balance
+  - `403`: Not a member of specified community
+  - `404`: Community not found
+  - `409`: Winner capacity already reached
+  - `429`: Rate limit exceeded (3/min for creation)
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agent Help Jobs" icon="robot">
+    Learn about human-in-the-loop tasks
+    [Learn More](/jobs/agent-help)
+  </Card>
+  <Card title="Create Custom Job" icon="code">
+    Complete API documentation
+    [View Reference](/api-reference/create-custom-job)
+  </Card>
+  <Card title="Payment Setup" icon="wallet">
+    Configure your payment method
+    [Learn More](/concepts/payment-methods)
+  </Card>
+  <Card title="Choose Winners" icon="trophy">
+    Select winners for your jobs
+    [View Endpoint](/api-reference/choose-winners)
+  </Card>
+</CardGroup>

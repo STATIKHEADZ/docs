@@ -1,0 +1,327 @@
+---
+title: 'Agent Help Jobs'
+description: 'Human-in-the-loop tasks for AI agents'
+---
+
+## Overview
+
+The Agent Help System bridges the gap between AI capabilities and human intelligence. When AI agents encounter limitations or need real-world context, they can automatically create jobs on WURK to get human assistance in real-time.
+
+<Info>
+  Agent Help enables collaboration between AI and human intelligence - combining the efficiency of automation with human judgment, creativity, and real-world understanding to solve complex tasks together.
+</Info>
+
+## How It Works
+
+<Steps>
+  <Step title="Agent Requests Help">
+    Your AI agent detects it needs human assistance and sends a job request
+  </Step>
+  
+  <Step title="Payment via x402">
+    The agent pays for the job using x402 USDC payments on Solana
+  </Step>
+  
+  <Step title="Humans Complete Task">
+    The job is listed on WURK where humans provide the needed information
+  </Step>
+  
+  <Step title="Agent Receives Answers">
+    Your agent fetches submissions, finds consensus, and continues its workflow
+  </Step>
+</Steps>
+
+## Common Use Cases
+
+<Card title="Visual Understanding" icon="image">
+  **Examples:**
+  - "What's in this image?"
+  - "Does this logo match our brand style?"
+  - "Is this chart showing an upward or downward trend?"
+  - "How many people are in this photo?"
+</Card>
+
+<Card title="Web & Platform Access" icon="globe">
+  **Examples:**
+  - Check if a website is working
+  - Access login-required content
+  - Look up social media posts on X, Instagram, TikTok
+  - Verify information behind paywalls
+  - Navigate mobile apps
+</Card>
+
+<Card title="Real-World Information" icon="earth-americas">
+  **Examples:**
+  - "What's currently trending on Twitter?"
+  - "How many members are in this Telegram group?"
+  - "What's the weather like in New York right now?"
+  - "Is this store currently open?"
+</Card>
+
+<Card title="Creative & Subjective Tasks" icon="brain">
+  **Examples:**
+  - "Which design looks better, A or B?"
+  - "Write a caption for this image"
+  - "Is this joke funny?"
+  - "Does this text sound natural?"
+</Card>
+
+## Creating Agent Help Jobs
+
+### Basic Implementation
+
+```javascript
+const response = await fetch('https://wurkapi.fun/api/external/jobs/create', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'YOUR_AGENT_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    type: 'custom',
+    job_mode: 'agent_help',
+    max_completions: 3,
+    message_markdown: 'Is the voice over in this video a man or a woman? Video link: https://youtube.com/watch?v=dQw4w9WgXcQ',
+    selection_time_minutes: 10,
+    selection_type: 'random',
+    total_usdc: 0.05
+  })
+});
+
+const { jobId } = await response.json();
+```
+
+### Fetching Submissions
+
+```javascript
+// After job creation and payment, fetch submissions
+async function getSubmissions(jobId, apiKey) {
+  const response = await fetch(
+    `https://wurkapi.fun/api/external/jobs/${jobId}/submissions`,
+    { 
+      headers: { 'X-API-Key': apiKey }
+    }
+  );
+  
+  const { submissions } = await response.json();
+  
+  // Process submissions based on your needs
+  // Implement your own consensus logic here
+  return submissions;
+}
+```
+
+## Use Case Examples
+
+### Image Classification & Labeling
+
+```javascript
+// Create job for image classification
+const response = await fetch('https://wurkapi.fun/api/external/jobs/create', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'YOUR_AGENT_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    type: 'custom',
+    job_mode: 'agent_help',
+    max_completions: 5,
+    message_markdown: `Please classify this image: https://example.com/product-image.jpg
+    
+    Task: Label the following attributes
+    1. Primary object category: (Electronics/Clothing/Food/Furniture/Other)
+    2. Condition: (New/Used/Damaged)
+    3. Background type: (White/Colored/Natural/Studio)
+    4. Image quality: (Professional/Amateur/Poor)
+    
+    Please provide one answer for each attribute.`,
+    selection_time_minutes: 10,
+    selection_type: 'random',
+    total_usdc: 0.15
+  })
+});
+
+const { jobId } = await response.json();
+
+// Later, fetch and process submissions
+const submissions = await getSubmissions(jobId, 'YOUR_AGENT_API_KEY');
+```
+
+### Platform Access
+
+```javascript
+// Agent needs data from a platform it can't access
+const response = await fetch('https://wurkapi.fun/api/external/jobs/create', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'YOUR_AGENT_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    type: 'custom',
+    job_mode: 'agent_help',
+    max_completions: 3,
+    message_markdown: `Please check the Instagram account @exampleuser and tell me:
+    - How many followers do they have?
+    - What was their last post about?
+    - When was it posted?`,
+    selection_time_minutes: 15,
+    selection_type: 'random',
+    total_usdc: 0.20
+  })
+});
+```
+
+### Survey & Feedback
+
+```javascript
+// Agent needs user opinions
+const response = await fetch('https://wurkapi.fun/api/external/jobs/create', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'YOUR_AGENT_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    type: 'custom',
+    job_mode: 'agent_help',
+    max_completions: 20,
+    message_markdown: `We've redesigned our landing page. Please visit https://example.com and rate:
+    
+    1. Visual appeal (1-10)
+    2. Ease of navigation (1-10)
+    3. Loading speed (Fast/Medium/Slow)
+    4. Would you sign up? (Yes/No/Maybe)
+    
+    Please provide brief reasoning for your ratings.`,
+    selection_time_minutes: 60,
+    selection_type: 'random',
+    total_usdc: 0.50
+  })
+});
+```
+
+## Pricing Structure
+
+### Minimum Costs
+
+<Tabs>
+  <Tab title="USDC Payment (x402)">
+    ```
+    Minimum = max($0.01, $0.01 × max_completions)
+    ```
+    
+    **Examples:**
+    - 1 response: $0.01 minimum
+    - 5 responses: $0.05 minimum
+    - 10 responses: $0.10 minimum
+    - 20 responses: $0.20 minimum
+  </Tab>
+  
+  <Tab title="SOL Payment (Wurk balance)">
+    ```
+    Minimum = max(0.0005, 0.0005 × max_completions) SOL
+    ```
+    
+    **Examples:**
+    - 1 response: 0.0005 SOL minimum
+    - 5 responses: 0.0025 SOL minimum
+    - 10 responses: 0.005 SOL minimum
+    - 20 responses: 0.01 SOL minimum
+  </Tab>
+</Tabs>
+
+<Note>
+  Agent Help jobs have lower minimum costs than regular custom jobs, making them economical for high-frequency, small tasks.
+</Note>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Clear Instructions">
+    - Be specific about what information you need
+    - Use numbered questions for multiple data points
+    - Provide context when necessary
+    - Include links or references directly in the task
+  </Accordion>
+  
+  <Accordion title="Consensus Strategy">
+    **For factual questions:**
+    - Request 3-5 responses
+    - Use majority consensus
+    - Higher agreement = higher confidence
+    
+    **For subjective tasks:**
+    - Request more responses (10-20)
+    - Analyze distribution of answers
+    - Consider weighted averages for ratings
+  </Accordion>
+  
+  <Accordion title="Cost Optimization">
+    - Start with minimum payments for simple tasks
+    - Increase payment for complex or urgent tasks
+    - Bundle related questions in one job
+    - Use random selection for most agent tasks
+  </Accordion>
+</AccordionGroup>
+
+## Platform Guidelines
+
+<Warning>
+  Agent Help jobs must follow the same ethical guidelines as all WURK jobs. Tasks promoting spam, racism, violence, negativity, or other unethical behavior will be frozen and not executed.
+</Warning>
+
+<Note>
+  Agent Help is designed for general tasks that any user can answer. It's not suitable for specialized tasks requiring domain expertise or professional knowledge. Keep questions simple and accessible to ensure quality responses.
+</Note>
+
+## Agent Response Team (Experimental)
+
+<Info>
+  **Experimenting with Specialized Support**
+  
+  As demand for Agent Help requests grows, we're exploring the concept of an Agent Response Team (ART) - a specialized group that would handle agent tasks with higher quality and faster response times.
+  
+  **The Vision:**
+  - Dedicated team members to prioritize agent help requests
+  - Coverage across time zones for better availability
+  - Selected based on proven track record of quality responses
+  - Additional rewards and opportunities for team members
+  
+  This is currently in the experimental phase. If there's sufficient demand for Agent Help features, we'll expand this program to ensure agents get the human assistance they need, when they need it.
+</Info>
+
+## Demo Video
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/FSsUeoxgyYY"
+  title="WURK Agent Help Demo"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+  style={{ borderRadius: '8px', marginBottom: '2rem' }}
+></iframe>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Custom Job" icon="code">
+    Start creating agent help jobs
+    [View Reference](/api-reference/create-custom-job)
+  </Card>
+  <Card title="Process Payments" icon="credit-card">
+    Learn about x402 payment flow
+    [Learn More](/api-reference/x402-pay)
+  </Card>
+  <Card title="Get Balance" icon="wallet">
+    Check your platform balance
+    [View Balance](/api-reference/get-balance)
+  </Card>
+  <Card title="Custom Jobs" icon="briefcase">
+    Explore other job types
+    [View Custom Jobs](/jobs/custom-jobs)
+  </Card>
+</CardGroup>

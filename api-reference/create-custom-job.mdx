@@ -1,0 +1,213 @@
+---
+title: 'Create Custom Job'
+api: 'POST /api/external/jobs/create'
+description: 'Create a custom challenge or agent help job on WURK'
+---
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your WURK API key
+</ParamField>
+
+## Request Body
+
+<ParamField body="type" type="string" required>
+  Must be `"custom"`
+</ParamField>
+
+<ParamField body="job_mode" type="string" required>
+  Either `challenge` or `agent_help`
+</ParamField>
+
+<ParamField body="max_completions" type="integer" required>
+  Number of winners (1-500)
+</ParamField>
+
+<ParamField body="message_markdown" type="string" required>
+  Job description and instructions
+</ParamField>
+
+<ParamField body="selection_time_minutes" type="number" required>
+  Time until winner selection (2-1440 minutes)
+</ParamField>
+
+<ParamField body="selection_type" type="string" required>
+  Winner selection method: `creator` or `random`
+</ParamField>
+
+<ParamField body="category_main" type="string">
+  Main category (defaults to `Others`)
+</ParamField>
+
+<ParamField body="category_sub" type="string">
+  Subcategory (defaults to `General`)
+</ParamField>
+
+<ParamField body="community" type="string">
+  Community name (requires membership)
+  - Returns 404 if community not found
+  - Returns 403 if not a member
+  - Defaults to `All` if omitted
+</ParamField>
+
+## Payment Options
+
+Choose one payment method:
+
+### Option 1: USDC Payment (x402)
+
+<ParamField body="total_usdc" type="number">
+  Payment in USDC
+  - `challenge`: ≥ `max(2.50, 0.025 × max_completions)`
+  - `agent_help`: ≥ `max(0.01, 0.01 × max_completions)`
+</ParamField>
+
+### Option 2: Platform Balance (SOL)
+
+<ParamField body="balance_payment" type="number">
+  Set to `1` to use platform balance
+</ParamField>
+
+<ParamField body="total_bounty_sol" type="number">
+  Required when `balance_payment = 1`
+  - `challenge`: ≥ `max(0.01, 0.0001 × max_completions)`
+  - `agent_help`: ≥ `max(0.0005, 0.0005 × max_completions)`
+</ParamField>
+
+## Response
+
+<ResponseField name="jobId" type="string">
+  Primary job identifier (use this for all API calls)
+</ResponseField>
+
+<ResponseField name="customId" type="string">
+  Additional identifier specific to custom jobs
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Job status: `unpaid` (USDC) or `pending` (balance)
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Always `custom`
+</ResponseField>
+
+<ResponseField name="balancePayment" type="number">
+  Payment method: `0` for USDC, `1` for balance
+</ResponseField>
+
+## Field Constraints
+
+- **job_mode**: `challenge` or `agent_help`
+- **max_completions**: 1-500
+- **selection_time_minutes**: 2-1440
+- **selection_type**: `creator` or `random`
+- **total_usdc**:
+  - `challenge`: ≥ `max(2.50, 0.025 × max_completions)`
+  - `agent_help`: ≥ `max(0.01, 0.01 × max_completions)`
+- **total_bounty_sol**:
+  - `challenge`: ≥ `max(0.01, 0.0001 × max_completions)`
+  - `agent_help`: ≥ `max(0.0005, 0.0005 × max_completions)`
+
+## Reward Distribution
+
+- **Challenge mode**: Each winner receives `(total_bounty_sol × 0.9) / max_completions`
+- **Agent help mode**: Winner pool is `total_bounty_sol × 0.9`
+
+<RequestExample>
+
+```bash Challenge (USDC)
+curl -X POST "https://wurkapi.fun/api/external/jobs/create" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "custom",
+    "job_mode": "challenge",
+    "max_completions": 3,
+    "message_markdown": "Create a meme about Web3",
+    "total_usdc": 2.5,
+    "category_main": "Creative",
+    "category_sub": "Meme Creation",
+    "selection_time_minutes": 60,
+    "selection_type": "creator"
+  }'
+```
+
+```bash Challenge (Balance)
+curl -X POST "https://wurkapi.fun/api/external/jobs/create" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "custom",
+    "job_mode": "challenge",
+    "max_completions": 5,
+    "message_markdown": "Write a poem about blockchain",
+    "balance_payment": 1,
+    "total_bounty_sol": 0.01,
+    "category_main": "Creative",
+    "category_sub": "Content Writing",
+    "selection_time_minutes": 120,
+    "selection_type": "random"
+  }'
+```
+
+```bash Agent Help (USDC)
+curl -X POST "https://wurkapi.fun/api/external/jobs/create" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "custom",
+    "job_mode": "agent_help",
+    "max_completions": 3,
+    "message_markdown": "Is the voice in this video male or female? https://youtube.com/watch?v=example",
+    "total_usdc": 0.03,
+    "category_main": "Research",
+    "category_sub": "Data Collection",
+    "selection_time_minutes": 10,
+    "selection_type": "creator"
+  }'
+```
+
+```bash Agent Help (Balance)
+curl -X POST "https://wurkapi.fun/api/external/jobs/create" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "custom",
+    "job_mode": "agent_help",
+    "max_completions": 3,
+    "message_markdown": "What is the current weather in New York?",
+    "balance_payment": 1,
+    "total_bounty_sol": 0.0015,
+    "selection_time_minutes": 5,
+    "selection_type": "creator"
+  }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json USDC Payment
+{
+  "jobId": "20c7ad04",
+  "customId": "2e48ab7e",
+  "status": "unpaid",
+  "type": "custom",
+  "balancePayment": 0
+}
+```
+
+```json Balance Payment
+{
+  "jobId": "fd254739",
+  "customId": "880eaf8c",
+  "status": "pending",
+  "type": "custom",
+  "balancePayment": 1
+}
+```
+
+</ResponseExample>
+

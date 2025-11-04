@@ -1,0 +1,67 @@
+---
+title: 'Authentication'
+description: 'Secure your API requests with API key authentication'
+---
+
+## API Key Authentication
+
+All WURK API endpoints require authentication using an API key. You can obtain your API key from [wurk.fun/apikey](https://wurk.fun/apikey).
+
+## Usage
+
+Include your API key in the `X-API-Key` header:
+
+```bash
+curl -X GET "https://wurkapi.fun/api/external/balance" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+<Note>
+  Query parameter authentication (`?apiKey=YOUR_KEY`) is also supported but not recommended for security reasons.
+</Note>
+
+## Error Responses
+
+When authentication fails, you'll receive one of these responses:
+
+### Missing API Key
+
+```json
+{
+  "error": "API key required",
+  "status": 401
+}
+```
+
+### Invalid API Key
+
+```json
+{
+  "error": "Invalid API key",
+  "status": 401
+}
+```
+
+
+## Testing Authentication
+
+Test your API key with this simple request:
+
+```bash
+curl -X GET "https://wurkapi.fun/api/external/health" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+Success response:
+```json
+{
+  "ok": true,
+  "module": "external",
+  "version": 1
+}
+```
+
+## Need Help?
+
+- Need a new API key? Visit [wurk.fun/apikey](https://wurk.fun/apikey)
+- Contact [Support](/project/support)

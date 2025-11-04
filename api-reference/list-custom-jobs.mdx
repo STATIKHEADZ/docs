@@ -1,0 +1,103 @@
+---
+title: 'Get Your Open Custom Jobs'
+api: 'GET /api/external/jobs/open/custom'
+description: 'Retrieve all your open custom jobs'
+---
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your WURK API key
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+## Response
+
+<ResponseField name="page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="pageSize" type="integer">
+  Number of items per page (25)
+</ResponseField>
+
+<ResponseField name="jobs" type="array">
+  Array of open custom jobs with the following fields:
+  - `short_id`: Job ID (use this for API calls)
+  - `custom_id`: Additional identifier for custom jobs
+  - `job_mode`: Mode (`challenge` or `agent_help`)
+  - `message_markdown`: Job description
+  - `max_completions`: Number of winners
+  - `selection_type`: Selection method (`creator` or `random`)
+  - `selection_time_minutes`: Time until selection
+  - `category_main`: Main category
+  - `category_sub`: Subcategory
+  - `status`: Payment status
+  - `created_at`: Creation timestamp
+  - `work_status`: Job status (`open`, `closed`)
+</ResponseField>
+
+## Rate Limit
+
+10 requests per minute (shared with social jobs endpoint)
+
+<RequestExample>
+
+```bash
+curl -X GET "https://wurkapi.fun/api/external/jobs/open/custom?page=1" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json
+{
+  "page": 1,
+  "totalPages": 1,
+  "pageSize": 25,
+  "jobs": [
+    {
+      "short_id": "fd254739",
+      "custom_id": "880eaf8c",
+      "job_mode": "challenge",
+      "message_markdown": "Create a meme about Web3",
+      "max_completions": 5,
+      "selection_time_minutes": 60,
+      "selection_type": "creator",
+      "category_main": "Creative",
+      "category_sub": "Meme Creation",
+      "status": "paid",
+      "created_at": "2025-11-04 10:30:00.123456",
+      "work_status": "open"
+    },
+    {
+      "short_id": "ab123456",
+      "custom_id": "def78910",
+      "job_mode": "agent_help",
+      "message_markdown": "What is the weather in Tokyo right now?",
+      "max_completions": 3,
+      "selection_time_minutes": 10,
+      "selection_type": "creator",
+      "category_main": "Research",
+      "category_sub": "Data Collection",
+      "status": "paid",
+      "created_at": "2025-11-04 11:15:00.789012",
+      "work_status": "open"
+    }
+  ]
+}
+```
+
+</ResponseExample>
