@@ -42,10 +42,8 @@ description: 'Prefetch payment requirements for x402 USDC payments'
   Array of payment requirement objects with fields:
   - `scheme`: Payment scheme (`"exact"`)
   - `network`: Blockchain network (`"solana"`)
-  - `maxAmountRequired`: Amount in smallest unit (e.g., `"2500000"` for 2.5 USDC)
+  - `maxAmountRequired`: Amount in smallest unit (e.g., `"4000000"` for 4 USDC)
   - `resource`: The payment endpoint URL
-  - `description`: Optional description
-  - `mimeType`: Optional MIME type
   - `payTo`: Recipient wallet address
   - `asset`: Token mint address (USDC: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`)
   - `maxTimeoutSeconds`: Payment timeout (typically 60)
@@ -71,8 +69,8 @@ curl -X GET "https://wurkapi.fun/api/x402/jobs/89e57c15/accepts" \
     {
       "scheme": "exact",
       "network": "solana",
-      "maxAmountRequired": "2500000",
-      "resource": "https://wurkapi.fun/api/x402/jobs/61038823/pay",
+      "maxAmountRequired": "4000000",
+      "resource": "https://wurkapi.fun/api/x402/jobs/89e57c15/pay",
       "description": "",
       "mimeType": "",
       "payTo": "SAT8g2xU7AFy7eUmNJ9SNrM6yYo7LDCi13GXJ8Ez9kC",
