@@ -39,11 +39,17 @@ description: 'Prefetch payment requirements for x402 USDC payments'
 </ResponseField>
 
 <ResponseField name="accepts" type="array">
-  Array of payment requirements including:
-  - Payment amount
-  - Recipient address
-  - Token information
-  - Network details
+  Array of payment requirement objects with fields:
+  - `scheme`: Payment scheme (`"exact"`)
+  - `network`: Blockchain network (`"solana"`)
+  - `maxAmountRequired`: Amount in smallest unit (e.g., `"2500000"` for 2.5 USDC)
+  - `resource`: The payment endpoint URL
+  - `description`: Optional description
+  - `mimeType`: Optional MIME type
+  - `payTo`: Recipient wallet address
+  - `asset`: Token mint address (USDC: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`)
+  - `maxTimeoutSeconds`: Payment timeout (typically 60)
+  - `extra`: Additional data including `feePayer` address
 </ResponseField>
 
 <RequestExample>
@@ -63,11 +69,18 @@ curl -X GET "https://wurkapi.fun/api/x402/jobs/89e57c15/accepts" \
   "x402Version": 1,
   "accepts": [
     {
-      "type": "spl-token",
+      "scheme": "exact",
       "network": "solana",
-      "amount": "5000000",
-      "token": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      "recipient": "8xHdJebEQkjZvB2BPVKzQwNTnrDu4Zny4gKVJdXXXXXX"
+      "maxAmountRequired": "2500000",
+      "resource": "https://wurkapi.fun/api/x402/jobs/61038823/pay",
+      "description": "",
+      "mimeType": "",
+      "payTo": "SAT8g2xU7AFy7eUmNJ9SNrM6yYo7LDCi13GXJ8Ez9kC",
+      "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "maxTimeoutSeconds": 60,
+      "extra": {
+        "feePayer": "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"
+      }
     }
   ]
 }
