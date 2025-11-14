@@ -1,15 +1,18 @@
 ---
 title: 'Payment Methods'
-description: 'Choose between x402 USDC payments or platform balance'
+description: 'Choose between x402 USDC payments on multiple chains or platform balance'
 ---
 
 ## Overview
 
-WURK offers two payment methods for job creation, each with unique advantages:
+WURK offers multiple payment methods for job creation, each with unique advantages:
 
-<CardGroup cols={2}>
-  <Card title="x402 USDC Payments" icon="coins">
+<CardGroup cols={3}>
+  <Card title="x402 USDC (Solana)" icon="coins">
     Direct on-chain payments using Solana USDC with the x402 protocol
+  </Card>
+  <Card title="x402 USDC (Base)" icon="coins">
+    Direct on-chain payments using Base USDC with the x402 protocol
   </Card>
   <Card title="Platform Balance" icon="wallet">
     Pre-funded SOL balance for job activation
@@ -18,12 +21,31 @@ WURK offers two payment methods for job creation, each with unique advantages:
 
 ## x402 USDC Payments
 
-The x402 protocol enables HTTP-based cryptocurrency payments. When you create a job with USDC payment:
+The x402 protocol enables HTTP-based cryptocurrency payments on multiple blockchain networks. When you create a job with USDC payment:
 
 1. Job is created with status `"unpaid"`
 2. You receive payment requirements
-3. You send USDC payment via x402
+3. You send USDC payment via x402 (on either Solana or Base)
 4. Job activates upon confirmation
+
+### Supported Networks
+
+<Tabs>
+  <Tab title="Solana">
+    - **Network**: Solana Mainnet
+    - **USDC Contract**: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
+    - **Endpoint Path**: `/api/x402/jobs/{jobId}/pay`
+    - **Payment Method**: SPL Token Transfer
+  </Tab>
+  
+  <Tab title="Base">
+    - **Network**: Base Mainnet
+    - **Chain ID**: 8453
+    - **USDC Contract**: `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913`
+    - **Endpoint Path**: `/api/x402/base/jobs/{jobId}/pay`
+    - **Payment Method**: EIP-3009 Authorization
+  </Tab>
+</Tabs>
 
 ### How x402 Works
 
@@ -41,11 +63,18 @@ The x402 protocol enables HTTP-based cryptocurrency payments. When you create a 
   
   <Step title="Get Payment Requirements">
     Request returns 402 status with payment details:
+    
+    **Solana:**
     ```bash
     GET /api/x402/jobs/{jobId}/pay
     ```
     
-    Response:
+    **Base:**
+    ```bash
+    GET /api/x402/base/jobs/{jobId}/pay
+    ```
+    
+    Example Solana Response:
     ```json
     {
       "x402Version": 1,
@@ -55,13 +84,37 @@ The x402 protocol enables HTTP-based cryptocurrency payments. When you create a 
           "network": "solana",
           "maxAmountRequired": "2500000",
           "resource": "https://wurkapi.fun/api/x402/jobs/61038823/pay",
-          "description": "",
-          "mimeType": "",
           "payTo": "SAT8g2xU7AFy7eUmNJ9SNrM6yYo7LDCi13GXJ8Ez9kC",
           "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
           "maxTimeoutSeconds": 60,
           "extra": {
             "feePayer": "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"
+          }
+        }
+      ]
+    }
+    ```
+    
+    Example Base Response:
+    ```json
+    {
+      "x402Version": 1,
+      "accepts": [
+        {
+          "scheme": "exact",
+          "network": "base",
+          "maxAmountRequired": "2500000",
+          "resource": "https://wurkapi.fun/api/x402/base/jobs/61038823/pay",
+          "payTo": "0xF00DAF15713e82fBb7bDC4b818444D93D655DE96",
+          "asset": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "maxTimeoutSeconds": 60,
+          "extra": {
+            "chainId": 8453,
+            "decimals": 6,
+            "eip712": {
+              "name": "USD Coin",
+              "version": "2"
+            }
           }
         }
       ]
@@ -78,8 +131,16 @@ The x402 protocol enables HTTP-based cryptocurrency payments. When you create a 
   
   <Step title="Confirm Payment">
     Send request with X-PAYMENT header:
+    
+    **Solana:**
     ```bash
     GET /api/x402/jobs/{jobId}/pay
+    Headers: X-PAYMENT: {payment_proof}
+    ```
+    
+    **Base:**
+    ```bash
+    GET /api/x402/base/jobs/{jobId}/pay
     Headers: X-PAYMENT: {payment_proof}
     ```
     
@@ -134,20 +195,33 @@ The x402 protocol enables HTTP-based cryptocurrency payments. When you create a 
 </Tabs>
 
 <Note>
-  USDC payments are automatically converted to SOL within the WURK platform. This ensures seamless reward distribution, as all wurker payouts are processed in SOL.
-</Note>
-
-<Note>
-  Since Wurk distributes all rewards in SOL, all payments in USDC will be automatically swapped to SOL. This also means that if there is a problem with a job and a refund is necessary, it will be made in the SOL value at the job creation time.
+  **USDC to SOL Conversion**
+  
+  All USDC payments are automatically converted to SOL upon receipt. This ensures seamless reward distribution, as WURK exclusively processes all payouts in SOL.
+  
+  **Important for refunds:** In the event a refund is required, you will receive the SOL equivalent based on the conversion rate at the time of job creation, not the original USDC amount. Market fluctuations may affect the value you receive back.
 </Note>
 
 ## Platform Balance (SOL)
 
-Platform balance allows you to deposit SOL once and create multiple jobs without individual transactions.
+Platform balance allows you to deposit funds once and create multiple jobs without individual transactions.
+
+### How to Deposit Funds
+
+To add funds to your platform balance:
+
+1. Visit [wurk.fun](https://wurk.fun) and log in
+2. Go to your profile page
+3. Click on the deposit option
+4. Choose your preferred payment method:
+   - **Direct crypto deposits**: SOL or USDC on Solana, Ethereum, or Base
+   - **Fiat payments**: Via MoonPay integration
+
+All deposits are automatically converted to SOL for use as platform balance.
 
 ### How Balance Payments Work
 
-1. Deposit SOL to your Wurk account balance
+1. Ensure sufficient balance in your account
 2. Set `balance_payment: 1` and specify `total_bounty_sol`
 3. Job activates instantly with status `"pending"`
 4. Balance is deducted immediately
@@ -236,7 +310,7 @@ Platform balance allows you to deposit SOL once and create multiple jobs without
 
 ## Next Steps
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card
     title="Create Social Job"
     icon="hashtag"
@@ -252,11 +326,18 @@ Platform balance allows you to deposit SOL once and create multiple jobs without
     Create a custom challenge job
   </Card>
   <Card
-    title="Process Payment"
+    title="Process Payment (SOL)"
     icon="credit-card"
-    href="/api-reference/x402-pay"
+    href="/api-reference/x402-pay-sol"
   >
-    Process x402 USDC payments
+    Process x402 USDC payments on Solana
+  </Card>
+  <Card
+    title="Process Payment (BASE)"
+    icon="credit-card"
+    href="/api-reference/x402-pay-base"
+  >
+    Process x402 USDC payments on Base
   </Card>
   <Card
     title="Check Balance"

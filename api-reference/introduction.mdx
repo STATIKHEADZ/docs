@@ -11,33 +11,75 @@ All API requests should be made to:
 https://wurkapi.fun
 ```
 
-## Authentication
+## Two Ways to Use WURK API
 
-All endpoints require authentication using your API key in the `X-API-Key` header:
+<CardGroup cols={2}>
+  <Card title="Quick Endpoints" icon="bolt">
+    **No API key needed!** Create preconfigured jobs with just 2 HTTP requests and x402 payment.
+  </Card>
+  <Card title="Full API" icon="key">
+    Complete control with API key authentication. Customize every aspect of your jobs.
+  </Card>
+</CardGroup>
+
+## Quick Endpoints (No API Key)
+
+Quick Endpoints allow instant job creation without registration:
+
+- **No API key required** - Just make HTTP requests
+- **Fixed pricing** - $2.50 USDC per job
+- **100 completions** - Preconfigured for optimal results
+- **Two-step flow** - Discovery request, then payment
+
+### Quick Endpoint Format
+```
+https://wurkapi.fun/api/x402/quick/{network}/{job-type}?url={target}
+```
+
+Available on both Solana and Base networks. See [Quick Endpoints](/api-reference/quick-endpoints-overview) for details.
+
+## Full API (With API Key)
+
+For complete control, use authenticated endpoints:
+
+### Authentication
+
+All authenticated endpoints require your API key in the `X-API-Key` header:
 
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" https://wurkapi.fun/api/external/...
 ```
 
+Get your API key at [wurk.fun/apikey](https://wurk.fun/apikey).
+
 ## Available Endpoints
 
-### Create Jobs
+### Quick Endpoints (No API Key)
+- **GET** `/api/x402/quick/solana/{job-type}` - Quick jobs on Solana
+- **GET** `/api/x402/quick/base/{job-type}` - Quick jobs on Base
+  - Job types: `reposts-100`, `xlikes-100`, `insta-likes-100`, `dex-rocket-100`
+
+### Create Jobs (API Key Required)
 - **POST** `/api/external/jobs/create` - Create a social job (see [Social Jobs](/api-reference/create-social-job))
 - **POST** `/api/external/jobs/create` - Create a custom job (see [Custom Jobs](/api-reference/create-custom-job))
 
-### List Jobs
+### List Jobs (API Key Required)
 - **GET** `/api/external/jobs/open/custom` - List your open custom jobs
 - **GET** `/api/external/jobs/open/social` - List your open social jobs
 
-### Payments (x402)
+### Payments - Solana (x402)
 - **GET** `/api/x402/jobs/:jobId/accepts` - Get payment requirements
 - **GET** `/api/x402/jobs/:jobId/pay` - Process USDC payment
 
-### Submissions
+### Payments - Base (x402)
+- **GET** `/api/x402/base/jobs/:jobId/accepts` - Get payment requirements
+- **GET** `/api/x402/base/jobs/:jobId/pay` - Process USDC payment
+
+### Submissions (API Key Required)
 - **GET** `/api/external/jobs/:jobId/submissions` - Get job submissions
 - **POST** `/api/external/jobs/:jobId/choose-winners` - Select winners
 
-### Utilities
+### Utilities (API Key Required)
 - **GET** `/api/external/categories` - List categories
 - **GET** `/api/external/balance` - Check platform balance
 - **GET** `/api/external/change-log` - View platform updates

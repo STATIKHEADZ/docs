@@ -5,7 +5,7 @@ description: 'Understand and work with API rate limits'
 
 ## Overview
 
-WURK API implements rate limiting to ensure fair usage and maintain service quality for all users. Each API key has specific limits per endpoint.
+WURK API implements rate limiting to ensure fair usage and maintain service quality for all users. Each API key has specific limits per endpoint for authenticated requests. Quick Endpoints (`/api/x402/quick/*`) do not require API keys and have their own rate limiting based on IP address.
 
 ## Rate Limits by Endpoint
 
@@ -19,14 +19,15 @@ WURK API implements rate limiting to ensure fair usage and maintain service qual
 
 | Endpoint | Rate Limit | Description |
 |----------|------------|-------------|
-| **Create Job** | 3/min | Create social or custom jobs |
-| **Open Jobs** | 10/min | List open jobs (shared for custom + social) |
-| **Submissions** | 6/min | View job submissions |
-| **Choose Winners** | 50/min | Select winners for custom jobs |
-| **Categories** | 10/min | List available categories |
-| **Balance** | 3/min | Check platform balance |
-| **Change Log** | 5/min | View platform updates |
-| **x402 Endpoints** | No limit | Payment-related endpoints |
+| **Create Job** | 3/min | Create social or custom jobs (API key required) |
+| **Open Jobs** | 10/min | List open jobs (API key required) |
+| **Submissions** | 6/min | View job submissions (API key required) |
+| **Choose Winners** | 50/min | Select winners for custom jobs (API key required) |
+| **Categories** | 10/min | List available categories (API key required) |
+| **Balance** | 3/min | Check platform balance (API key required) |
+| **Change Log** | 5/min | View platform updates (API key required) |
+| **Quick Endpoints** | 10/min per IP | Quick job creation (NO API key needed) |
+| **x402 Payment** | No limit | Payment processing endpoints |
 
 ## Rate Limit Response
 

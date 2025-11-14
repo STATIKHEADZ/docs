@@ -3,20 +3,137 @@ title: 'Quickstart'
 description: 'Create your first WURK job in under 5 minutes'
 ---
 
-## Prerequisites
+## Choose Your Method
 
-Before you begin, you'll need:
+WURK offers two ways to create jobs:
+
+<CardGroup cols={2}>
+  <Card title="Quick Endpoints (Recommended)" icon="bolt">
+    **No API key required!** Create preconfigured jobs with just 2 HTTP requests.
+    Perfect for getting started immediately.
+  </Card>
+  <Card title="Full API" icon="code">
+    Complete control with API key. Customize every aspect of your jobs.
+  </Card>
+</CardGroup>
+
+## Method 1: Quick Endpoints (No API Key)
+
+The fastest way to get started - no registration required!
+
+### Example: Create 100 X/Twitter Likes
+
+<Steps>
+  <Step title="Make Discovery Request">
+    ```bash
+    curl -i \
+      "https://wurkapi.fun/api/x402/quick/base/xlikes-100?url=https%3A%2F%2Fx.com%2Fyourpost%2Fstatus%2F123" \
+      -H "Accept: application/json"
+    ```
+    This returns a 402 status with payment requirements ($2.50 USDC).
+  </Step>
+  
+  <Step title="Send Payment">
+    Use the x402 library to create and send payment:
+    
+    **For Base (EVM):**
+    ```javascript
+    import { withPaymentInterceptor } from 'x402-axios';
+    import { privateKeyToAccount } from 'viem/accounts';
+    
+    const account = privateKeyToAccount(YOUR_PRIVATE_KEY);
+    const api = withPaymentInterceptor(axios.create(), account);
+    
+    const result = await api.get(
+      'https://wurkapi.fun/api/x402/quick/base/xlikes-100?url=...',
+      { headers: { 'Accept': 'application/json' }}
+    );
+    ```
+    
+    **For Solana:**
+    ```javascript
+    import { createSigner } from 'x402/types';
+    
+    const signer = await createSigner('solana', YOUR_PRIVATE_KEY);
+    // ... handle x402 flow
+    ```
+  </Step>
+  
+  <Step title="Job Created!">
+    ```json
+    {
+      "ok": true,
+      "paid": true,
+      "jobId": "abc123de"
+    }
+    ```
+    Your job is now active with 100 completions configured!
+  </Step>
+</Steps>
+
+### Available Quick Jobs
+
+<CardGroup cols={2}>
+  <Card title="X/Twitter Reposts" icon="retweet">
+    `reposts-100` - 100 reposts for $2.50
+  </Card>
+  <Card title="X/Twitter Likes" icon="heart">
+    `xlikes-100` - 100 likes for $2.50
+  </Card>
+  <Card title="Instagram Likes" icon="instagram">
+    `insta-likes-100` - 100 likes for $2.50
+  </Card>
+  <Card title="DexScreener Rockets" icon="rocket">
+    `dex-rocket-100` - 100 rockets for $2.50
+  </Card>
+</CardGroup>
+
+<Info>
+  Quick Endpoints are perfect for common use cases. For full customization, use Method 2 below.
+</Info>
+
+### Learn More
+
+<CardGroup cols={3}>
+  <Card
+    title="Overview"
+    icon="book"
+    href="/api-reference/quick-endpoints-overview"
+  >
+    Complete Quick Endpoints documentation
+  </Card>
+  <Card
+    title="Solana Endpoints"
+    icon="coins"
+    href="/api-reference/quick-endpoints-solana"
+  >
+    Quick Endpoints on Solana
+  </Card>
+  <Card
+    title="Base Endpoints"
+    icon="ethereum"
+    href="/api-reference/quick-endpoints-base"
+  >
+    Quick Endpoints on Base
+  </Card>
+</CardGroup>
+
+## Method 2: Full API (With API Key)
+
+For complete control over job parameters.
+
+### Prerequisites
 
 <CardGroup cols={2}>
   <Card title="API Key" icon="key">
     Get your API key from [wurk.fun/apikey](https://wurk.fun/apikey)
   </Card>
   <Card title="Payment Method" icon="wallet">
-    Either USDC on Solana or platform balance (SOL)
+    Either USDC (on Solana or Base) or platform balance (SOL)
   </Card>
 </CardGroup>
 
-## Create Your First Job
+### Create Your First Job
 
 Let's create a simple social media repost job:
 
@@ -104,8 +221,15 @@ Since we used USDC payment, we need to complete the x402 payment:
   <Step title="Get Payment Requirements">
     Request the payment details for your job:
     
+    **For Solana:**
     ```bash
     curl -X GET "https://wurkapi.fun/api/x402/jobs/abc123def/pay" \
+      -H "Accept: application/json"
+    ```
+    
+    **For Base:**
+    ```bash
+    curl -X GET "https://wurkapi.fun/api/x402/base/jobs/abc123def/pay" \
       -H "Accept: application/json"
     ```
     
@@ -115,6 +239,7 @@ Since we used USDC payment, we need to complete the x402 payment:
   <Step title="Send Payment">
     Use the x402 library to create and send the payment header:
     
+    **For Solana:**
     ```javascript
     import { createSigner } from 'x402/types';
     import { selectPaymentRequirements, createPaymentHeader } from 'x402/client';
@@ -134,6 +259,27 @@ Since we used USDC payment, we need to complete the x402 payment:
         'Accept': 'application/json',
         'X-PAYMENT': xPayment
       }
+    });
+    ```
+    
+    **For Base:**
+    ```javascript
+    import { privateKeyToAccount } from 'viem/accounts';
+    import { withPaymentInterceptor } from 'x402-axios';
+    import axios from 'axios';
+    
+    // Create account with your EVM private key
+    const account = privateKeyToAccount(YOUR_PRIVATE_KEY);
+    
+    // Create axios instance with payment interceptor
+    const api = withPaymentInterceptor(
+      axios.create({ baseURL: 'https://wurkapi.fun' }),
+      account
+    );
+    
+    // The interceptor handles the 402 flow automatically
+    const payResponse = await api.get(`/api/x402/base/jobs/abc123def/pay`, {
+      headers: { 'Accept': 'application/json' }
     });
     ```
   </Step>

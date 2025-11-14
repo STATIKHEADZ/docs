@@ -1,0 +1,107 @@
+---
+title: 'Get Payment Requirements (BASE)'
+api: 'GET /api/x402/base/jobs/{jobId}/accepts'
+description: 'Prefetch payment requirements for x402 USDC payments on Base chain'
+---
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your WURK API key
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="jobId" type="string" required>
+  The job ID (8 character identifier returned from job creation)
+</ParamField>
+
+## Response
+
+### Already Paid
+
+<ResponseField name="ok" type="boolean">
+  Always `true` when successful
+</ResponseField>
+
+<ResponseField name="alreadyConfirmed" type="boolean">
+  `true` if the job is already paid
+</ResponseField>
+
+<ResponseField name="jobId" type="string">
+  The job ID
+</ResponseField>
+
+### Payment Required
+
+<ResponseField name="x402Version" type="number">
+  x402 protocol version (currently 1)
+</ResponseField>
+
+<ResponseField name="accepts" type="array">
+  Array of payment requirement objects with fields:
+  - `scheme`: Payment scheme (`"exact"`)
+  - `network`: Blockchain network (`"base"`)
+  - `maxAmountRequired`: Amount in smallest unit (e.g., `"2500000"` for 2.5 USDC)
+  - `resource`: The payment endpoint URL
+  - `payTo`: Recipient wallet address
+  - `asset`: USDC contract address on Base (`0x833589fcd6edb6e08f4c7c32d4f71b54bda02913`)
+  - `maxTimeoutSeconds`: Payment timeout (typically 60)
+  - `extra`: Additional data including:
+    - `chainId`: Base mainnet chain ID (8453)
+    - `decimals`: USDC decimals (6)
+    - `eip712`: EIP-712 domain parameters
+    - `name`: Token name (`"USD Coin"`)
+    - `version`: EIP-712 version (`"2"`)
+</ResponseField>
+
+<RequestExample>
+
+```bash
+curl -X GET "https://wurkapi.fun/api/x402/base/jobs/89e57c15/accepts" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Payment Required
+{
+  "x402Version": 1,
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "base",
+      "maxAmountRequired": "2500000",
+      "resource": "https://wurkapi.fun/api/x402/base/jobs/89e57c15/pay",
+      "description": "",
+      "mimeType": "",
+      "payTo": "0xF00DAF15713e82fBb7bDC4b818444D93D655DE96",
+      "asset": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "maxTimeoutSeconds": 60,
+      "extra": {
+        "chainId": 8453,
+        "decimals": 6,
+        "eip712": {
+          "name": "USD Coin",
+          "version": "2"
+        },
+        "name": "USD Coin",
+        "version": "2"
+      }
+    }
+  ]
+}
+```
+
+```json Already Paid
+{
+  "ok": true,
+  "alreadyConfirmed": true,
+  "jobId": "89e57c15"
+}
+```
+
+</ResponseExample>

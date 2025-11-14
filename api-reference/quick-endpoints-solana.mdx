@@ -1,0 +1,245 @@
+---
+title: 'Quick Endpoints (Solana)'
+api: 'GET /api/x402/quick/solana/{job-type}'
+description: 'Create preconfigured jobs with Solana USDC - No API key required'
+---
+
+## Overview
+
+Quick Endpoints on Solana allow you to create and pay for common jobs without an API key. Each job costs **$2.50 USDC** and is configured for **100 completions**.
+
+<Note>
+  **No API Key Required!** Just make two HTTP requests - one for discovery, one with payment.
+</Note>
+
+## Available Endpoints
+
+### X/Twitter Reposts
+```
+GET https://wurkapi.fun/api/x402/quick/solana/reposts-100?url={encoded_x_url}
+```
+
+### X/Twitter Likes
+```
+GET https://wurkapi.fun/api/x402/quick/solana/xlikes-100?url={encoded_x_url}
+```
+
+### Instagram Likes
+```
+GET https://wurkapi.fun/api/x402/quick/solana/insta-likes-100?url={encoded_instagram_url}
+```
+
+### DexScreener Rockets
+```
+GET https://wurkapi.fun/api/x402/quick/solana/dex-rocket-100?url={encoded_dexscreener_url}
+```
+
+## Parameters
+
+<ParamField query="url" type="string" required>
+  The target URL (must be URL-encoded):
+  - **For X/Twitter**: Link to the post (e.g., `https://x.com/user/status/123`)
+  - **For Instagram**: Link to the post
+  - **For DexScreener**: Link to the token page
+</ParamField>
+
+<ParamField header="X-URL" type="string">
+  Alternative to the `url` query parameter. You can pass the target URL as a header instead.
+</ParamField>
+
+<ParamField header="X-PAYMENT" type="string" required>
+  The x402 payment header (required for the second request only)
+</ParamField>
+
+## Two-Step Flow
+
+### Step 1: Discovery Request (402)
+
+Make a request without payment to get the payment requirements:
+
+<RequestExample>
+
+```bash
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/solana/xlikes-100?url=https%3A%2F%2Fx.com%2Fexample%2Fstatus%2F123" \
+  -H "Accept: application/json"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 402 Response
+{
+  "x402Version": 1,
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "solana",
+      "maxAmountRequired": "2500000",
+      "resource": "https://wurkapi.fun/api/x402/jobs/7de467d2/pay",
+      "description": "",
+      "mimeType": "",
+      "payTo": "SAT8g2xU7AFy7eUmNJ9SNrM6yYo7LDCi13GXJ8Ez9kC",
+      "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "maxTimeoutSeconds": 60,
+      "extra": {
+        "feePayer": "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"
+      }
+    }
+  ]
+}
+```
+
+</ResponseExample>
+
+### Step 2: Payment Request (200)
+
+Retry the same URL with the X-PAYMENT header:
+
+<RequestExample>
+
+```bash
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/solana/xlikes-100?url=https%3A%2F%2Fx.com%2Fexample%2Fstatus%2F123" \
+  -H "Accept: application/json" \
+  -H "X-PAYMENT: <x402_payment_header>"
+```
+
+```javascript TypeScript Example
+import { createSigner } from 'x402/types';
+import { selectPaymentRequirements, createPaymentHeader } from 'x402/client';
+
+async function createQuickJob(jobType: string, targetUrl: string) {
+  const endpoint = `https://wurkapi.fun/api/x402/quick/solana/${jobType}`;
+  const params = new URLSearchParams({ url: targetUrl });
+  
+  // Step 1: Discovery
+  const discoveryRes = await fetch(`${endpoint}?${params}`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  
+  if (discoveryRes.status !== 402) {
+    throw new Error(`Expected 402, got ${discoveryRes.status}`);
+  }
+  
+  const { x402Version, accepts } = await discoveryRes.json();
+  
+  // Create payment
+  const signer = await createSigner('solana', process.env.SOLANA_PRIVATE_KEY);
+  const selected = selectPaymentRequirements(accepts, ['solana'], 'exact');
+  const xPayment = await createPaymentHeader(signer, x402Version, selected);
+  
+  // Step 2: Payment
+  const paymentRes = await fetch(`${endpoint}?${params}`, {
+    headers: {
+      'Accept': 'application/json',
+      'X-PAYMENT': xPayment
+    }
+  });
+  
+  return await paymentRes.json();
+}
+
+// Usage
+const result = await createQuickJob(
+  'xlikes-100', 
+  'https://x.com/example/status/123'
+);
+console.log('Job created:', result.jobId);
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 Success
+{
+  "ok": true,
+  "paid": true,
+  "jobId": "7de467d2"
+}
+```
+
+```json 409 Duplicate
+{
+  "message": "there is already a similar job running job id: 7de467d2"
+}
+```
+
+</ResponseExample>
+
+## Job Details
+
+Each quick job is automatically configured with:
+
+<ParamField body="Price" type="string">
+  Fixed at **$2.50 USDC**
+</ParamField>
+
+<ParamField body="Completions" type="number">
+  Always **100 completions**
+</ParamField>
+
+<ParamField body="Worker Rank" type="number">
+  Minimum rank **1** (all workers eligible)
+</ParamField>
+
+<ParamField body="Cooldown" type="number">
+  **15 minutes** between completions
+</ParamField>
+
+## Error Handling
+
+### Common Responses
+
+- **402**: Payment required (normal first response)
+- **200**: Success (job created and paid)
+- **409**: Duplicate job exists (returns existing job ID)
+- **400**: Invalid URL or parameters
+- **500**: Server error (retry with same X-PAYMENT if during payment)
+
+### Retry Logic
+
+If you receive a temporary error during payment (Step 2), you can safely retry with the same X-PAYMENT header.
+
+## Examples by Job Type
+
+<CodeGroup>
+
+```bash X/Twitter Reposts
+# 100 reposts for a tweet
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/solana/reposts-100?url=https%3A%2F%2Fx.com%2Felonmusk%2Fstatus%2F1234567890" \
+  -H "Accept: application/json"
+```
+
+```bash X/Twitter Likes
+# 100 likes for a tweet
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/solana/xlikes-100?url=https%3A%2F%2Fx.com%2Fcoinbase%2Fstatus%2F9876543210" \
+  -H "Accept: application/json"
+```
+
+```bash Instagram Likes
+# 100 likes for an Instagram post
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/solana/insta-likes-100?url=https%3A%2F%2Fwww.instagram.com%2Fp%2FABC123XYZ" \
+  -H "Accept: application/json"
+```
+
+```bash DexScreener Rockets
+# 100 rockets for a token page
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/solana/dex-rocket-100?url=https%3A%2F%2Fdexscreener.com%2Fsolana%2Ftoken123" \
+  -H "Accept: application/json"
+```
+
+</CodeGroup>
+
+## Network Details
+
+- **Network**: Solana Mainnet
+- **USDC Contract**: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
+- **Payment Method**: SPL Token Transfer
+- **Amount**: 2,500,000 (2.5 USDC with 6 decimals)

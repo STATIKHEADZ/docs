@@ -60,20 +60,10 @@ flowchart TD
 
 <CardGroup cols={2}>
   <Card title="x402 USDC Payment" icon="credit-card">
-    **Steps:**
-    1. Request payment details (402 response)
-    2. Process payment with X-PAYMENT header
-    3. Job automatically lists upon confirmation
-    
-    **Best for:** One-time jobs without existing balance
+    **Steps:** Request payment details (402) → Process with X-PAYMENT
   </Card>
-  
   <Card title="Balance Payment" icon="wallet">
-    **Steps:**
-    1. Job immediately lists if balance sufficient
-    2. No additional payment steps needed
-    
-    **Best for:** Frequent job creators with pre-funded accounts
+    **Steps:** Job lists immediately if balance sufficient
   </Card>
 </CardGroup>
 

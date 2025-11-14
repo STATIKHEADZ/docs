@@ -1,0 +1,289 @@
+---
+title: 'Quick Endpoints (Base)'
+api: 'GET /api/x402/quick/base/{job-type}'
+description: 'Create preconfigured jobs with Base USDC - No API key required'
+---
+
+## Overview
+
+Quick Endpoints on Base allow you to create and pay for common jobs without an API key. Each job costs **$2.50 USDC** and is configured for **100 completions**.
+
+<Note>
+  **No API Key Required!** Just make two HTTP requests - one for discovery, one with payment.
+</Note>
+
+## Available Endpoints
+
+### X/Twitter Reposts
+```
+GET https://wurkapi.fun/api/x402/quick/base/reposts-100?url={encoded_x_url}
+```
+
+### X/Twitter Likes
+```
+GET https://wurkapi.fun/api/x402/quick/base/xlikes-100?url={encoded_x_url}
+```
+
+### Instagram Likes
+```
+GET https://wurkapi.fun/api/x402/quick/base/insta-likes-100?url={encoded_instagram_url}
+```
+
+### DexScreener Rockets
+```
+GET https://wurkapi.fun/api/x402/quick/base/dex-rocket-100?url={encoded_dexscreener_url}
+```
+
+## Parameters
+
+<ParamField query="url" type="string" required>
+  The target URL (must be URL-encoded):
+  - **For X/Twitter**: Link to the post (e.g., `https://x.com/user/status/123`)
+  - **For Instagram**: Link to the post
+  - **For DexScreener**: Link to the token page
+</ParamField>
+
+<ParamField header="X-URL" type="string">
+  Alternative to the `url` query parameter. You can pass the target URL as a header instead.
+</ParamField>
+
+<ParamField header="X-PAYMENT" type="string" required>
+  The x402 payment header (required for the second request only)
+</ParamField>
+
+## Two-Step Flow
+
+### Step 1: Discovery Request (402)
+
+Make a request without payment to get the payment requirements:
+
+<RequestExample>
+
+```bash
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/base/xlikes-100?url=https%3A%2F%2Fx.com%2Fexample%2Fstatus%2F123" \
+  -H "Accept: application/json"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 402 Response
+{
+  "x402Version": 1,
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "base",
+      "maxAmountRequired": "2500000",
+      "resource": "https://wurkapi.fun/api/x402/base/jobs/6e33ea0f/pay",
+      "description": "",
+      "mimeType": "",
+      "payTo": "0xF00DAF15713e82fBb7bDC4b818444D93D655DE96",
+      "asset": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "maxTimeoutSeconds": 60,
+      "extra": {
+        "chainId": 8453,
+        "decimals": 6,
+        "eip712": {
+          "name": "USD Coin",
+          "version": "2"
+        },
+        "name": "USD Coin",
+        "version": "2"
+      }
+    }
+  ]
+}
+```
+
+</ResponseExample>
+
+### Step 2: Payment Request (200)
+
+Retry the same URL with the X-PAYMENT header:
+
+<RequestExample>
+
+```bash
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/base/xlikes-100?url=https%3A%2F%2Fx.com%2Fexample%2Fstatus%2F123" \
+  -H "Accept: application/json" \
+  -H "X-PAYMENT: <x402_payment_header>"
+```
+
+```typescript TypeScript with x402-axios
+import { privateKeyToAccount } from 'viem/accounts';
+import { withPaymentInterceptor } from 'x402-axios';
+import axios from 'axios';
+import { Hex } from 'viem';
+
+async function createQuickJob(jobType: string, targetUrl: string) {
+  const endpoint = `https://wurkapi.fun/api/x402/quick/base/${jobType}`;
+  const params = new URLSearchParams({ url: targetUrl });
+  
+  // Setup account and axios with interceptor
+  const account = privateKeyToAccount(process.env.BASE_PRIVATE_KEY as Hex);
+  const api = withPaymentInterceptor(
+    axios.create({ baseURL: 'https://wurkapi.fun' }),
+    account
+  );
+  
+  // The interceptor handles both discovery and payment automatically
+  const response = await api.get(
+    `/api/x402/quick/base/${jobType}?${params}`,
+    {
+      headers: { 'Accept': 'application/json' }
+    }
+  );
+  
+  return response.data;
+}
+
+// Usage
+const result = await createQuickJob(
+  'xlikes-100',
+  'https://x.com/example/status/123'
+);
+console.log('Job created:', result.jobId);
+```
+
+```javascript Manual Implementation
+async function createQuickJobManual(jobType, targetUrl) {
+  const endpoint = `https://wurkapi.fun/api/x402/quick/base/${jobType}`;
+  const params = new URLSearchParams({ url: targetUrl });
+  
+  // Step 1: Discovery
+  const discoveryRes = await fetch(`${endpoint}?${params}`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  
+  if (discoveryRes.status !== 402) {
+    throw new Error(`Expected 402, got ${discoveryRes.status}`);
+  }
+  
+  const { x402Version, accepts } = await discoveryRes.json();
+  
+  // Build X-PAYMENT header using x402 library
+  // (Implementation depends on your x402 client setup)
+  const xPayment = await buildPaymentHeader(accepts, x402Version);
+  
+  // Step 2: Payment
+  const paymentRes = await fetch(`${endpoint}?${params}`, {
+    headers: {
+      'Accept': 'application/json',
+      'X-PAYMENT': xPayment
+    }
+  });
+  
+  return await paymentRes.json();
+}
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 Success
+{
+  "ok": true,
+  "paid": true,
+  "jobId": "6e33ea0f"
+}
+```
+
+```json 409 Duplicate
+{
+  "message": "there is already a similar job running job id: 6e33ea0f"
+}
+```
+
+</ResponseExample>
+
+## Job Details
+
+Each quick job is automatically configured with:
+
+<ParamField body="Price" type="string">
+  Fixed at **$2.50 USDC**
+</ParamField>
+
+<ParamField body="Completions" type="number">
+  Always **100 completions**
+</ParamField>
+
+<ParamField body="Worker Rank" type="number">
+  Minimum rank **1** (all workers eligible)
+</ParamField>
+
+<ParamField body="Cooldown" type="number">
+  **15 minutes** between completions
+</ParamField>
+
+## Error Handling
+
+### Common Responses
+
+- **402**: Payment required (normal first response)
+- **200**: Success (job created and paid)
+- **409**: Duplicate job exists (returns existing job ID)
+- **400**: Invalid URL or parameters
+- **500**: Server error (retry with same X-PAYMENT if during payment)
+
+### Retry Logic
+
+If you receive a temporary error during payment (Step 2), you can safely retry with the same X-PAYMENT header.
+
+## Examples by Job Type
+
+<CodeGroup>
+
+```bash X/Twitter Reposts
+# 100 reposts for a tweet
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/base/reposts-100?url=https%3A%2F%2Fx.com%2Felonmusk%2Fstatus%2F1234567890" \
+  -H "Accept: application/json"
+```
+
+```bash X/Twitter Likes
+# 100 likes for a tweet
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/base/xlikes-100?url=https%3A%2F%2Fx.com%2Fcoinbase%2Fstatus%2F9876543210" \
+  -H "Accept: application/json"
+```
+
+```bash Instagram Likes
+# 100 likes for an Instagram post
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/base/insta-likes-100?url=https%3A%2F%2Fwww.instagram.com%2Fp%2FABC123XYZ" \
+  -H "Accept: application/json"
+```
+
+```bash DexScreener Rockets
+# 100 rockets for a token page
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/base/dex-rocket-100?url=https%3A%2F%2Fdexscreener.com%2Fsolana%2Ftoken123" \
+  -H "Accept: application/json"
+```
+
+</CodeGroup>
+
+## Network Details
+
+- **Network**: Base Mainnet
+- **Chain ID**: 8453
+- **USDC Contract**: `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913`
+- **Payment Receiver**: `0xF00DAF15713e82fBb7bDC4b818444D93D655DE96`
+- **Payment Method**: EIP-3009 Authorization (transferWithAuthorization)
+
+## Technical Notes
+
+The Base implementation uses EIP-3009 for USDC transfers, which means:
+
+1. No gas fees for the payer
+2. Authorization is signed off-chain
+3. The facilitator executes the on-chain transfer
+4. EIP-712 typed data signing is required
+
+The x402-axios interceptor handles all of this complexity automatically.

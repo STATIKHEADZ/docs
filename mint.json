@@ -76,6 +76,14 @@
       "pages": [
         "api-reference/introduction",
         {
+          "group": "Quick Endpoints (No API Key)",
+          "pages": [
+            "api-reference/quick-endpoints-overview",
+            "api-reference/quick-endpoints-solana",
+            "api-reference/quick-endpoints-base"
+          ]
+        },
+        {
           "group": "Create Jobs",
           "pages": [
             "api-reference/create-social-job",
@@ -90,10 +98,17 @@
           ]
         },
         {
-          "group": "Payments",
+          "group": "Payments (SOL)",
           "pages": [
-            "api-reference/x402-accepts",
-            "api-reference/x402-pay"
+            "api-reference/x402-accepts-sol",
+            "api-reference/x402-pay-sol"
+          ]
+        },
+        {
+          "group": "Payments (BASE)",
+          "pages": [
+            "api-reference/x402-accepts-base",
+            "api-reference/x402-pay-base"
           ]
         },
         {

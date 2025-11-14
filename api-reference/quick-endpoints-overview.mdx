@@ -1,0 +1,124 @@
+---
+title: 'Quick Endpoints Overview'
+description: 'No API key required - Create and pay for preconfigured jobs in two simple HTTP requests'
+---
+
+## Overview
+
+Quick Endpoints allow you to create and pay for commonly used jobs without needing an API key. These endpoints use the x402 protocol for direct HTTP-based USDC payments.
+
+<Note>
+  **No API Key Required!** Quick Endpoints work with just two simple HTTP requests - perfect for rapid integration.
+</Note>
+
+## How It Works
+
+<Steps>
+  <Step title="Discovery Request">
+    Make a GET request without payment to receive the payment requirements (HTTP 402)
+  </Step>
+  
+  <Step title="Payment Request">
+    Retry the same URL with the X-PAYMENT header to complete the transaction (HTTP 200)
+  </Step>
+</Steps>
+
+## Available Quick Jobs
+
+All quick jobs are preconfigured with:
+- **Price**: $2.50 USDC
+- **Completions**: 100
+- **Networks**: Available on both Solana and Base
+
+<CardGroup cols={2}>
+  <Card title="X/Twitter Reposts" icon="retweet">
+    100 reposts for any X/Twitter post
+  </Card>
+  <Card title="X/Twitter Likes" icon="heart">
+    100 likes for any X/Twitter post
+  </Card>
+  <Card title="Instagram Likes" icon="instagram">
+    100 likes for any Instagram post
+  </Card>
+  <Card title="DexScreener Rockets" icon="rocket">
+    100 rockets for any DexScreener page
+  </Card>
+</CardGroup>
+
+## Endpoint Format
+
+Quick endpoints follow this pattern:
+
+```
+https://wurkapi.fun/api/x402/quick/{network}/{job-type}?url={encoded_target_url}
+```
+
+Where:
+- `{network}` is either `solana` or `base`
+- `{job-type}` is one of: `reposts-100`, `xlikes-100`, `insta-likes-100`, `dex-rocket-100`
+- `{encoded_target_url}` is the URL-encoded target (X post, Instagram post, or DexScreener page)
+
+## Simple Example
+
+Create 100 X/Twitter likes using Base network:
+
+```bash Step 1: Discovery (returns 402)
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/base/xlikes-100?url=https%3A%2F%2Fx.com%2Fyourpost%2Fstatus%2F123" \
+  -H "Accept: application/json"
+```
+
+```bash Step 2: Payment (returns 200)
+curl -i \
+  "https://wurkapi.fun/api/x402/quick/base/xlikes-100?url=https%3A%2F%2Fx.com%2Fyourpost%2Fstatus%2F123" \
+  -H "Accept: application/json" \
+  -H "X-PAYMENT: <your_x402_payment_header>"
+```
+
+## Benefits
+
+<CardGroup cols={3}>
+  <Card title="No API Key" icon="key">
+    Start immediately without registration
+  </Card>
+  <Card title="Fixed Pricing" icon="tag">
+    Always $2.50 USDC per job
+  </Card>
+  <Card title="Instant Setup" icon="bolt">
+    Preconfigured for optimal performance
+  </Card>
+</CardGroup>
+
+## Duplicate Protection
+
+Quick Endpoints automatically prevent duplicate jobs:
+
+- Returns HTTP 409 if a similar job is already running
+- Provides the existing job ID in the response
+- Saves you money by avoiding accidental duplicates
+
+Example 409 response:
+```json
+{
+  "message": "there is already a similar job running job id: 7de467d2"
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick Endpoints (Solana)"
+    icon="coins"
+    href="/api-reference/quick-endpoints-solana"
+  >
+    Use Quick Endpoints with Solana USDC
+  </Card>
+  <Card
+    title="Quick Endpoints (Base)"
+    icon="ethereum"
+    href="/api-reference/quick-endpoints-base"
+  >
+    Use Quick Endpoints with Base USDC
+  </Card>
+</CardGroup>
