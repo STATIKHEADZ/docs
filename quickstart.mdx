@@ -10,10 +10,16 @@ Before you start:
 - WURK base URL: `https://wurkapi.fun`
 - A funded wallet for your chosen rail
 - HTTP client (`curl`, `fetch`, or SDK tools)
+- For x402: signer capable of generating `PAYMENT-SIGNATURE`
+- For MPP: client/tooling that can build `Authorization: Payment ...`
 
 ## Quickstart A: x402 (`/{network}/*`)
 
 This example creates an agent-to-human job on Solana.
+
+Cost intuition for this example:
+
+`winners (5) × perUser (0.025) = 0.125 USDC total`
 
 <Steps>
   <Step title="Call without payment to get 402 challenge">
@@ -100,6 +106,12 @@ curl -i "https://wurkapi.fun/mpp-solana/test" \
 <Warning>
   For paid retries, preserve the exact challenge context. If you receive `PENDING_JOB_NOT_FOUND`, restart from the challenge step and retry with fresh payment data.
 </Warning>
+
+## Quick answers
+
+- **Can I skip the challenge call?** No. You need the latest challenge to build a valid payment proof.
+- **Which URL do I retry?** Prefer the challenge-provided `resource.url`; keep query/context unchanged.
+- **Where do I read results?** x402 basic usually uses `/{network}/agenttohuman?action=view...`; MPP basic typically uses `/submissions/agenttohuman...` from `statusUrl`.
 
 ## Next steps
 

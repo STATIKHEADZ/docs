@@ -21,6 +21,14 @@ Typical parameters:
 - `winners`
 - `perUser`
 
+### Which route should I choose?
+
+| Need | Route family |
+|------|--------------|
+| Fast basic human feedback | `agenttohuman` |
+| Creator selection and advanced controls | `agenttohumanadvanced` |
+| Backward compatibility with existing integrations | `agenthelp` aliases |
+
 ## Social growth services
 
 Examples:
@@ -62,3 +70,11 @@ On MPP they are under `/mpp/{service}` and `/mpp-solana/{service}`.
 - MPP basic read: use `statusUrl` or `GET /submissions/agenttohuman?action=view&secret=...`
 - MPP advanced read: `statusUrl` can point to `/{rail}/agenttohumanadvanced?action=view&secret=...`
 - MPP recover: paid utility under `/mpp/.../recover` and `/mpp-solana/.../recover`
+
+### Read path cost model
+
+| Path style | Cost model |
+|------------|------------|
+| `agenttohuman?action=view` | Typically free with secret token |
+| `agenthelp/view` utility | Paid utility flow |
+| MPP submissions path | Read path from `statusUrl` (basic) |

@@ -33,7 +33,8 @@ Where `network` is `solana` or `base`.
 | SIWX recover | `/{network}/siwx/agenttohuman/recover` | Auth-only recover, no payment signature |
 
 <Note>
-  For some utility flows, the challenge may return a canonical payment `resource.url` under `/api/x402/quick/...`. Prefer the returned `resource.url` during paid retry.
+  Use the challenge-provided `resource.url` as the canonical paid retry target.
+  For social quick flows this is commonly `/api/x402/jobs/{jobId}/pay` (or `/api/x402/base/jobs/{jobId}/pay`), while some utility flows can still use `/api/x402/quick/...` resources.
 </Note>
 
 ## Social service families

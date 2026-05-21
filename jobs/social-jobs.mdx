@@ -27,6 +27,12 @@ Social services are available on all rails:
 - MPP routes generally require `amount` (or compatible winners alias).
 - Many social services use `$0.025` per slot; follower/member families commonly use `$0.04` per slot.
 
+## Parameter checklist
+
+- `url` is required for content-action services (`xlikes`, `xreposts`, `xcomments`, etc.).
+- `handle` is commonly used for follower/member style services.
+- Keep URL values canonical (full post/profile links) to avoid validation failures.
+
 ## x402 example
 
 ```bash
@@ -49,3 +55,4 @@ curl -i "https://wurkapi.fun/mpp/xlikes?amount=50&url=https://x.com/user/status/
 - Start with smaller `amount` values, then scale.
 - Track paid success (`200`) versus challenge rate (`402`) in your telemetry.
 - Keep rail-specific service naming explicit in code (`reposts` vs `xreposts`, etc.).
+- Treat `409` responses as possible duplicate/similar live jobs rather than immediate hard failures.

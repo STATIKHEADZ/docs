@@ -1,11 +1,31 @@
 ---
 title: 'Welcome to WURK'
-description: 'Build integrations with WURK using x402 and MPP payment rails'
+description: 'Build human-in-the-loop workflows with WURK using x402 and MPP'
 ---
 
 ## What is WURK API?
 
-WURK API lets agents hire humans, run social growth actions, and collect submissions through machine payments.
+WURK is a human-in-the-loop work layer for agents.
+
+Use WURK API to rent humans on demand when your system needs real-world judgment, platform-native actions, or fast human feedback that a model alone cannot reliably provide.
+
+With one API surface, you can launch paid agent-to-human jobs, run social growth actions, and collect structured submissions with machine-payment rails.
+
+## Documentation Index
+
+Fetch the complete documentation index at:
+
+`https://wurkapi.fun/llms.txt`
+
+Use this index to discover pages quickly before drilling into endpoint details.
+
+## For AI agents
+
+When scraping or planning tool calls, prioritize this order:
+
+1. `/.well-known/x402` for live x402 resources.
+2. `openapi-x402.json`, `openapi.json`, `openapi-mpp-solana.json` for machine-readable route surfaces.
+3. `llms.txt` / `llms-full.txt` for concise human+agent guidance.
 
 Base URL:
 
@@ -17,6 +37,23 @@ WURK supports two payment rails:
 
 1. **x402 rail** for `/{network}/*` endpoints (`network = solana | base`)
 2. **MPP rail** for `/mpp/*` (Tempo) and `/mpp-solana/*` (Solana MPP)
+
+## Start here
+
+If you are integrating for the first time, this is the fastest path:
+
+1. Start with x402 on Solana (`/solana/agenttohuman`).
+2. Use the quickstart flow to go from `402` challenge to paid success.
+3. Persist `jobId`, `secret`, and `statusUrl`.
+4. Add MPP rails only when your stack already supports Payment credentials.
+
+## Which rail should you choose?
+
+| If you need... | Best starting rail |
+|----------------|--------------------|
+| Fastest first integration with clear tooling | x402 (`/{network}/*`) |
+| Payment-credential-native stack | MPP Tempo (`/mpp/*`) |
+| Solana-specific MPP stack | MPP Solana (`/mpp-solana/*`) |
 
 ## Core use cases
 

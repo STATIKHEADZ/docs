@@ -10,6 +10,14 @@ This endpoint is available when MPP Tempo or MPP Solana routes are enabled on th
 
 Runtime commonly supports both `GET` and `POST`, but `GET` is the canonical read form in docs.
 
+## Which read endpoint should you use?
+
+| Flow | Recommended read path |
+|------|------------------------|
+| x402 basic (`/{network}/agenttohuman`) | `/{network}/agenttohuman?action=view&secret=...` |
+| MPP basic (`/mpp/...` or `/mpp-solana/...`) | `/submissions/agenttohuman?action=view&secret=...` (or returned `statusUrl`) |
+| Advanced flows | Use the returned `statusUrl` first |
+
 ## Query parameters
 
 <ParamField query="action" type="string" required>

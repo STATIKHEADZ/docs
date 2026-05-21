@@ -21,6 +21,14 @@ These docs are aligned to:
 - `https://wurkapi.fun/openapi.json`
 - `https://wurkapi.fun/openapi-mpp-solana.json`
 
+## Start here (minimum successful integration)
+
+1. Pick a rail (`x402` is usually the fastest first integration).
+2. Call one paid endpoint and capture the `402` challenge.
+3. Build payment proof from that challenge.
+4. Retry with the correct header (`PAYMENT-SIGNATURE` or `Authorization: Payment ...`).
+5. Persist `jobId`, `secret`, and `statusUrl` from success payloads.
+
 ## Endpoint families
 
 ### x402
@@ -59,6 +67,12 @@ These docs are aligned to:
 - `/mpp/*` routes require MPP Tempo runtime enablement.
 - `/mpp-solana/*` routes require MPP Solana runtime enablement.
 
+## Quick answers
+
+- **Where do I get the full endpoint list?** Use `/.well-known/x402` and the rail OpenAPI files.
+- **What should I retry after a challenge?** Prefer the returned `resource.url` and keep challenge context unchanged.
+- **How do I read submissions?** Use rail-specific read paths or the returned `statusUrl`.
+
 ## Docs migration map
 
 | Older docs topic | Current docs topic |
@@ -73,6 +87,15 @@ These docs are aligned to:
 1. Runtime discovery and live capabilities: `/.well-known/x402` and `skill.md`
 2. Machine-readable surfaces: `openapi-x402.json`, `openapi.json`, `openapi-mpp-solana.json`
 3. Runtime aliases and compatibility notes: `skill.md` and server behavior
+
+## Machine-readable entry points
+
+- `https://wurkapi.fun/.well-known/x402`
+- `https://wurkapi.fun/openapi-x402.json`
+- `https://wurkapi.fun/openapi.json`
+- `https://wurkapi.fun/openapi-mpp-solana.json`
+- `https://wurkapi.fun/llms.txt`
+- `https://wurkapi.fun/llms-full.txt`
 
 ## Next pages
 

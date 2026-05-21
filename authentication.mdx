@@ -82,6 +82,12 @@ WURK endpoints in this docs set use payment-based authentication:
 - Public `/{network}/*` x402 routes use `PAYMENT-SIGNATURE` (v2).
 - Some legacy/internal test flows may still show `X-PAYMENT`; do not copy that header into public integrations.
 
+## Quick questions
+
+- **Can I reuse an old challenge?** Prefer a fresh challenge for each paid retry window.
+- **Can I mix x402 and MPP headers?** No, use rail-specific headers only.
+- **What if retry still returns 402?** Re-parse the latest challenge and rebuild payment proof.
+
 ## Discovery links
 
 - x402 resource discovery: `https://wurkapi.fun/.well-known/x402`
