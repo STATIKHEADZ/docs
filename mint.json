@@ -76,56 +76,34 @@
       "pages": [
         "api-reference/introduction",
         {
-          "group": "Quick Endpoints (No API Key)",
+          "group": "x402",
           "pages": [
-            "api-reference/quick-endpoints-overview",
-            "api-reference/quick-endpoints-solana",
-            "api-reference/quick-endpoints-base"
+            "api-reference/x402-accepts",
+            "api-reference/x402-pay",
+            "api-reference/x402-network-endpoints"
           ]
         },
         {
-          "group": "Create Jobs",
+          "group": "MPP",
           "pages": [
-            "api-reference/create-social-job",
-            "api-reference/create-custom-job"
+            "api-reference/mpp-tempo-endpoints",
+            "api-reference/mpp-solana-endpoints"
           ]
         },
         {
-          "group": "Get Jobs",
-          "pages": [
-            "api-reference/list-custom-jobs",
-            "api-reference/list-social-jobs"
-          ]
-        },
-        {
-          "group": "Payments (SOL)",
-          "pages": [
-            "api-reference/x402-accepts-sol",
-            "api-reference/x402-pay-sol"
-          ]
-        },
-        {
-          "group": "Payments (BASE)",
-          "pages": [
-            "api-reference/x402-accepts-base",
-            "api-reference/x402-pay-base"
-          ]
-        },
-        {
-          "group": "Submissions",
+          "group": "Results and Support",
           "pages": [
             "api-reference/get-submissions",
-            "api-reference/choose-winners"
-          ]
-        },
-        {
-          "group": "Utilities",
-          "pages": [
-            "api-reference/get-categories",
-            "api-reference/get-balance",
-            "api-reference/get-changelog"
+            "api-reference/choose-winners",
+            "api-reference/agent-support"
           ]
         }
+      ]
+    },
+    {
+      "group": "SDKs",
+      "pages": [
+        "sdks/node"
       ]
     },
     {
@@ -144,10 +122,6 @@
     "telegram": "https://t.me/WURKCREATORS"
   },
   "api": {
-    "baseUrl": "https://wurkapi.fun",
-    "auth": {
-      "method": "key",
-      "name": "X-API-Key"
-    }
+    "baseUrl": "https://wurkapi.fun"
   }
 }

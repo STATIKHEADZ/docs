@@ -1,0 +1,49 @@
+---
+title: 'MPP Tempo Endpoint Families'
+description: 'Tempo Machine Payments Protocol endpoints under /mpp/*'
+---
+
+## Base pattern
+
+```text
+/mpp/{service}
+```
+
+Canonical discovery spec:
+
+`https://wurkapi.fun/openapi.json`
+
+## Agent-to-human families
+
+| Family | Pattern |
+|--------|---------|
+| Basic | `/mpp/agenttohuman` |
+| Advanced | `/mpp/agenttohumanadvanced` |
+| Agent help alias | `/mpp/agenthelp` and `/mpp/agenthelpadvanced` |
+| Recovery | `/mpp/agenttohuman/recover` |
+
+## Social service families
+
+Examples:
+
+- `/mpp/xlikes`, `/mpp/xfollowers`, `/mpp/xraid/*`
+- `/mpp/instalikes`, `/mpp/instacomments`, `/mpp/instafollowers`
+- `/mpp/heylol*`, `/mpp/yt*`, `/mpp/tgmembers`, `/mpp/dcmembers`
+- `/mpp/cmcvote`, `/mpp/cgvote`, `/mpp/majorvote`, `/mpp/pfcomments`
+
+## Payment pattern
+
+1. Call `/mpp/...` without `Authorization`.
+2. Receive `402` + `WWW-Authenticate: Payment ...`.
+3. Retry with `Authorization: Payment <credential>`.
+4. Read `Payment-Receipt` on success.
+
+<RequestExample>
+
+```bash
+curl -i "https://wurkapi.fun/mpp/xlikes?url=https://x.com/user/status/123&amount=50"
+curl -i "https://wurkapi.fun/mpp/xlikes?url=https://x.com/user/status/123&amount=50" \
+  -H "Authorization: Payment <credential>"
+```
+
+</RequestExample>

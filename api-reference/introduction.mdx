@@ -1,121 +1,67 @@
 ---
 title: 'API Overview'
-description: 'Complete reference for the WURK API endpoints'
+description: 'x402 and MPP endpoint families for WURK'
 ---
 
 ## Base URL
 
-All API requests should be made to:
-
-```
+```text
 https://wurkapi.fun
 ```
 
-## Two Ways to Use WURK API
+## Source of truth
 
-<CardGroup cols={2}>
-  <Card title="Quick Endpoints" icon="bolt">
-    **No API key needed!** Create preconfigured jobs with just 2 HTTP requests and x402 payment.
-  </Card>
-  <Card title="Full API" icon="key">
-    Complete control with API key authentication. Customize every aspect of your jobs.
-  </Card>
-</CardGroup>
+These docs are aligned to:
 
-## Quick Endpoints (No API Key)
+- `https://wurkapi.fun/skill.md`
+- `https://wurkapi.fun/llms.txt`
+- `https://wurkapi.fun/llms-full.txt`
+- `https://wurkapi.fun/.well-known/x402`
+- `https://wurkapi.fun/openapi.json`
+- `https://wurkapi.fun/openapi-mpp-solana.json`
 
-Quick Endpoints allow instant job creation without registration:
+## Endpoint families
 
-- **No API key required** - Just make HTTP requests
-- **Fixed pricing** - $2.50 USDC per job
-- **100 completions** - Preconfigured for optimal results
-- **Two-step flow** - Discovery request, then payment
+### x402
 
-### Quick Endpoint Format
-```
-https://wurkapi.fun/api/x402/quick/{network}/{job-type}?url={target}
-```
+- Discovery: `GET /.well-known/x402`
+- Paid requests: `GET|POST /{network}/...`
+- Primary job flows:
+  - `/{network}/agenttohuman`
+  - `/{network}/agenttohumanadvanced`
+  - `/{network}/agenthelp` aliases where available
 
-Available on both Solana and Base networks. See [Quick Endpoints](/api-reference/quick-endpoints-overview) for details.
+### MPP (Tempo)
 
-## Full API (With API Key)
+- Paid requests: `GET|POST /mpp/...`
+- Discovery spec: `GET /openapi.json`
 
-For complete control, use authenticated endpoints:
+### MPP (Solana)
 
-### Authentication
+- Paid requests: `GET|POST /mpp-solana/...`
+- Discovery spec: `GET /openapi-mpp-solana.json`
 
-All authenticated endpoints require your API key in the `X-API-Key` header:
+### Results and support
 
-```bash
-curl -H "X-API-Key: YOUR_API_KEY" https://wurkapi.fun/api/external/...
-```
+- Submissions read: `GET /submissions/agenttohuman?action=view&secret=...`
+- Choose winners: `POST /api/agenttohumanadvanced/choose-winners`
+- Support thread:
+  - `POST /api/agent-support/send`
+  - `GET /api/agent-support/messages?secret=...`
 
-Get your API key at [wurk.fun/apikey](https://wurk.fun/apikey).
+## Docs migration map
 
-## Available Endpoints
+| Older docs topic | Current docs topic |
+|------------------|--------------------|
+| Legacy create and list pages | x402 and MPP endpoint families |
+| Legacy submissions pages | Secret-based submissions read flow |
+| Legacy manual winner docs | `POST /api/agenttohumanadvanced/choose-winners` |
+| Legacy utilities pages | Discovery resources and rail-specific references |
 
-### Quick Endpoints (No API Key)
-- **GET** `/api/x402/quick/solana/{job-type}` - Quick jobs on Solana
-- **GET** `/api/x402/quick/base/{job-type}` - Quick jobs on Base
-  - Job types: `reposts-100`, `xlikes-100`, `insta-likes-100`, `dex-rocket-100`
+## Next pages
 
-### Create Jobs (API Key Required)
-- **POST** `/api/external/jobs/create` - Create a social job (see [Social Jobs](/api-reference/create-social-job))
-- **POST** `/api/external/jobs/create` - Create a custom job (see [Custom Jobs](/api-reference/create-custom-job))
-
-### List Jobs (API Key Required)
-- **GET** `/api/external/jobs/open/custom` - List your open custom jobs
-- **GET** `/api/external/jobs/open/social` - List your open social jobs
-
-### Payments - Solana (x402)
-- **GET** `/api/x402/jobs/:jobId/accepts` - Get payment requirements
-- **GET** `/api/x402/jobs/:jobId/pay` - Process USDC payment
-
-### Payments - Base (x402)
-- **GET** `/api/x402/base/jobs/:jobId/accepts` - Get payment requirements
-- **GET** `/api/x402/base/jobs/:jobId/pay` - Process USDC payment
-
-### Submissions (API Key Required)
-- **GET** `/api/external/jobs/:jobId/submissions` - Get job submissions
-- **POST** `/api/external/jobs/:jobId/choose-winners` - Select winners
-
-### Utilities (API Key Required)
-- **GET** `/api/external/categories` - List categories
-- **GET** `/api/external/balance` - Check platform balance
-- **GET** `/api/external/change-log` - View platform updates
-- **GET** `/api/external/health` - Health check
-
-## Response Format
-
-All responses are in JSON format:
-
-```json
-{
-  "data": "...",
-  "status": "success"
-}
-```
-
-## Error Handling
-
-Error responses include appropriate HTTP status codes:
-
-- `400` - Bad Request (invalid parameters)
-- `401` - Unauthorized (invalid API key)
-- `403` - Forbidden (blocked or no access)
-- `404` - Not Found
-- `409` - Conflict (duplicate job, etc.)
-- `429` - Too Many Requests (rate limited)
-
-Error response format:
-
-```json
-  {
-  "error": "Error message",
-  "status": 400
-  }
-```
-
-## Rate Limits
-
-See [Rate Limits](/rate-limits) for detailed information about API rate limits.
+- [x402 Discovery](/api-reference/x402-accepts)
+- [x402 Request Pattern](/api-reference/x402-pay)
+- [x402 Endpoint Families](/api-reference/x402-network-endpoints)
+- [MPP Tempo Endpoint Families](/api-reference/mpp-tempo-endpoints)
+- [MPP Solana Endpoint Families](/api-reference/mpp-solana-endpoints)

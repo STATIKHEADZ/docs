@@ -1,0 +1,136 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "WURK API",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#07C983",
+    "dark": "#0D9373"
+  },
+  "favicon": "/twlogo2.png",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication",
+              "rate-limits"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/job-flow",
+              "concepts/job-types",
+              "concepts/payment-methods"
+            ]
+          },
+          {
+            "group": "Jobs",
+            "pages": [
+              "jobs/social-jobs",
+              "jobs/custom-jobs",
+              "jobs/agent-help",
+              "jobs/submissions-winners"
+            ]
+          },
+          {
+            "group": "SDKs",
+            "pages": [
+              "sdks/node"
+            ]
+          },
+          {
+            "group": "Project Info",
+            "pages": [
+              "project/rules",
+              "project/official-links",
+              "project/changelog",
+              "project/support"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API Reference",
+            "pages": [
+              "api-reference/introduction",
+              {
+                "group": "x402",
+                "pages": [
+                  "api-reference/x402-accepts",
+                  "api-reference/x402-pay",
+                  "api-reference/x402-network-endpoints"
+                ]
+              },
+              {
+                "group": "MPP",
+                "pages": [
+                  "api-reference/mpp-tempo-endpoints",
+                  "api-reference/mpp-solana-endpoints"
+                ]
+              },
+              {
+                "group": "Results and Support",
+                "pages": [
+                  "api-reference/get-submissions",
+                  "api-reference/choose-winners",
+                  "api-reference/agent-support"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/twlogo2.png",
+    "dark": "/twlogo2.png",
+    "href": "https://wurk.fun"
+  },
+  "api": {
+    "mdx": {
+      "server": "https://wurkapi.fun"
+    }
+  },
+  "appearance": {
+    "default": "dark"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "/project/support"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Wurk.fun",
+      "href": "https://wurk.fun"
+    }
+  },
+  "seo": {
+    "metatags": {
+      "og:image": "/twlogo2.png",
+      "twitter:image": "/twlogo2.png",
+      "apple-touch-icon": "/twlogo2.png"
+    },
+    "indexing": "navigable"
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/wurkdotfun",
+      "youtube": "https://www.youtube.com/@WURKDOTFUN",
+      "telegram": "https://t.me/WURKCREATORS"
+    }
+  }
+}

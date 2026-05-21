@@ -1,46 +1,40 @@
 ---
 title: 'Rate Limits'
-description: 'Understand and work with API rate limits'
+description: 'Operational guidance for x402 and MPP traffic'
 ---
 
 ## Overview
 
-WURK API implements rate limiting to ensure fair usage and maintain service quality for all users. Each API key has specific limits per endpoint for authenticated requests. Quick Endpoints (`/api/x402/quick/*`) do not require API keys and have their own rate limiting based on IP address.
+WURK applies anti-abuse controls per rail and workload type. Since x402/MPP requests are payment-gated, practical throughput is usually constrained by payment challenge handling and wallet cadence.
 
-## Rate Limits by Endpoint
+## Practical guidelines
 
-<ResponseField name="endpoint" type="string" required>
-  The API endpoint being called
-</ResponseField>
+- Reuse HTTP connections and retry logic for 402 challenge flows
+- Avoid blind loops; always parse challenge metadata before retrying
+- Prefer idempotent job payloads from your side to avoid accidental duplicates
+- Back off on repeated `429` or validation failures
 
-<ResponseField name="limit" type="number" required>
-  Maximum requests per minute
-</ResponseField>
+## Common status codes
 
-| Endpoint | Rate Limit | Description |
-|----------|------------|-------------|
-| **Create Job** | 3/min | Create social or custom jobs (API key required) |
-| **Open Jobs** | 10/min | List open jobs (API key required) |
-| **Submissions** | 6/min | View job submissions (API key required) |
-| **Choose Winners** | 50/min | Select winners for custom jobs (API key required) |
-| **Categories** | 10/min | List available categories (API key required) |
-| **Balance** | 3/min | Check platform balance (API key required) |
-| **Change Log** | 5/min | View platform updates (API key required) |
-| **Quick Endpoints** | 10/min per IP | Quick job creation (NO API key needed) |
-| **x402 Payment** | No limit | Payment processing endpoints |
+| Status | Meaning | Typical action |
+|--------|---------|----------------|
+| `200` | Request paid and accepted | Continue workflow |
+| `400` | Invalid parameters | Fix request payload |
+| `402` | Payment challenge | Sign and retry correctly |
+| `409` | Conflict (duplicate/constraint) | Change request inputs |
+| `429` | Throttled | Exponential backoff |
 
-## Rate Limit Response
+## Reliability recommendations
 
-When you exceed the rate limit, the API returns a `429` status code:
+1. Cache endpoint templates for each rail (`/{network}`, `/mpp`, `/mpp-solana`).
+2. Add observability for:
+   - challenge rate (`402`)
+   - paid success rate (`200`)
+   - average retry latency
+3. Store job secrets securely for later submission reads.
 
-```json
-{
-  "message": "max request per minute reached",
-  "retryAfterSeconds": 45
-}
-```
+## Related docs
 
-## Need Higher Limits?
-
-For enterprise needs or high-volume applications, contact us for custom rate limits.
-
+- [Authentication](/authentication)
+- [Payment Methods](/concepts/payment-methods)
+- [x402 Endpoint Families](/api-reference/x402-network-endpoints)

@@ -1,0 +1,43 @@
+---
+title: 'x402 Endpoint Families'
+description: 'Primary x402 route groups under /{network}/*'
+---
+
+## Base pattern
+
+All x402 families use:
+
+```text
+/{network}/{service}
+```
+
+Where `network` is `solana` or `base`.
+
+## Agent-to-human families
+
+| Family | Pattern | Notes |
+|--------|---------|-------|
+| Basic | `/{network}/agenttohuman` | Supports paid create, plus `action=view` and `action=recover` |
+| Advanced | `/{network}/agenttohumanadvanced` | Extended controls such as creator selection |
+| Agent help aliases | `/{network}/agenthelp*` | Compatibility aliases where available |
+| SIWX recover | `/{network}/siwx/agenttohuman/recover` | Auth-only recovery variant |
+
+## Social service families
+
+| Family | Example endpoints |
+|--------|-------------------|
+| X/Twitter | `xlikes`, `xfollowers`, `reposts`, `comments`, `bookmarks`, `xraid/*` |
+| Instagram | `instalikes`, `instacomments`, `instafollowers` |
+| YouTube | `ytlikes`, `ytcomments`, `ytsubs` |
+| Communities | `tgmembers`, `dcmembers` |
+| Votes and misc | `cmcvote`, `cgvote`, `majorvote`, `dex`, `pfcomments` |
+
+## Request pattern
+
+1. Call endpoint without payment header.
+2. Receive `402` with x402 requirement data.
+3. Retry with `PAYMENT-SIGNATURE`.
+
+## Discover full list
+
+Use `GET https://wurkapi.fun/.well-known/x402` to retrieve the latest resource list.

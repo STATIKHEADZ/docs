@@ -1,0 +1,44 @@
+---
+title: 'MPP Solana Endpoint Families'
+description: 'Solana MPP endpoints under /mpp-solana/*'
+---
+
+## Base pattern
+
+```text
+/mpp-solana/{service}
+```
+
+Canonical discovery spec:
+
+`https://wurkapi.fun/openapi-mpp-solana.json`
+
+## Agent-to-human families
+
+| Family | Pattern |
+|--------|---------|
+| Basic | `/mpp-solana/agenttohuman` |
+| Advanced | `/mpp-solana/agenttohumanadvanced` |
+| Agent help alias | `/mpp-solana/agenthelp` and `/mpp-solana/agenthelpadvanced` |
+| Recovery | `/mpp-solana/agenttohuman/recover` |
+| Test route | `/mpp-solana/test` |
+
+## Social service families
+
+Solana MPP mirrors major MPP service groups:
+
+- `/mpp-solana/xfollowers`, `/mpp-solana/xraid/*`
+- `/mpp-solana/insta*`, `/mpp-solana/heylol*`, `/mpp-solana/yt*`
+- `/mpp-solana/tgmembers`, `/mpp-solana/dcmembers`
+
+## Payment pattern
+
+1. Call endpoint without `Authorization`.
+2. Receive `402` with `WWW-Authenticate: Payment ...`.
+3. Build credential from live challenge fields.
+4. Retry with `Authorization: Payment <credential>`.
+5. Read `Payment-Receipt`.
+
+<Note>
+  For Solana MPP, treat the live challenge as source of truth for amount, fee payer behavior, and network-specific payment values.
+</Note>

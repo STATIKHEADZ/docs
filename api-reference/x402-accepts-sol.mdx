@@ -1,94 +1,52 @@
 ---
-title: 'Get Payment Requirements'
-api: 'GET /api/x402/jobs/{jobId}/accepts'
-description: 'Prefetch payment requirements for x402 USDC payments'
+title: 'x402 Discovery'
+api: 'GET /.well-known/x402'
+description: 'Discover all publicly listed x402 resources for WURK'
 ---
 
-## Authentication
+## Overview
 
-<ParamField header="X-API-Key" type="string" required>
-  Your WURK API key
-</ParamField>
+Use this endpoint to discover x402-payable resources exposed by WURK.
 
-## Path Parameters
+## Response fields
 
-<ParamField path="jobId" type="string" required>
-  The job ID (8 character identifier returned from job creation)
-</ParamField>
-
-## Response
-
-### Already Paid
-
-<ResponseField name="ok" type="boolean">
-  Always `true` when successful
+<ResponseField name="version" type="number">
+  Discovery schema version.
 </ResponseField>
 
-<ResponseField name="alreadyConfirmed" type="boolean">
-  `true` if the job is already paid
+<ResponseField name="resources" type="array">
+  List of absolute x402 resource URLs (for example `https://wurkapi.fun/solana/xlikes`).
 </ResponseField>
 
-<ResponseField name="jobId" type="string">
-  The job ID
+<ResponseField name="ownershipProofs" type="array">
+  Optional signatures used for ownership verification by ecosystem tooling.
 </ResponseField>
 
-### Payment Required
-
-<ResponseField name="x402Version" type="number">
-  x402 protocol version (currently 1)
-</ResponseField>
-
-<ResponseField name="accepts" type="array">
-  Array of payment requirement objects with fields:
-  - `scheme`: Payment scheme (`"exact"`)
-  - `network`: Blockchain network (`"solana"`)
-  - `maxAmountRequired`: Amount in smallest unit (e.g., `"4000000"` for 4 USDC)
-  - `resource`: The payment endpoint URL
-  - `payTo`: Recipient wallet address
-  - `asset`: Token mint address (USDC: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`)
-  - `maxTimeoutSeconds`: Payment timeout (typically 60)
-  - `extra`: Additional data including `feePayer` address
+<ResponseField name="instructions" type="string">
+  Human-readable notes on discovery and usage.
 </ResponseField>
 
 <RequestExample>
 
 ```bash
-curl -X GET "https://wurkapi.fun/api/x402/jobs/89e57c15/accepts" \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -H "Accept: application/json"
+curl -X GET "https://wurkapi.fun/.well-known/x402"
 ```
 
 </RequestExample>
 
 <ResponseExample>
 
-```json Payment Required
+```json
 {
-  "x402Version": 1,
-  "accepts": [
-    {
-      "scheme": "exact",
-      "network": "solana",
-      "maxAmountRequired": "4000000",
-      "resource": "https://wurkapi.fun/api/x402/jobs/89e57c15/pay",
-      "description": "",
-      "mimeType": "",
-      "payTo": "SAT8g2xU7AFy7eUmNJ9SNrM6yYo7LDCi13GXJ8Ez9kC",
-      "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      "maxTimeoutSeconds": 60,
-      "extra": {
-        "feePayer": "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"
-      }
-    }
-  ]
-}
-```
-
-```json Already Paid
-{
-  "ok": true,
-  "alreadyConfirmed": true,
-  "jobId": "89e57c15"
+  "version": 1,
+  "resources": [
+    "https://wurkapi.fun/solana/agenttohuman",
+    "https://wurkapi.fun/solana/xlikes",
+    "https://wurkapi.fun/base/agenttohuman",
+    "https://wurkapi.fun/api/agenttohumanadvanced/choose-winners"
+  ],
+  "ownershipProofs": ["0x..."],
+  "instructions": "# WURK x402 resources ..."
 }
 ```
 

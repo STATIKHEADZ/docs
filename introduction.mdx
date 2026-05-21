@@ -1,62 +1,81 @@
 ---
 title: 'Welcome to WURK'
-description: 'Build powerful integrations with the WURK platform for social and custom job management'
+description: 'Build integrations with WURK using x402 and MPP payment rails'
 ---
 
-## What is Wurk?
+## What is WURK API?
 
-Wurk is the work layer of Web3, a platform where humans, creators, communities, and intelligent agents collaborate, create value, and grow together.
+WURK API lets agents hire humans, run social growth actions, and collect submissions through machine payments.
 
-With the Wurk API, you can programmatically create jobs, manage submissions, and process x402 payments. This means agents, bots, or back-end systems can automatically publish tasks, reward users, and collect verified human input, all without leaving your environment.
+Base URL:
 
-The API is flexible and can be integrated into a wide range of workflows:
-- Agents that need human-in-the-loop assistance
-- Telegram or Discord bots that create and manage jobs
-- Campaign systems that automate social or creative tasks
-- Automated surveys
+```text
+https://wurkapi.fun
+```
 
-This API acts as the bridge between automation and human creativity, powering a new layer of digital work where value, energy, and effort flow seamlessly on-chain.
+WURK supports two payment rails:
 
-## Key Features
+1. **x402 rail** for `/{network}/*` endpoints (`network = solana | base`)
+2. **MPP rail** for `/mpp/*` (Tempo) and `/mpp-solana/*` (Solana MPP)
+
+## Core use cases
+
+- Agent-to-human jobs (`agenttohuman`, `agenttohumanadvanced`)
+- Social growth jobs (`xlikes`, `xfollowers`, `xraid`, `instalikes`, and more)
+- Submission retrieval and winner selection for creator-mode flows
 
 <CardGroup cols={2}>
   <Card
-    title="Dual Payment System"
+    title="x402 Endpoints"
     icon="credit-card"
-    href="/concepts/payment-methods"
+    href="/api-reference/x402-network-endpoints"
   >
-    Pay with USDC via x402 protocol or use platform balance (SOL)
+    Call paid `/{network}/*` resources and complete payment with `PAYMENT-SIGNATURE`
   </Card>
   <Card
-    title="Agent Help Jobs"
+    title="MPP Endpoints"
     icon="robot"
-    href="/jobs/agent-help"
+    href="/api-reference/mpp-tempo-endpoints"
   >
-    Human-in-the-loop tasks for AI agents needing real-world assistance
+    Use `Authorization: Payment ...` for `/mpp/*` and `/mpp-solana/*`
   </Card>
   <Card
-    title="Social Jobs"
+    title="x402 Discovery"
     icon="hashtag"
-    href="/jobs/social-jobs"
+    href="/api-reference/x402-accepts"
   >
-    Create Twitter/X engagement campaigns with reposts, comments, or both
+    Discover payable x402 resources from `/.well-known/x402`
   </Card>
   <Card
-    title="Custom Jobs"
+    title="Job Results"
     icon="briefcase"
-    href="/jobs/custom-jobs"
+    href="/api-reference/get-submissions"
   >
-    Post challenges or request agent help with flexible winner selection
+    Fetch submissions and select winners in creator selection flows
   </Card>
 </CardGroup>
 
-## Payment Options
+## Payment flow in short
 
-WURK supports two payment methods:
+<Tabs>
+  <Tab title="x402">
+    1. Call a paid `/{network}/...` endpoint without payment.
+    2. Receive `402 Payment Required` with payment requirements.
+    3. Retry the same request with `PAYMENT-SIGNATURE`.
+  </Tab>
+  <Tab title="MPP">
+    1. Call `/mpp/...` or `/mpp-solana/...` without `Authorization`.
+    2. Receive `402` with `WWW-Authenticate: Payment ...`.
+    3. Retry with `Authorization: Payment ...` and read `Payment-Receipt`.
+  </Tab>
+</Tabs>
 
-1. **x402 USDC Payments** - Direct on-chain payments using USDC on Solana or Base
-2. **Platform Balance** - Pre-funded balance for instant job creation
+## Official discovery and specs
 
+- x402 discovery: `https://wurkapi.fun/.well-known/x402`
+- MPP OpenAPI (Tempo): `https://wurkapi.fun/openapi.json`
+- MPP OpenAPI (Solana): `https://wurkapi.fun/openapi-mpp-solana.json`
+- Skill docs: `https://wurkapi.fun/skill.md`
 
 ## Quick Links
 
@@ -66,27 +85,27 @@ WURK supports two payment methods:
     icon="rocket"
     href="/quickstart"
   >
-    Create your first job in minutes
+    Build your first x402 and MPP calls
   </Card>
   <Card
-    title="API Reference"
+    title="API Reference Overview"
     icon="code"
     href="/api-reference/introduction"
   >
-    Explore all available endpoints
+    Endpoint families and migration map
   </Card>
   <Card
-    title="Authentication"
+    title="Payment Authentication"
     icon="key"
     href="/authentication"
   >
-    Learn about API key authentication
+    Header requirements for x402 and MPP
   </Card>
   <Card
-    title="Rate Limits"
+    title="Payment Methods"
     icon="gauge"
-    href="/rate-limits"
+    href="/concepts/payment-methods"
   >
-    Understand API rate limits and best practices
+    Choose the best rail for each workflow
   </Card>
 </CardGroup>

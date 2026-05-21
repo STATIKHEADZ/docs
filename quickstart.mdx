@@ -1,367 +1,102 @@
 ---
 title: 'Quickstart'
-description: 'Create your first WURK job in under 5 minutes'
+description: 'Call your first x402 and MPP endpoints in minutes'
 ---
 
-## Choose Your Method
+## Prerequisites
 
-WURK offers two ways to create jobs:
+Before you start:
 
-<CardGroup cols={2}>
-  <Card title="Quick Endpoints (Recommended)" icon="bolt">
-    **No API key required!** Create preconfigured jobs with just 2 HTTP requests.
-    Perfect for getting started immediately.
-  </Card>
-  <Card title="Full API" icon="code">
-    Complete control with API key. Customize every aspect of your jobs.
-  </Card>
-</CardGroup>
+- WURK base URL: `https://wurkapi.fun`
+- A funded wallet for your chosen rail
+- HTTP client (`curl`, `fetch`, or SDK tools)
 
-## Method 1: Quick Endpoints (No API Key)
+## Quickstart A: x402 (`/{network}/*`)
 
-The fastest way to get started - no registration required!
-
-### Example: Create 100 X/Twitter Likes
+This example creates an agent-to-human job on Solana.
 
 <Steps>
-  <Step title="Make Discovery Request">
+  <Step title="Call without payment to get 402 challenge">
     ```bash
-    curl -i \
-      "https://wurkapi.fun/api/x402/quick/base/xlikes-100?url=https%3A%2F%2Fx.com%2Fyourpost%2Fstatus%2F123" \
-      -H "Accept: application/json"
+    curl -i "https://wurkapi.fun/solana/agenttohuman?description=Rate+my+new+landing+page&winners=5&perUser=0.025"
     ```
-    This returns a 402 status with payment requirements ($2.50 USDC).
+
+    Expected:
+    - Status `402 Payment Required`
+    - Payment requirements in body (`accepts[]`)
+    - Payment metadata in response headers
   </Step>
-  
-  <Step title="Send Payment">
-    Use the x402 library to create and send payment:
-    
-    **For Base (EVM):**
-    ```javascript
-    import { withPaymentInterceptor } from 'x402-axios';
-    import { privateKeyToAccount } from 'viem/accounts';
-    
-    const account = privateKeyToAccount(YOUR_PRIVATE_KEY);
-    const api = withPaymentInterceptor(axios.create(), account);
-    
-    const result = await api.get(
-      'https://wurkapi.fun/api/x402/quick/base/xlikes-100?url=...',
-      { headers: { 'Accept': 'application/json' }}
-    );
+
+  <Step title="Retry same URL with PAYMENT-SIGNATURE">
+    ```bash
+    curl -i "https://wurkapi.fun/solana/agenttohuman?description=Rate+my+new+landing+page&winners=5&perUser=0.025" \
+      -H "PAYMENT-SIGNATURE: <signed-payment>"
     ```
-    
-    **For Solana:**
-    ```javascript
-    import { createSigner } from 'x402/types';
-    
-    const signer = await createSigner('solana', YOUR_PRIVATE_KEY);
-    // ... handle x402 flow
-    ```
+
+    Expected success payload includes:
+    - `jobId`
+    - `secret`
+    - `statusUrl`
+    - `paid: true`
   </Step>
-  
-  <Step title="Job Created!">
-    ```json
-    {
-      "ok": true,
-      "paid": true,
-      "jobId": "abc123de"
-    }
+
+  <Step title="Read submissions later (free)">
+    ```bash
+    curl "https://wurkapi.fun/solana/agenttohuman?action=view&secret=YOUR_SECRET"
     ```
-    Your job is now active with 100 completions configured!
   </Step>
 </Steps>
 
-### Available Quick Jobs
+## Quickstart B: MPP (`/mpp/*`)
 
-<CardGroup cols={2}>
-  <Card title="X/Twitter Reposts" icon="retweet">
-    `reposts-100` - 100 reposts for $2.50
-  </Card>
-  <Card title="X/Twitter Likes" icon="heart">
-    `xlikes-100` - 100 likes for $2.50
-  </Card>
-  <Card title="Instagram Likes" icon="instagram">
-    `insta-likes-100` - 100 likes for $2.50
-  </Card>
-  <Card title="DexScreener Rockets" icon="rocket">
-    `dex-rocket-100` - 100 rockets for $2.50
-  </Card>
-</CardGroup>
-
-<Info>
-  Quick Endpoints are perfect for common use cases. For full customization, use Method 2 below.
-</Info>
-
-### Learn More
-
-<CardGroup cols={3}>
-  <Card
-    title="Overview"
-    icon="book"
-    href="/api-reference/quick-endpoints-overview"
-  >
-    Complete Quick Endpoints documentation
-  </Card>
-  <Card
-    title="Solana Endpoints"
-    icon="coins"
-    href="/api-reference/quick-endpoints-solana"
-  >
-    Quick Endpoints on Solana
-  </Card>
-  <Card
-    title="Base Endpoints"
-    icon="ethereum"
-    href="/api-reference/quick-endpoints-base"
-  >
-    Quick Endpoints on Base
-  </Card>
-</CardGroup>
-
-## Method 2: Full API (With API Key)
-
-For complete control over job parameters.
-
-### Prerequisites
-
-<CardGroup cols={2}>
-  <Card title="API Key" icon="key">
-    Get your API key from [wurk.fun/apikey](https://wurk.fun/apikey)
-  </Card>
-  <Card title="Payment Method" icon="wallet">
-    Either USDC (on Solana or Base) or platform balance (SOL)
-  </Card>
-</CardGroup>
-
-### Create Your First Job
-
-Let's create a simple social media repost job:
-
-<CodeGroup>
-
-```bash cURL
-curl -X POST "https://wurkapi.fun/api/external/jobs/create" \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "social",
-    "tweet_url": "https://x.com/yourhandle/status/1234567890",
-    "min_rank": 1,
-    "cooldown_minutes": 5,
-    "jobtype": "repost",
-    "max_completions": 100,
-    "total_usdc": 5.0
-  }'
-```
-
-```javascript Node.js
-const response = await fetch('https://wurkapi.fun/api/external/jobs/create', {
-  method: 'POST',
-  headers: {
-    'X-API-Key': 'YOUR_API_KEY',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    type: 'social',
-    tweet_url: 'https://x.com/yourhandle/status/1234567890',
-    min_rank: 1,
-    cooldown_minutes: 5,
-    jobtype: 'repost',
-    max_completions: 100,
-    total_usdc: 5.0
-  })
-});
-
-const data = await response.json();
-console.log('Job created:', data.jobId);
-```
-
-```python Python
-import requests
-
-response = requests.post(
-    'https://wurkapi.fun/api/external/jobs/create',
-    headers={
-        'X-API-Key': 'YOUR_API_KEY',
-        'Content-Type': 'application/json'
-    },
-    json={
-        'type': 'social',
-        'tweet_url': 'https://x.com/yourhandle/status/1234567890',
-        'min_rank': 1,
-        'cooldown_minutes': 5,
-        'jobtype': 'repost',
-        'max_completions': 100,
-        'total_usdc': 5.0
-    }
-)
-
-data = response.json()
-print(f"Job created: {data['jobId']}")
-```
-
-</CodeGroup>
-
-## Response
-
-```json
-{
-  "jobId": "abc123def",
-  "status": "unpaid",
-  "type": "social",
-  "balancePayment": 0
-}
-```
-
-## Complete the Payment
-
-Since we used USDC payment, we need to complete the x402 payment:
+This example uses Tempo MPP for the same job family.
 
 <Steps>
-  <Step title="Get Payment Requirements">
-    Request the payment details for your job:
-    
-    **For Solana:**
+  <Step title="Call without Authorization">
     ```bash
-    curl -X GET "https://wurkapi.fun/api/x402/jobs/abc123def/pay" \
-      -H "Accept: application/json"
+    curl -i "https://wurkapi.fun/mpp/agenttohuman?description=Rate+my+new+landing+page&winners=5&perUser=0.025"
     ```
-    
-    **For Base:**
+
+    Expected:
+    - Status `402`
+    - `WWW-Authenticate: Payment ...`
+  </Step>
+
+  <Step title="Retry with Payment credential">
     ```bash
-    curl -X GET "https://wurkapi.fun/api/x402/base/jobs/abc123def/pay" \
-      -H "Accept: application/json"
+    curl -i "https://wurkapi.fun/mpp/agenttohuman?description=Rate+my+new+landing+page&winners=5&perUser=0.025" \
+      -H "Authorization: Payment <credential>"
     ```
-    
-    This returns a 402 status with payment requirements.
-  </Step>
-  
-  <Step title="Send Payment">
-    Use the x402 library to create and send the payment header:
-    
-    **For Solana:**
-    ```javascript
-    import { createSigner } from 'x402/types';
-    import { selectPaymentRequirements, createPaymentHeader } from 'x402/client';
-    
-    // Create signer with your Solana private key
-    const signer = await createSigner('solana', YOUR_PRIVATE_KEY);
-    
-    // Select payment requirements
-    const selected = selectPaymentRequirements(accepts, ['solana'], 'exact');
-    
-    // Create payment header
-    const xPayment = await createPaymentHeader(signer, x402Version, selected);
-    
-    // Send payment
-    const payResponse = await fetch('https://wurkapi.fun/api/x402/jobs/abc123def/pay', {
-      headers: {
-        'Accept': 'application/json',
-        'X-PAYMENT': xPayment
-      }
-    });
-    ```
-    
-    **For Base:**
-    ```javascript
-    import { privateKeyToAccount } from 'viem/accounts';
-    import { withPaymentInterceptor } from 'x402-axios';
-    import axios from 'axios';
-    
-    // Create account with your EVM private key
-    const account = privateKeyToAccount(YOUR_PRIVATE_KEY);
-    
-    // Create axios instance with payment interceptor
-    const api = withPaymentInterceptor(
-      axios.create({ baseURL: 'https://wurkapi.fun' }),
-      account
-    );
-    
-    // The interceptor handles the 402 flow automatically
-    const payResponse = await api.get(`/api/x402/base/jobs/abc123def/pay`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    ```
-  </Step>
-  
-  <Step title="Verify Success">
-    A successful payment returns:
-    
-    ```json
-    {
-      "ok": true,
-      "paid": true,
-      "jobId": "abc123def"
-    }
-    ```
-    
-    Your job is now active!
+
+    Expected:
+    - Status `200`
+    - `Payment-Receipt` response header
   </Step>
 </Steps>
 
-## Alternative: Use Platform Balance
+## Solana MPP variant
 
-If you have SOL balance on the platform, you can skip the x402 payment:
+Use the same flow on `/mpp-solana/*`:
 
 ```bash
-curl -X POST "https://wurkapi.fun/api/external/jobs/create" \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "social",
-    "tweet_url": "https://x.com/yourhandle/status/1234567890",
-    "min_rank": 1,
-    "cooldown_minutes": 5,
-    "jobtype": "repost",
-    "max_completions": 100,
-    "balance_payment": 1,
-    "total_bounty_sol": 0.12
-  }'
+curl -i "https://wurkapi.fun/mpp-solana/test"
+curl -i "https://wurkapi.fun/mpp-solana/test" \
+  -H "Authorization: Payment <solana-mpp-credential>"
 ```
 
-Response for balance payment:
-```json
-{
-  "jobId": "xyz789abc",
-  "status": "pending",
-  "type": "social",
-  "balancePayment": 1
-}
-```
-
-<Note>
-  Jobs paid with platform balance activate immediately - no additional payment step needed!
-</Note>
-
-## What's Next?
+## Next steps
 
 <CardGroup cols={2}>
-  <Card
-    title="Explore Job Types"
-    icon="briefcase"
-    href="/concepts/job-types"
-  >
-    Learn about social vs custom jobs
-</Card>
-  <Card
-    title="Manage Submissions"
-    icon="list"
-    href="/api-reference/submissions"
-  >
-    Track and manage job submissions
-</Card>
-  <Card
-    title="Payment Details"
-    icon="credit-card"
-    href="/concepts/payment-methods"
-  >
-    Understand payment calculations
-</Card>
-  <Card
-    title="Full API Reference"
-    icon="book"
-    href="/api-reference/introduction"
-  >
-    See all available endpoints
-</Card>
+  <Card title="Authentication" icon="key" href="/authentication">
+    Header-by-header x402 and MPP auth reference
+  </Card>
+  <Card title="x402 Reference" icon="book" href="/api-reference/x402-network-endpoints">
+    Endpoint families for `/{network}/*`
+  </Card>
+  <Card title="MPP Tempo" icon="network-wired" href="/api-reference/mpp-tempo-endpoints">
+    `/mpp/*` endpoint families
+  </Card>
+  <Card title="MPP Solana" icon="wallet" href="/api-reference/mpp-solana-endpoints">
+    `/mpp-solana/*` endpoint families
+  </Card>
 </CardGroup>

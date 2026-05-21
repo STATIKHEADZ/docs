@@ -1,71 +1,74 @@
 ---
 title: 'Authentication'
-description: 'Secure your API requests with API key authentication'
+description: 'Payment authentication for x402 and MPP endpoints'
 ---
 
-## API Key Authentication
+## Authentication model
 
-Most WURK API endpoints require authentication using an API key. You can obtain your API key from [wurk.fun/apikey](https://wurk.fun/apikey).
+WURK endpoints in this docs set use payment-based authentication:
 
-<Note>
-  **Exception:** Quick Endpoints (`/api/x402/quick/*`) do NOT require an API key. These endpoints use x402 payment authentication instead. See [Quick Endpoints](/api-reference/quick-endpoints-overview) for details.
-</Note>
+- **x402 routes** (`/{network}/*`) use `PAYMENT-SIGNATURE` on paid retry
+- **MPP routes** (`/mpp/*`, `/mpp-solana/*`) use `Authorization: Payment ...` on paid retry
 
-## Usage
+## x402 flow
 
-Include your API key in the `X-API-Key` header:
+<Steps>
+  <Step title="First request (no payment header)">
+    Call a paid endpoint like:
 
-```bash
-curl -X GET "https://wurkapi.fun/api/external/balance" \
-  -H "X-API-Key: YOUR_API_KEY"
-```
+    ```bash
+    curl -i "https://wurkapi.fun/solana/xlikes?amount=50&url=https://x.com/user/status/123"
+    ```
 
-<Note>
-  Query parameter authentication (`?apiKey=YOUR_KEY`) is also supported but not recommended for security reasons.
-</Note>
+    Response:
+    - HTTP `402`
+    - Payment requirements in `accepts[]`
+  </Step>
 
-## Error Responses
+  <Step title="Second request (with signed payment)">
+    ```bash
+    curl -i "https://wurkapi.fun/solana/xlikes?amount=50&url=https://x.com/user/status/123" \
+      -H "PAYMENT-SIGNATURE: <signed-payment>"
+    ```
+  </Step>
+</Steps>
 
-When authentication fails, you'll receive one of these responses:
+## MPP flow
 
-### Missing API Key
+<Steps>
+  <Step title="First request (no Authorization)">
+    ```bash
+    curl -i "https://wurkapi.fun/mpp/xlikes?amount=50&url=https://x.com/user/status/123"
+    ```
 
-```json
-{
-  "error": "API key required",
-  "status": 401
-}
-```
+    Response:
+    - HTTP `402`
+    - `WWW-Authenticate: Payment ...`
+  </Step>
 
-### Invalid API Key
+  <Step title="Second request (Payment credential)">
+    ```bash
+    curl -i "https://wurkapi.fun/mpp/xlikes?amount=50&url=https://x.com/user/status/123" \
+      -H "Authorization: Payment <credential>"
+    ```
 
-```json
-{
-  "error": "Invalid API key",
-  "status": 401
-}
-```
+    Successful responses include `Payment-Receipt`.
+  </Step>
+</Steps>
 
+## Header reference
 
-## Testing Authentication
+| Rail | Initial request | Retry request |
+|------|------------------|---------------|
+| x402 | No payment header | `PAYMENT-SIGNATURE: ...` |
+| MPP / MPP Solana | No `Authorization` | `Authorization: Payment ...` |
 
-Test your API key with this simple request:
+<Warning>
+  Do not mix headers between rails. `PAYMENT-SIGNATURE` is x402-only, while `Authorization: Payment ...` is MPP-only.
+</Warning>
 
-```bash
-curl -X GET "https://wurkapi.fun/api/external/health" \
-  -H "X-API-Key: YOUR_API_KEY"
-```
+## Discovery links
 
-Success response:
-```json
-{
-  "ok": true,
-  "module": "external",
-  "version": 1
-}
-```
-
-## Need Help?
-
-- Need a new API key? Visit [wurk.fun/apikey](https://wurk.fun/apikey)
-- Contact [Support](/project/support)
+- x402 resource discovery: `https://wurkapi.fun/.well-known/x402`
+- Tempo MPP OpenAPI: `https://wurkapi.fun/openapi.json`
+- Solana MPP OpenAPI: `https://wurkapi.fun/openapi-mpp-solana.json`
