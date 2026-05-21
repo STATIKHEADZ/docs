@@ -13,6 +13,14 @@ Canonical discovery spec:
 
 `https://wurkapi.fun/openapi-mpp-solana.json`
 
+<Note>
+  As with Tempo MPP, OpenAPI is canonical for baseline routes while some aliases can exist at runtime.
+</Note>
+
+<Warning>
+  Runtime availability for `/mpp-solana/*` depends on MPP Solana configuration (for example `MPP_SOLANA_ENABLED=1` in server deployments).
+</Warning>
+
 ## Agent-to-human families
 
 | Family | Pattern |
@@ -35,10 +43,31 @@ Solana MPP mirrors major MPP service groups:
 
 1. Call endpoint without `Authorization`.
 2. Receive `402` with `WWW-Authenticate: Payment ...`.
-3. Build credential from live challenge fields.
-4. Retry with `Authorization: Payment <credential>`.
-5. Read `Payment-Receipt`.
+3. Parse `application/problem+json` challenge metadata.
+4. Build credential from live challenge fields.
+5. Retry with `Authorization: Payment <credential>`.
+6. Read `Payment-Receipt`.
 
 <Note>
   For Solana MPP, treat the live challenge as source of truth for amount, fee payer behavior, and network-specific payment values.
 </Note>
+
+### Common live challenge fields
+
+- `amount`
+- `feePayer`
+- `feePayerKey`
+- `recentBlockhash` (when present)
+- `network`
+- `currency`
+- `recipient`
+
+## Interop note
+
+MPP Solana and x402 may expose similar business capabilities with different route names and payment headers. Keep rail-specific clients isolated to avoid header or route-mapping mistakes.
+
+## Submissions note
+
+For basic MPP Solana agent-to-human jobs, use the returned `statusUrl` (commonly `/submissions/agenttohuman?action=view&secret=...`) for reads.
+
+For advanced jobs, `statusUrl` can point to `/mpp-solana/agenttohumanadvanced?action=view&secret=...`.

@@ -31,6 +31,15 @@ Examples:
 On x402 these are exposed under `/{network}/{service}`.
 On MPP they are under `/mpp/{service}` and `/mpp-solana/{service}`.
 
+### x402 -> MPP naming differences
+
+| x402 service | MPP equivalent |
+|--------------|----------------|
+| `reposts` | `xreposts` |
+| `comments` | `xcomments` |
+| `bookmarks` | `xbookmarks` |
+| `dex` | `dex-rocket` |
+
 ## Selection modes
 
 <Tabs>
@@ -47,4 +56,9 @@ On MPP they are under `/mpp/{service}` and `/mpp-solana/{service}`.
 
 - x402 view: `/{network}/agenttohuman?action=view&secret=...`
 - x402 recover: `/{network}/agenttohuman?action=recover`
+- x402 paid utility recover: `/{network}/agenthelp/recover` (small paid utility flow)
+- x402 paid utility view: `/{network}/agenthelp/view?secret=...`
 - SIWX recover aliases: `/{network}/siwx/agenttohuman/recover` and `/{network}/siwx/agenthelp/recover`
+- MPP basic read: use `statusUrl` or `GET /submissions/agenttohuman?action=view&secret=...`
+- MPP advanced read: `statusUrl` can point to `/{rail}/agenttohumanadvanced?action=view&secret=...`
+- MPP recover: paid utility under `/mpp/.../recover` and `/mpp-solana/.../recover`

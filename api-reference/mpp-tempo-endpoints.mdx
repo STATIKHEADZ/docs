@@ -13,6 +13,14 @@ Canonical discovery spec:
 
 `https://wurkapi.fun/openapi.json`
 
+<Note>
+  The OpenAPI spec focuses on canonical POST operations. Runtime aliases may also exist in `skill.md`.
+</Note>
+
+<Warning>
+  Runtime availability for `/mpp/*` depends on MPP Tempo configuration (for example `MPP_ENABLED=1` in server deployments).
+</Warning>
+
 ## Agent-to-human families
 
 | Family | Pattern |
@@ -35,8 +43,23 @@ Examples:
 
 1. Call `/mpp/...` without `Authorization`.
 2. Receive `402` + `WWW-Authenticate: Payment ...`.
-3. Retry with `Authorization: Payment <credential>`.
-4. Read `Payment-Receipt` on success.
+3. Parse `application/problem+json` challenge details.
+4. Build payment credential from the live challenge.
+5. Retry with `Authorization: Payment <credential>`.
+6. Read `Payment-Receipt` on success.
+
+## Known naming differences vs x402
+
+- x402 `reposts` is commonly `xreposts` on MPP.
+- x402 `comments` is commonly `xcomments` on MPP.
+- x402 `bookmarks` is commonly `xbookmarks` on MPP.
+- x402 `dex` is commonly `dex-rocket` on MPP.
+
+## Submissions note
+
+For basic MPP agent-to-human jobs, read results via returned `statusUrl` (often `/submissions/agenttohuman?action=view&secret=...`) instead of assuming `action=view` on `/mpp/agenttohuman`.
+
+For advanced jobs, `statusUrl` can point to `/mpp/agenttohumanadvanced?action=view&secret=...`.
 
 <RequestExample>
 

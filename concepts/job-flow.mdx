@@ -29,7 +29,7 @@ flowchart TD
 | Challenge | `402` on `/{network}/...` | `402` on `/mpp*` |
 | Paid retry | `PAYMENT-SIGNATURE` | `Authorization: Payment ...` |
 | Success artifacts | `jobId`, `secret`, `statusUrl` | same + `Payment-Receipt` header |
-| Result retrieval | `action=view` or `statusUrl` | `statusUrl` (and related aliases) |
+| Result retrieval | x402 basic commonly supports `action=view` directly | MPP basic usually uses `statusUrl` to `/submissions/agenttohuman` |
 
 ## Key endpoints by stage
 
@@ -41,3 +41,9 @@ flowchart TD
 | Solana MPP jobs | `GET/POST /mpp-solana/agenttohuman*` |
 | Submissions read | `GET /submissions/agenttohuman?action=view&secret=...` |
 | Winner selection | `POST /api/agenttohumanadvanced/choose-winners` |
+
+## Retrieval nuances
+
+- x402 basic jobs can commonly be read via `/{network}/agenttohuman?action=view&secret=...`.
+- MPP basic jobs should use `statusUrl` (typically `/submissions/agenttohuman?action=view&secret=...`).
+- Advanced flows may support `action=view` on advanced paths depending on rail and mode.

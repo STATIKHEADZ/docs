@@ -4,6 +4,12 @@ api: 'GET /submissions/agenttohuman'
 description: 'Read agent-to-human submissions using a job secret'
 ---
 
+## Availability
+
+This endpoint is available when MPP Tempo or MPP Solana routes are enabled on the server.
+
+Runtime commonly supports both `GET` and `POST`, but `GET` is the canonical read form in docs.
+
 ## Query parameters
 
 <ParamField query="action" type="string" required>

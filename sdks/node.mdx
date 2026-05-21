@@ -1,23 +1,31 @@
 ---
 title: 'Node.js SDK Patterns'
-description: 'Reference implementations for x402 and MPP in Node.js'
+description: 'Practical client patterns for x402, MPP Tempo, and MPP Solana'
 ---
 
 ## Installation
+
+### x402 (Solana-focused)
 
 ```bash
 npm install @x402/fetch @x402/core @x402/svm
 ```
 
-For Solana MPP flows:
+### Solana MPP
 
 ```bash
 npm install @solana/mpp @solana/kit
 ```
 
-## x402 client pattern
+### Tempo MPP helper
 
-Use `@x402/fetch` so challenge and paid retry are handled automatically.
+```bash
+npm install execa
+```
+
+## x402 client pattern (`PAYMENT-SIGNATURE`)
+
+Use `@x402/fetch` to automate challenge -> sign -> retry.
 
 ```typescript
 import { wrapFetchWithPayment } from '@x402/fetch';
@@ -26,32 +34,34 @@ import { registerExactSvmScheme } from '@x402/svm/exact/client';
 
 const client = new x402Client();
 registerExactSvmScheme(client, { signer: yourSolanaSigner });
+
 const paidFetch = wrapFetchWithPayment(fetch, client);
 
-const response = await paidFetch(
+const res = await paidFetch(
   'https://wurkapi.fun/solana/agenttohuman?description=Review+this+copy&winners=5&perUser=0.025'
 );
-const data = await response.json();
+const data = await res.json();
+// includes: jobId, secret, statusUrl
 ```
 
-## MPP Tempo pattern
+## MPP Tempo pattern (`Authorization: Payment ...`)
+
+Tempo MPP commonly uses the Tempo tooling/client to handle challenge parsing and credential creation.
 
 ```typescript
-const challenge = await fetch(
-  'https://wurkapi.fun/mpp/xlikes?url=https://x.com/user/status/123&amount=25'
-);
+import { execa } from 'execa';
 
-if (challenge.status === 402) {
-  const credential = await buildPaymentCredentialFromChallenge(challenge);
-  const paid = await fetch(
-    'https://wurkapi.fun/mpp/xlikes?url=https://x.com/user/status/123&amount=25',
-    {
-      headers: { Authorization: `Payment ${credential}` },
-    }
-  );
-  const result = await paid.json();
-}
+const tempoBin = `${process.env.HOME}/.tempo/bin/tempo`;
+const url =
+  'https://wurkapi.fun/mpp/xlikes?url=https%3A%2F%2Fx.com%2Fuser%2Fstatus%2F123&amount=40';
+
+const { stdout } = await execa(tempoBin, ['request', '-t', '-X', 'GET', url]);
+console.log(stdout);
 ```
+
+<Note>
+  MPP OpenAPI is canonical for route surface, but runtime aliases can still exist. Keep route naming explicit (`xreposts`, `xcomments`, `xbookmarks`, `dex-rocket`).
+</Note>
 
 ## MPP Solana pattern
 
@@ -69,8 +79,21 @@ const response = await mppx.fetch('https://wurkapi.fun/mpp-solana/test', {
 const payload = await response.json();
 ```
 
-## Tips
+## Submissions retrieval pattern
 
-- Keep rail-specific logic isolated (`x402`, `mpp`, `mpp-solana`).
-- Persist `secret` and `statusUrl` from create responses.
-- Log challenge/paid metrics (`402` -> `200`) for reliability.
+- x402 basic jobs: often `/{network}/agenttohuman?action=view&secret=...`
+- MPP basic jobs: use `statusUrl` or `/submissions/agenttohuman?action=view&secret=...`
+
+```typescript
+const read = await fetch(
+  'https://wurkapi.fun/submissions/agenttohuman?action=view&secret=YOUR_SECRET'
+);
+const submissions = await read.json();
+```
+
+## Reliability tips
+
+- Keep rail-specific code paths isolated.
+- Treat every `402` response as the current source of truth.
+- Retry only with the latest challenge metadata.
+- Persist `jobId`, `secret`, and `statusUrl` immediately after success.

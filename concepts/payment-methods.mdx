@@ -21,10 +21,25 @@ description: 'Choose the right payment rail: x402, MPP Tempo, or MPP Solana'
 
 | Topic | x402 | MPP |
 |------|------|-----|
-| Challenge header | payment metadata + `accepts[]` | `WWW-Authenticate: Payment ...` |
+| Challenge header | `Payment-Required` + `accepts[]` | `WWW-Authenticate: Payment ...` |
 | Retry header | `PAYMENT-SIGNATURE` | `Authorization: Payment ...` |
 | Typical success signal | JSON `paid: true` | `Payment-Receipt` header + JSON |
 | Discovery source | `/.well-known/x402` | OpenAPI (`/openapi*.json`) |
+
+## Naming differences to watch
+
+| x402 | MPP |
+|------|-----|
+| `reposts` | `xreposts` |
+| `comments` | `xcomments` |
+| `bookmarks` | `xbookmarks` |
+| `dex` | `dex-rocket` |
+
+## Amount defaults and requirements
+
+- x402 social quick routes often allow omitted `amount` and default to `40`.
+- MPP social routes usually require explicit `amount` (or equivalent winners alias).
+- Many quick social actions are priced per slot (commonly `$0.025`, with some follower/member flows at `$0.04`).
 
 ## x402 flow
 
@@ -56,9 +71,17 @@ description: 'Choose the right payment rail: x402, MPP Tempo, or MPP Solana'
   </Tab>
 </Tabs>
 
+## Runtime availability
+
+- x402 routes are generally available with the x402 server rail.
+- MPP Tempo routes depend on MPP Tempo enablement.
+- MPP Solana routes depend on MPP Solana enablement.
+- OpenAPI documents can be reachable even when specific runtime rails are disabled.
+
 ## Canonical references
 
 - `https://wurkapi.fun/.well-known/x402`
+- `https://wurkapi.fun/openapi-x402.json`
 - `https://wurkapi.fun/openapi.json`
 - `https://wurkapi.fun/openapi-mpp-solana.json`
 - `https://wurkapi.fun/skill.md`

@@ -21,6 +21,20 @@ Where `network` is `solana` or `base`.
 | Advanced | `/{network}/agenttohumanadvanced` | Extended controls such as creator selection |
 | Agent help aliases | `/{network}/agenthelp*` | Compatibility aliases where available |
 | SIWX recover | `/{network}/siwx/agenttohuman/recover` | Auth-only recovery variant |
+| SIWX alias | `/{network}/siwx/agenthelp/recover` | Alias used by some clients |
+
+## View and recover matrix
+
+| Flow | Endpoint style | Notes |
+|------|----------------|-------|
+| Basic submissions read | `/{network}/agenttohuman?action=view&secret=...` | Common for x402 basic jobs |
+| Paid utility view | `/{network}/agenthelp/view?secret=...` | Small paid utility flow |
+| Paid utility recover | `/{network}/agenthelp/recover` | Returns recent paid jobs/secrets for payer |
+| SIWX recover | `/{network}/siwx/agenttohuman/recover` | Auth-only recover, no payment signature |
+
+<Note>
+  For some utility flows, the challenge may return a canonical payment `resource.url` under `/api/x402/quick/...`. Prefer the returned `resource.url` during paid retry.
+</Note>
 
 ## Social service families
 
@@ -30,7 +44,18 @@ Where `network` is `solana` or `base`.
 | Instagram | `instalikes`, `instacomments`, `instafollowers` |
 | YouTube | `ytlikes`, `ytcomments`, `ytsubs` |
 | Communities | `tgmembers`, `dcmembers` |
+| Base app | `basefollowers`, `baselikes`, `basereposts`, `basecomments` |
+| Zora | `zorafollowers`, `zoracomments` |
 | Votes and misc | `cmcvote`, `cgvote`, `majorvote`, `dex`, `pfcomments` |
+| Agentlink (base) | `base/agentlink/agenttohuman`, `base/agentlink/xraid/xverified/small` |
+
+## Amount and path variants
+
+Many services accept more than one request style:
+
+- query-style: `?amount=N`
+- path-style: `/{winners}`
+- hyphen-style: `-:winners` (service-specific aliases)
 
 ## Request pattern
 
@@ -41,3 +66,7 @@ Where `network` is `solana` or `base`.
 ## Discover full list
 
 Use `GET https://wurkapi.fun/.well-known/x402` to retrieve the latest resource list.
+
+For complete machine-readable route inventory, use:
+
+`GET https://wurkapi.fun/openapi-x402.json`

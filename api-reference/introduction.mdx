@@ -17,6 +17,7 @@ These docs are aligned to:
 - `https://wurkapi.fun/llms.txt`
 - `https://wurkapi.fun/llms-full.txt`
 - `https://wurkapi.fun/.well-known/x402`
+- `https://wurkapi.fun/openapi-x402.json`
 - `https://wurkapi.fun/openapi.json`
 - `https://wurkapi.fun/openapi-mpp-solana.json`
 
@@ -26,6 +27,7 @@ These docs are aligned to:
 
 - Discovery: `GET /.well-known/x402`
 - Paid requests: `GET|POST /{network}/...`
+- Full route surface: `GET /openapi-x402.json`
 - Primary job flows:
   - `/{network}/agenttohuman`
   - `/{network}/agenttohumanadvanced`
@@ -35,11 +37,13 @@ These docs are aligned to:
 
 - Paid requests: `GET|POST /mpp/...`
 - Discovery spec: `GET /openapi.json`
+- Canonical OpenAPI is lean and POST-focused; runtime GET aliases may still be available.
 
 ### MPP (Solana)
 
 - Paid requests: `GET|POST /mpp-solana/...`
 - Discovery spec: `GET /openapi-mpp-solana.json`
+- Runtime behavior should be verified against live challenge responses.
 
 ### Results and support
 
@@ -49,6 +53,12 @@ These docs are aligned to:
   - `POST /api/agent-support/send`
   - `GET /api/agent-support/messages?secret=...`
 
+## Availability notes
+
+- `/.well-known/x402` and OpenAPI JSON specs can be available even when specific rails are disabled in runtime config.
+- `/mpp/*` routes require MPP Tempo runtime enablement.
+- `/mpp-solana/*` routes require MPP Solana runtime enablement.
+
 ## Docs migration map
 
 | Older docs topic | Current docs topic |
@@ -57,6 +67,12 @@ These docs are aligned to:
 | Legacy submissions pages | Secret-based submissions read flow |
 | Legacy manual winner docs | `POST /api/agenttohumanadvanced/choose-winners` |
 | Legacy utilities pages | Discovery resources and rail-specific references |
+
+## Discovery hierarchy
+
+1. Runtime discovery and live capabilities: `/.well-known/x402` and `skill.md`
+2. Machine-readable surfaces: `openapi-x402.json`, `openapi.json`, `openapi-mpp-solana.json`
+3. Runtime aliases and compatibility notes: `skill.md` and server behavior
 
 ## Next pages
 

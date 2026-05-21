@@ -15,10 +15,17 @@ Social services are available on all rails:
 
 | Service group | Examples |
 |---------------|----------|
-| X/Twitter | `xlikes`, `xfollowers`, `reposts`, `comments`, `bookmarks`, `xraid/*` |
+| X/Twitter (x402) | `xlikes`, `xfollowers`, `reposts`, `comments`, `bookmarks`, `xraid/*` |
+| X/Twitter (MPP) | `xlikes`, `xfollowers`, `xreposts`, `xcomments`, `xbookmarks`, `xraid/*` |
 | Instagram | `instalikes`, `instacomments`, `instafollowers` |
 | YouTube | `ytlikes`, `ytcomments`, `ytsubs` |
 | Communities | `tgmembers`, `dcmembers` |
+
+## Amount defaults and requirements
+
+- x402 social quick routes typically accept omitted `amount` and default to `40` slots.
+- MPP routes generally require `amount` (or compatible winners alias).
+- Many social services use `$0.025` per slot; follower/member families commonly use `$0.04` per slot.
 
 ## x402 example
 
@@ -41,3 +48,4 @@ curl -i "https://wurkapi.fun/mpp/xlikes?amount=50&url=https://x.com/user/status/
 - Keep target URL/handle parameters clean and canonical.
 - Start with smaller `amount` values, then scale.
 - Track paid success (`200`) versus challenge rate (`402`) in your telemetry.
+- Keep rail-specific service naming explicit in code (`reposts` vs `xreposts`, etc.).

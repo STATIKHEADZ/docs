@@ -1,12 +1,12 @@
 ---
 title: 'x402 Discovery'
 api: 'GET /.well-known/x402'
-description: 'Discover all publicly listed x402 resources for WURK'
+description: 'Discover all public x402 resources exposed by WURK'
 ---
 
 ## Overview
 
-Use this endpoint to discover x402-payable resources exposed by WURK.
+Use this endpoint to enumerate x402-discoverable resources currently published by WURK.
 
 ## Response fields
 
@@ -15,16 +15,18 @@ Use this endpoint to discover x402-payable resources exposed by WURK.
 </ResponseField>
 
 <ResponseField name="resources" type="array">
-  List of absolute x402 resource URLs (for example `https://wurkapi.fun/solana/xlikes`).
+  Absolute resource URLs, usually under `/{network}/*` (`solana` or `base`).
 </ResponseField>
 
 <ResponseField name="ownershipProofs" type="array">
-  Optional signatures used for ownership verification by ecosystem tooling.
+  Optional signatures for registry/ownership verification.
 </ResponseField>
 
 <ResponseField name="instructions" type="string">
-  Human-readable notes on discovery and usage.
+  Human-readable integration notes from the server.
 </ResponseField>
+
+## Example request
 
 <RequestExample>
 
@@ -34,6 +36,8 @@ curl -X GET "https://wurkapi.fun/.well-known/x402"
 
 </RequestExample>
 
+## Example response
+
 <ResponseExample>
 
 ```json
@@ -42,8 +46,7 @@ curl -X GET "https://wurkapi.fun/.well-known/x402"
   "resources": [
     "https://wurkapi.fun/solana/agenttohuman",
     "https://wurkapi.fun/solana/xlikes",
-    "https://wurkapi.fun/base/agenttohuman",
-    "https://wurkapi.fun/api/agenttohumanadvanced/choose-winners"
+    "https://wurkapi.fun/base/agenttohuman"
   ],
   "ownershipProofs": ["0x..."],
   "instructions": "# WURK x402 resources ..."
@@ -51,3 +54,7 @@ curl -X GET "https://wurkapi.fun/.well-known/x402"
 ```
 
 </ResponseExample>
+
+<Note>
+  Discovery is dynamic. Always treat this endpoint as the live source of available x402 resources.
+</Note>

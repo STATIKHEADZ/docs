@@ -22,6 +22,7 @@ WURK endpoints in this docs set use payment-based authentication:
 
     Response:
     - HTTP `402`
+    - `Payment-Required` (or `PAYMENT-REQUIRED`) response header
     - Payment requirements in `accepts[]`
   </Step>
 
@@ -44,6 +45,7 @@ WURK endpoints in this docs set use payment-based authentication:
     Response:
     - HTTP `402`
     - `WWW-Authenticate: Payment ...`
+    - `application/problem+json` body (`type`, `title`, `status`, `detail`, optional `challengeId`)
   </Step>
 
   <Step title="Second request (Payment credential)">
@@ -63,9 +65,22 @@ WURK endpoints in this docs set use payment-based authentication:
 | x402 | No payment header | `PAYMENT-SIGNATURE: ...` |
 | MPP / MPP Solana | No `Authorization` | `Authorization: Payment ...` |
 
+## Common payment-related statuses
+
+| Status | Meaning | Action |
+|--------|---------|--------|
+| `402` | Payment challenge or payment verification failed | Rebuild payment using latest challenge |
+| `409` | Similar paid/open job already exists | Reuse existing job reference instead of re-paying |
+| `200` + `alreadyConfirmed` | Idempotent paid state | Treat as success |
+
 <Warning>
   Do not mix headers between rails. `PAYMENT-SIGNATURE` is x402-only, while `Authorization: Payment ...` is MPP-only.
 </Warning>
+
+## Legacy and internal notes
+
+- Public `/{network}/*` x402 routes use `PAYMENT-SIGNATURE` (v2).
+- Some legacy/internal test flows may still show `X-PAYMENT`; do not copy that header into public integrations.
 
 ## Discovery links
 
