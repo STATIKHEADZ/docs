@@ -1,95 +1,131 @@
 ---
 title: 'Authentication'
-description: 'Payment authentication for x402 and MPP endpoints'
+description: 'Use wallet authentication, account keys, checkout tokens, and job secrets for the right operation'
 ---
 
-## Authentication model
+WURK separates **free account authentication**, **x402 payment**, and **access to a particular job**. Creating a paid job does not require an account login. Finding eligible jobs and submitting work use free account authentication and need no funded wallet.
 
-WURK endpoints in this docs set use payment-based authentication:
+## Choose the credential for your operation
 
-- **x402 routes** (`/{network}/*`) use `PAYMENT-SIGNATURE` on paid retry
-- **MPP routes** (`/mpp/*`, `/mpp-solana/*`) use `Authorization: Payment ...` on paid retry
+| Operation | Credential |
+| --- | --- |
+| Create or pay for a job, Contest, Store purchase, or direct hire | `PAYMENT-SIGNATURE` for the approved x402 payment; `X-Checkout-Token` where required |
+| Read an Advanced USDC, Contest, Store, or hire checkout | Its saved `X-Checkout-Token`, or the endpoint's supported account/wallet authentication |
+| Access an account, profile, worker API, or account history | `X-API-Key` or a fresh `SIGN-IN-WITH-X` proof where supported |
+| Rotate an account API key, or request a withdrawal quote, confirmation, or individual status | Fresh `SIGN-IN-WITH-X` from the account's registered wallet |
+| Read submissions or perform creator actions | The job's private `X-Secret`, where supported |
 
-## x402 flow
+For account and job-secret operations, send exactly one supported credential. Create/pay requests reject `X-API-Key`, `SIGN-IN-WITH-X`, `Authorization`, and `X-WURK-Auth` with `400 X402_PAYMENT_AUTH_FORBIDDEN`. An API key is never an alternative to paying for the job.
 
-<Steps>
-  <Step title="First request (no payment header)">
-    Call a paid endpoint like:
+## Understand an HTTP 402 response
 
-    ```bash
-    curl -i "https://wurkapi.fun/solana/xlikes?amount=50&url=https://x.com/user/status/123"
-    ```
+Inspect `accepts` before deciding what to sign:
 
-    Response:
-    - HTTP `402`
-    - `Payment-Required` (or `PAYMENT-REQUIRED`) response header
-    - Payment requirements in `accepts[]`
-  </Step>
+| Challenge | Meaning | Next step |
+| --- | --- | --- |
+| `x402Version: 2`, `accepts: []`, and a `sign-in-with-x` extension | Free wallet authentication | Sign the exact advertised authentication message |
+| Nonempty `accepts` | An x402 payment quote | Review the complete amount, network, asset, recipient, resource, and metadata before authorizing payment |
 
-  <Step title="Second request (with signed payment)">
-    ```bash
-    curl -i "https://wurkapi.fun/solana/xlikes?amount=50&url=https://x.com/user/status/123" \
-      -H "PAYMENT-SIGNATURE: <signed-payment>"
-    ```
-  </Step>
-</Steps>
+The `PAYMENT-REQUIRED` header encodes the x402 challenge. Free authentication uses `SIGN-IN-WITH-X` on the retry; payment uses `PAYMENT-SIGNATURE`. See [payment methods](/concepts/payment-methods) for checkout handling.
 
-## MPP flow
+## Free account access
 
-<Steps>
-  <Step title="First request (no Authorization)">
-    ```bash
-    curl -i "https://wurkapi.fun/mpp/xlikes?amount=50&url=https://x.com/user/status/123"
-    ```
+Use the [CLI setup](/quickstart) to import your wallet, then:
 
-    Response:
-    - HTTP `402`
-    - `WWW-Authenticate: Payment ...`
-    - `application/problem+json` body (`type`, `title`, `status`, `detail`, optional `challengeId`)
-  </Step>
+```sh
+wurk account access --state-dir "$WURK_STATE" --network solana --wallet "$WURK_WALLET"
+```
 
-  <Step title="Second request (Payment credential)">
-    ```bash
-    curl -i "https://wurkapi.fun/mpp/xlikes?amount=50&url=https://x.com/user/status/123" \
-      -H "Authorization: Payment <credential>"
-    ```
+Use `--network base` with an imported Base wallet. The command signs a free message, creates or retrieves the wallet's account, and saves its API key privately. Keep the returned `data.access.account` reference for future commands. No gas, token approval, transfer, or human verification is needed for account access.
 
-    Successful responses include `Payment-Receipt`.
-  </Step>
-</Steps>
+For a direct HTTP client, the preferred endpoints accept GET or POST:
 
-## Header reference
+| Signing wallet | Endpoint |
+| --- | --- |
+| Solana mainnet | `/solana/siwx/account-create` |
+| Base mainnet | `/base/siwx/account-create` |
 
-| Rail | Initial request | Retry request |
-|------|------------------|---------------|
-| x402 | No payment header | `PAYMENT-SIGNATURE: ...` |
-| MPP / MPP Solana | No `Authorization` | `Authorization: Payment ...` |
+Use POST with no query or body to inspect the challenge:
 
-## Common payment-related statuses
+```bash
+curl -i -X POST 'https://wurkapi.fun/solana/siwx/account-create'
+```
 
-| Status | Meaning | Action |
-|--------|---------|--------|
-| `402` | Payment challenge or payment verification failed | Rebuild payment using latest challenge |
-| `409` | Similar paid/open job already exists | Reuse existing job reference instead of re-paying |
-| `200` + `alreadyConfirmed` | Idempotent paid state | Treat as success |
+Solana authentication uses Ed25519/SIWS on `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`; Base uses EOA EIP-191 on `eip155:8453`. The [account reference](https://wurkapi.fun/references/account.md#account-access) includes the direct signing flow. The [Node.js SDK](/sdks/node) handles challenge validation and private API-key storage.
 
-<Warning>
-  Do not mix headers between rails. `PAYMENT-SIGNATURE` is x402-only, while `Authorization: Payment ...` is MPP-only.
-</Warning>
+Accessing the same wallet again retrieves the active key without rotating it. If a key is blocked, inspect the error and the account's key-management options. Key rotation is an explicit separate action that invalidates the previous key.
 
-## Legacy and internal notes
+## Authenticate account requests
 
-- Public `/{network}/*` x402 routes use `PAYMENT-SIGNATURE` (v2).
-- Some legacy/internal test flows may still show `X-PAYMENT`; do not copy that header into public integrations.
+With a saved account key, send `X-API-Key` only to an endpoint that accepts it:
 
-## Quick questions
+```http
+GET /profile
+Host: wurkapi.fun
+X-API-Key: <private-account-key>
+```
 
-- **Can I reuse an old challenge?** Prefer a fresh challenge for each paid retry window.
-- **Can I mix x402 and MPP headers?** No, use rail-specific headers only.
-- **What if retry still returns 402?** Re-parse the latest challenge and rebuild payment proof.
+Alternatively, use a fresh wallet proof for each supported operation:
 
-## Discovery links
+1. Send the intended method, URL, and valid body without credentials.
+2. Verify the free challenge has empty `accepts`. Check its origin, exact resource, purpose, signing chain, nonce, and validity window.
+3. Sign the advertised statement unchanged with the account's registered wallet.
+4. Repeat the same method, URL, and body with `SIGN-IN-WITH-X`.
 
-- x402 resource discovery: `https://wurkapi.fun/.well-known/x402`
-- Tempo MPP OpenAPI: `https://wurkapi.fun/openapi.json`
-- Solana MPP OpenAPI: `https://wurkapi.fun/openapi-mpp-solana.json`
+Proofs are one-use and expire within five minutes. A different page, alias, body, or operation needs its own proof. A proof may already be consumed when a later step returns `429`, `503`, or times out. Preserve the original operation identifiers and obtain a fresh proof for a permitted retry. Follow [rate limits](/rate-limits).
+
+Use the [private profile and verification guide](/account/profile-and-verification) to read balances or check agent Proof of Human. Public seller profiles use their [separate profile workflow](/guides/selling-services#1-set-up-your-public-profile).
+
+## Rotate and recover an API key
+
+Use explicit rotation when you intend to invalidate the previous account key. With **CLI 0.7.1**, replace `PATH_TO_PRIVATE_STATE` and `WALLET_REF` with your existing private state directory and the account's imported signing wallet. Use `--network base` for Base; Solana requires the account's primary wallet.
+
+You can inspect the free challenge without signing or changing the key:
+
+```sh
+wurk account apikey inspect --state-dir "PATH_TO_PRIVATE_STATE" --network solana
+```
+
+Rotate once when ready to replace it:
+
+```sh
+wurk account apikey rotate --state-dir "PATH_TO_PRIVATE_STATE" --network solana --wallet WALLET_REF
+```
+
+Rotation requires `--network` and exactly one of `--wallet` or `--key-file`. It accepts no `--account` or JSON body. The command signs a free wallet message and immediately invalidates the previous key for new requests. No gas or payment is required.
+
+On success, `data.rotated` is `true` and `data.access.account` identifies the saved account. The CLI stores the new key privately, retaining an existing account reference; normal output does not expose the raw key. Other integrations holding the old key must retrieve and save the active key through their own account-access flow. Coordinate rotations across clients, since a later rotation replaces an earlier key. Account identity, balances and history are preserved.
+
+**After a lost response, invalid response or local save failure, recover the active key before considering another rotation.** Keep the same state directory and signing wallet:
+
+```sh
+wurk account access --state-dir "PATH_TO_PRIVATE_STATE" --network solana --wallet WALLET_REF
+```
+
+If rotation used `--key-file`, use that same private key file instead of `--wallet`. Repair a local storage failure before recovery. Account access retrieves the current active key without rotating it. The CLI does not automatically retry rotation or run recovery; its recovery error includes `doNotRotateAgain: true` and a suggested `account access` command.
+
+For direct HTTP clients, rotation is **POST `/apikey/rotate`** with fresh wallet SIWX, no query, no body (including `{}`), no `X-API-Key` and no `Authorization`. After an uncertain result, use a fresh proof on the signing network's account-create route to retrieve the active key. See the [account API contract](/api-reference/account#rotate-the-account-api-key) for the exact purpose, response and errors.
+
+Explicit rotation can restore API access after self-service key deletion. It cannot unblock an account or restore a disabled wallet credential; resolve those restrictions through the website or support.
+
+## Payment ownership and checkout access
+
+Advanced USDC, every Contest, Store purchases, and direct hire use a private checkout token and an `idempotencyKey`. The [CLI](/quickstart) and [SDK](/sdks/node) save the token before requesting the quote. Direct clients should generate and persist a random 32-byte base64url token and send it as `X-Checkout-Token` from the first request.
+
+After verified payment is reserved, WURK reuses the payer wallet's eligible account or creates one and links the job to it. This does not issue an API key or browser session. Funding confirmation and activation are separate states. You can use free account access afterward if you want a saved API key.
+
+The token opens only its checkout. For status, follow that checkout's `statusCheck` with the token and **without a payment signature**. Account/wallet status and recovery use their separately documented authentication. If the token is lost after payment reservation, use the original payer wallet and saved identifiers for recovery; see the [recovery guide](https://wurkapi.fun/references/recovery.md#recover-the-existing-operation).
+
+Basic, Advanced WURK, and Preselection use their payment-and-job-secret workflow. Their recovery contract differs from checkout idempotency; follow the relevant [job guide](/concepts/job-types).
+
+## Job secrets
+
+A job secret authorizes actions for that job. Keep it private, including URLs that contain it. Direct clients can use `X-Secret` on supported creator routes; the SDK and CLI retain it privately behind the saved operation reference.
+
+```http
+GET /solana/agenttohumanadvanced?action=view&page=1&pageSize=25
+Host: wurkapi.fun
+X-Secret: <private-job-secret>
+```
+
+See [submissions and winner selection](/jobs/submissions-winners) and [job support](/project/support) for their specific inputs.

@@ -1,0 +1,122 @@
+---
+title: 'Refund history'
+description: 'Read credited job refunds in their recorded assets, without requesting a refund or moving funds.'
+---
+
+Read the authenticated account's **credited job refunds**. This is separate from [requesting human refund review](/api-reference/agent-support#request-refund-review). It includes corresponding website activity and does not transfer funds to a wallet.
+
+| Method | Path | Authentication |
+| --- | --- | --- |
+| POST | `/refunds` | Account API key or fresh Solana/Base wallet proof |
+| POST | `/api/agent/refunds` | Same operation and permissions |
+
+Both paths use `https://wurkapi.fun`. Send one authentication method. There is no account selector or payment requirement. Without credentials, a valid request returns a free SIWX challenge with `accepts: []`; follow [authentication](/authentication#authenticate-account-requests).
+
+## Request
+
+```bash
+curl --fail-with-body 'https://wurkapi.fun/refunds' \
+  -H "X-API-Key: $WURK_API_KEY" \
+  -H 'Content-Type: application/json' \
+  --data '{"limit":10,"offset":0}'
+```
+
+Use `{}` for the first page with defaults. Query parameters and unknown JSON fields are rejected.
+
+| Field | Type | Default | Allowed values |
+| --- | --- | --- | --- |
+| `limit` | Integer | `10` | `1`–`50` |
+| `offset` | Integer | `0` | `0`–`10000` |
+
+Numeric strings and fractions are invalid. For SIWX, sign the advertised challenge for this exact POST path and JSON, including any supplied default fields. Changing the page or alias requires a fresh proof. JSON object key order does not change the intent.
+
+## Response
+
+An empty history returns HTTP 200:
+
+```json
+{
+  "ok": true,
+  "refunds": [],
+  "total": 0,
+  "limit": 10,
+  "offset": 0,
+  "hasMore": false,
+  "nextOffset": null
+}
+```
+
+Every item in `refunds` has:
+
+| Field | Meaning |
+| --- | --- |
+| `historyId` | Stable receipt identifier for deduplication. Preserve it unchanged. |
+| `id` | Native refund identifier; prefer `historyId` across sources. |
+| `jobShortId` | The refunded job's short ID. |
+| `amountRefund` | Exact nonnegative decimal string in the recorded asset. |
+| `assetId` | `SOL`, `USDC`, or `WURK`. |
+| `network` | `solana`, independently of the account's signing chain or the original payment network. |
+| `createdAt` | UTC timestamp, possibly with microseconds; `null` when unavailable. |
+| `source` | `active`, `archive`, or `reward`; receipt classification, not a payment status. |
+| `jobType`, `customShortId` | Job metadata, nullable when unavailable. |
+| `alternativeAccepted` | Historical job metadata. Use `assetId` to determine the currency. |
+
+Preserve amount strings and timestamp precision. A zero-valued receipt can record closure of an empty Contest prize. Failed-swap and withdrawal reversals are outside this job-refund history; use the respective [swap](/api-reference/swaps) or [withdrawal](/api-reference/withdrawals) status and current balances.
+
+## Pagination and limits
+
+Rows are newest first, with unknown timestamps last and deterministic tie-breakers. `total` and the page describe one read snapshot. New refunds between requests can shift later pages: deduplicate by `historyId`.
+
+Follow `nextOffset` with the same `limit`, waiting for the cooldown between requests. Stop when `nextOffset` is `null`. At the offset ceiling it can be null even when `hasMore` is true. An offset beyond the account's last receipt returns an empty list with the correct total.
+
+There is **one refund-history request per account every ten seconds**, shared across credentials, aliases, and pages. Empty pages and accepted reads that later fail count. Rejected early retries do not extend the window. This is separate from swap and withdrawal submission/history limits.
+
+## CLI and SDK 0.7.1
+
+After [free account access](/authentication#free-account-access), use the saved account reference, not the API key:
+
+```sh
+wurk refunds list --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT"
+```
+
+For another page, save `refund-page.json` with the returned offset:
+
+```json
+{"limit":10,"offset":10}
+```
+
+```sh
+wurk refunds list --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --input-file refund-page.json
+```
+
+The CLI's `data` contains `refunds`, `total`, `limit`, `offset`, `hasMore`, and `nextOffset`. With wallet authentication, replace `--account` with `--wallet "$WURK_WALLET" --network solana` or `base` for the registered signing wallet. Each invocation obtains a fresh proof. Use `wurk.cmd` in Windows PowerShell as described in the [CLI setup](/quickstart#install-the-cli).
+
+With the [SDK client and account store](/sdks/node) configured, request one page explicitly:
+
+```typescript
+import type { FinanceAccess, WurkClient } from '@wurk/sdk';
+
+export async function readRefundPage(
+  client: WurkClient,
+  access: FinanceAccess,
+  offset = 0,
+) {
+  return client.refunds.list({ access, limit: 10, offset });
+}
+```
+
+Neither client automatically traverses pages. These reads do not create a refund request or change a balance. To see currently available funds, read the [account balances](/finance/balances-and-earnings).
+
+## Errors and retries
+
+Errors use `{ "ok": false, "errorCode": "...", "message": "..." }`, with optional `details`.
+
+| Response | Next action |
+| --- | --- |
+| `400 REFUND_HISTORY_INPUT_INVALID` | Use only integer `limit`/`offset` within the limits, without query parameters. |
+| `401` / `403` / `404` authentication or account error | Check the credential and its account access. Do not replace it with a job secret or checkout token. |
+| `409 SIWX_NONCE_ALREADY_USED` | Request and sign a fresh authentication challenge. |
+| `429 REFUND_HISTORY_RATE_LIMITED` | Wait for `Retry-After` / `details.retryAfterSeconds`. CLI errors expose `error.retryAfterSeconds`. |
+| `503 REFUND_HISTORY_RATE_LIMIT_UNAVAILABLE` or `REFUND_HISTORY_UNAVAILABLE` | Retry later with backoff, honoring any returned delay. An unavailable history is not proof that no refund exists. |
+
+Use a fresh SIWX proof after an authenticated attempt, including a later rate-limit or read failure. Preserve the page selector. For an unresolved refund decision, follow the original [support conversation](/api-reference/agent-support) rather than using this history read to request another review.

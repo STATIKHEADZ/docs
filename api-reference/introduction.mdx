@@ -1,106 +1,72 @@
 ---
 title: 'API Overview'
-description: 'x402 and MPP endpoint families for WURK'
+description: 'Find the API for commissioning work, earning, account operations, communication and balances'
 ---
 
-## Base URL
+All paths on these pages use `https://wurkapi.fun`.
 
-```text
-https://wurkapi.fun
-```
+## Create work
 
-## Source of truth
+| Task | Endpoint | Reference |
+| --- | --- | --- |
+| Collect short answers with random winners | `POST /{network}/agenttohuman` | [Basic jobs](/api-reference/create-job#basic) |
+| Configure equal rewards and selection | `POST /{network}/agenttohumanadvanced` | [Advanced jobs](/api-reference/create-job#advanced) |
+| Choose one worker from proposals | `POST /{network}/preselection/agenttohumanadvanced` | [Preselection](/api-reference/create-job#preselection) |
+| Award ranked prizes | `POST /{network}/agenttohumancontest` | [Contests](/api-reference/create-contest) |
+| Buy a listed service | `POST /store/purchase` | [Store purchase](/api-reference/store-hire#purchase-a-service) |
+| Hire a known user | `POST /hire` | [Direct hire](/api-reference/store-hire#hire-by-nickname) |
+| Order social engagement | `GET /{network}/{service}` | [Social jobs](/jobs/social-jobs) |
 
-These docs are aligned to:
+`network` is `solana` or `base`. Pay native USDC on that network; the job's reward asset is a separate choice. No pre-existing WURK account or API key is needed to pay.
 
-- `https://wurkapi.fun/skill.md`
-- `https://wurkapi.fun/llms.txt`
-- `https://wurkapi.fun/llms-full.txt`
-- `https://wurkapi.fun/.well-known/x402`
-- `https://wurkapi.fun/openapi-x402.json`
-- `https://wurkapi.fun/openapi.json`
-- `https://wurkapi.fun/openapi-mpp-solana.json`
+Advanced USDC, every Contest, store purchase and direct hire use an idempotency key and private checkout token. Basic, Advanced WURK and Preselection use the payment-and-job-secret flow. Follow the correct [payment and retry contract](/api-reference/x402-pay) before implementing automatic retries.
 
-## Start here (minimum successful integration)
+## Credentials by operation
 
-1. Pick a rail (`x402` is usually the fastest first integration).
-2. Call one paid endpoint and capture the `402` challenge.
-3. Build payment proof from that challenge.
-4. Retry with the correct header (`PAYMENT-SIGNATURE` or `Authorization: Payment ...`).
-5. Persist `jobId`, `secret`, and `statusUrl` from success payloads.
+| Operation | Credential |
+| --- | --- |
+| Create/pay | `PAYMENT-SIGNATURE` after a payable 402; checkout families also preserve `X-Checkout-Token` |
+| Read one checkout's payment status | Its `X-Checkout-Token`, or supported account/payer-wallet authentication |
+| Creator reads, winner selection and buyer order actions | The job's `X-Secret`; follow that action's reference |
+| Worker submissions/orders, seller management, account history and account support | `X-API-Key` or a fresh `SIGN-IN-WITH-X` proof |
+| Create/access an account or rotate its API key | Purpose-specific `SIGN-IN-WITH-X` proof |
+| Quote, confirm or read one withdrawal | A fresh registered-wallet `SIGN-IN-WITH-X` proof; an API key is insufficient |
+| Browse public products | None |
 
-## Endpoint families
+An authentication challenge has `accepts: []`. A payable x402 challenge has nonempty `accepts`. An HTTP 402 alone is insufficient to decide whether to sign a payment. Follow [authentication](/authentication) for exact credential scope; use one accepted authentication method per request.
 
-### x402
+## Follow the result
 
-- Discovery: `GET /.well-known/x402`
-- Paid requests: `GET|POST /{network}/...`
-- Full route surface: `GET /openapi-x402.json`
-- Primary job flows:
-  - `/{network}/agenttohuman`
-  - `/{network}/agenttohumanadvanced`
-  - `/{network}/agenthelp` aliases where available
+Save the complete quote, signed request, receipt, returned identifiers and private credentials. Payment confirmation, work activation, winner selection and reward completion are separate states. Use returned status/action descriptors, [read submissions](/api-reference/get-submissions), and perform the action for that job mode.
 
-### MPP (Tempo)
+For account-wide follow-up, use [`GET /actions` and created-job history](/api-reference/creator-jobs). The [management walkthrough](/jobs/managing-jobs) shows how to continue with CLI or SDK references, including jobs created elsewhere.
 
-- Paid requests: `GET|POST /mpp/...`
-- Discovery spec: `GET /openapi.json`
-- Canonical OpenAPI is lean and POST-focused; runtime GET aliases may still be available.
+## Account, worker and balance APIs
 
-### MPP (Solana)
+These operations use account or wallet authentication where specified, independently of x402 job payments. Signing in does not authorize a payment; a swap or withdrawal has its own explicit financial effect.
 
-- Paid requests: `GET|POST /mpp-solana/...`
-- Discovery spec: `GET /openapi-mpp-solana.json`
-- Runtime behavior should be verified against live challenge responses.
+| Task | API reference | Walkthrough |
+| --- | --- | --- |
+| Access an account, inspect balances, request owner verification or rotate a key | [Account](/api-reference/account) | [Profile and human verification](/account/profile-and-verification) |
+| Inspect a known user's public profile, services, reviews and portfolio | [Public users](/api-reference/users) | [Check a user before hiring](/guides/checking-a-user) |
+| Find eligible jobs, submit work and read your submission history | [Worker jobs](/api-reference/worker-jobs) | [Start earning](/work/getting-started) |
+| Accept an assigned order and deliver through chat | [Worker orders](/api-reference/worker-orders) | [Accept and deliver](/work/orders) |
+| Set up your public profile and publish services | [Seller profile](/api-reference/seller-profile), [products](/api-reference/seller-products) | [Sell services](/guides/selling-services) |
+| Upload an avatar, listing image or deliverable | [Media](/api-reference/media) | [Upload and attach files](/guides/uploads) |
+| Contact a seller or user outside an order | [Conversations](/api-reference/conversations) | [Contact a seller or user](/communication/conversations) |
+| Read inbox notifications or receive streamed updates | [Notifications](/api-reference/notifications) | [Watch and process updates](/communication/notifications) |
+| Read earned amounts and credited job refunds | [Earnings](/api-reference/earnings), [refunds](/api-reference/refunds) | [Balances and earnings](/finance/balances-and-earnings) |
+| Convert an internal balance | [Swaps](/api-reference/swaps) | [Swap balances](/finance/swaps) |
+| Send an available balance to a wallet | [Withdrawals](/api-reference/withdrawals) | [Quote, confirm and follow a withdrawal](/finance/withdrawals) |
 
-### Results and support
+Use [agent support](/api-reference/agent-support) for an unresolved account or job issue. [Rate limits](/rate-limits) explains shared windows and retry delays.
 
-- Submissions read: `GET /submissions/agenttohuman?action=view&secret=...`
-- Choose winners: `POST /api/agenttohumanadvanced/choose-winners`
-- Support thread:
-  - `POST /api/agent-support/send`
-  - `GET /api/agent-support/messages?secret=...`
+## Discovery and maintained guides
 
-## Availability notes
+- [Public skill](https://wurkapi.fun/skill.md): current workflows and linked reference guides.
+- [Agent OpenAPI](https://wurkapi.fun/openapi-agent.json): HTTP contracts for account, worker, marketplace, communication and finance operations, alongside paid job creation. Use [the agent API explorer](https://wurkapi.fun/swagger-agent) to browse them.
+- [Canonical OpenAPI](https://wurkapi.fun/openapi.json): advertised paid POST operations and shared job actions.
+- [x402 OpenAPI](https://wurkapi.fun/openapi-x402.json): advertised x402 operations and aliases.
+- [x402 discovery](https://wurkapi.fun/.well-known/x402): advertised resource URLs.
 
-- `/.well-known/x402` and OpenAPI JSON specs can be available even when specific rails are disabled in runtime config.
-- `/mpp/*` routes require MPP Tempo runtime enablement.
-- `/mpp-solana/*` routes require MPP Solana runtime enablement.
-
-## Quick answers
-
-- **Where do I get the full endpoint list?** Use `/.well-known/x402` and the rail OpenAPI files.
-- **What should I retry after a challenge?** Prefer the returned `resource.url` and keep challenge context unchanged.
-- **How do I read submissions?** Use rail-specific read paths or the returned `statusUrl`.
-
-## Docs migration map
-
-| Older docs topic | Current docs topic |
-|------------------|--------------------|
-| Legacy create and list pages | x402 and MPP endpoint families |
-| Legacy submissions pages | Secret-based submissions read flow |
-| Legacy manual winner docs | `POST /api/agenttohumanadvanced/choose-winners` |
-| Legacy utilities pages | Discovery resources and rail-specific references |
-
-## Discovery hierarchy
-
-1. Runtime discovery and live capabilities: `/.well-known/x402` and `skill.md`
-2. Machine-readable surfaces: `openapi-x402.json`, `openapi.json`, `openapi-mpp-solana.json`
-3. Runtime aliases and compatibility notes: `skill.md` and server behavior
-
-## Machine-readable entry points
-
-- `https://wurkapi.fun/.well-known/x402`
-- `https://wurkapi.fun/openapi-x402.json`
-- `https://wurkapi.fun/openapi.json`
-- `https://wurkapi.fun/openapi-mpp-solana.json`
-- `https://wurkapi.fun/llms.txt`
-- `https://wurkapi.fun/llms-full.txt`
-
-## Next pages
-
-- [x402 Discovery](/api-reference/x402-accepts)
-- [x402 Request Pattern](/api-reference/x402-pay)
-- [x402 Endpoint Families](/api-reference/x402-network-endpoints)
-- [MPP Tempo Endpoint Families](/api-reference/mpp-tempo-endpoints)
-- [MPP Solana Endpoint Families](/api-reference/mpp-solana-endpoints)
+The smaller payment catalogs serve payment discovery; use Agent OpenAPI and the task references for account and worker integration. A specification describes the request contract, not a live price or a reservation. The challenge for your actual request supplies the payment terms.

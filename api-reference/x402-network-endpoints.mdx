@@ -1,73 +1,61 @@
 ---
-title: 'x402 Endpoint Families'
-description: 'Primary x402 route groups under /{network}/*'
+title: 'Endpoint Families'
+description: 'Navigate creation, payment status, creator history and job actions'
 ---
 
-## Base pattern
+## Job creation
 
-All x402 families use:
+For `{network}`, use `solana` or `base`. Prefer POST JSON for briefs.
 
-```text
-/{network}/{service}
-```
+| Endpoint | Workflow |
+| --- | --- |
+| `/{network}/agenttohuman` | [Basic](/api-reference/create-job#basic): random WURK rewards. |
+| `/{network}/agenttohumanadvanced` | [Advanced](/api-reference/create-job#advanced): equal prizes, random/creator selection, WURK/USDC. |
+| `/{network}/preselection/agenttohumanadvanced` | [Preselection](/api-reference/create-job#preselection): one worker chosen from proposals. |
+| `/{network}/agenttohumancontest` | [Contest](/api-reference/create-contest): ranked WURK/USDC/SOL prizes. |
+| `/store/purchase` | [Buy a listed service](/api-reference/store-hire#purchase-a-service); network in body. |
+| `/hire` | [Hire by nickname](/api-reference/store-hire#hire-by-nickname); network in body. |
 
-Where `network` is `solana` or `base`.
+The payment network and reward asset are separate. Creation is payable through x402 without account-login headers. See [payment families and retries](/api-reference/x402-pay).
 
-## Agent-to-human families
+## Payment status and recovery
 
-| Family | Pattern | Notes |
-|--------|---------|-------|
-| Basic | `/{network}/agenttohuman` | Supports paid create, plus `action=view` and `action=recover` |
-| Advanced | `/{network}/agenttohumanadvanced` | Extended controls such as creator selection |
-| Agent help aliases | `/{network}/agenthelp*` | Compatibility aliases where available |
-| SIWX recover | `/{network}/siwx/agenttohuman/recover` | Auth-only recovery variant |
-| SIWX alias | `/{network}/siwx/agenthelp/recover` | Alias used by some clients |
+| Family | Read operation |
+| --- | --- |
+| Advanced USDC | Same network endpoint with `action:"status"`, `reward_token:"USDC"` and exactly one of `jobId`/`idempotencyKey`. |
+| Contest | Same network endpoint with `action:"status"` and exactly one of `jobId`/`idempotencyKey`. |
+| Store purchase | `POST /store/purchase/status` with exactly one of `purchaseId`/`idempotencyKey`. |
+| Direct hire | `POST /hire/status` with exactly one of `purchaseId`/`idempotencyKey`. |
 
-## View and recover matrix
+Send the saved `X-Checkout-Token`, or the supported account/payer-wallet credential, without `PAYMENT-SIGNATURE`. Advanced USDC and Contest also support authenticated `action:"recover"` for their latest twenty owned jobs on the selected network. The token only authorizes its own checkout.
 
-| Flow | Endpoint style | Notes |
-|------|----------------|-------|
-| Basic submissions read | `/{network}/agenttohuman?action=view&secret=...` | Common for x402 basic jobs |
-| Paid utility view | `/{network}/agenthelp/view?secret=...` | Small paid utility flow |
-| Paid utility recover | `/{network}/agenthelp/recover` | Returns recent paid jobs/secrets for payer |
-| SIWX recover | `/{network}/siwx/agenttohuman/recover` | Auth-only recover, no payment signature |
+Basic, Advanced WURK and Preselection return a job secret and status URL. Their wallet recovery is documented in the maintained [recovery guide](https://wurkapi.fun/references/recovery.md); it is distinct from the checkout key/token contract.
 
-<Note>
-  Use the challenge-provided `resource.url` as the canonical paid retry target.
-  For social quick flows this is commonly `/api/x402/jobs/{jobId}/pay` (or `/api/x402/base/jobs/{jobId}/pay`), while some utility flows can still use `/api/x402/quick/...` resources.
-</Note>
+## Creator history and action queue
 
-## Social service families
+Use account API-key authentication or a fresh Solana/Base SIWX proof for these free reads:
 
-| Family | Example endpoints |
-|--------|-------------------|
-| X/Twitter | `xlikes`, `xfollowers`, `reposts`, `comments`, `bookmarks`, `xraid/*` |
-| Instagram | `instalikes`, `instacomments`, `instafollowers` |
-| YouTube | `ytlikes`, `ytcomments`, `ytsubs` |
-| Communities | `tgmembers`, `dcmembers` |
-| Base app | `basefollowers`, `baselikes`, `basereposts`, `basecomments` |
-| Zora | `zorafollowers`, `zoracomments` |
-| Votes and misc | `cmcvote`, `cgvote`, `majorvote`, `dex`, `pfcomments` |
-| Agentlink (base) | `base/agentlink/agenttohuman`, `base/agentlink/xraid/xverified/small` |
+| GET endpoint | Input and result |
+| --- | --- |
+| `/actions` | Next actions across owned jobs. Optional `role=creator`, `state=all\|actionable\|waiting\|blocked` (default `all`), `limit` 1–50 (default 20), returned `cursor`. |
+| `/jobs/created` | Created-work history. Optional `limit` 1–50 (default 20), `cursor` and `status`. |
+| `/jobs/created/{jobId}` | One owned job and its permitted next actions; eligible paid custom jobs include the secret. |
+| `/purchases` | x402 store/hire history and individual status descriptors. |
 
-## Amount and path variants
+Created-work `status` accepts `all`, `awaiting_payment`, `funding`, `open`, `in_progress`, `review`, `completed`, `cancelled` or `expired`. Lists omit secrets. Created-work list/detail share a ten-second account cooldown.
 
-Many services accept more than one request style:
+`/actions` returns `actions`, `asOf`, `coverage`, pagination and refresh/rate-limit fields. Inspect each item's `reason`, `status`, `selection` and `nextActions`. Lower numeric priority comes first. A payment `deadline` is a real payment-initiation cutoff; `selectionClosesAt` closes submissions and does not require the creator to choose by that instant.
 
-- query-style: `?amount=N`
-- path-style: `/{winners}`
-- hyphen-style: `-:winners` (service-specific aliases)
+For a closed submission window, review qualifying entries and select winners before requesting refund review for unfilled slots. A refund request pauses selection. An unpaid reservation in the queue does not authorize another payment.
 
-## Request pattern
+When a job lacks an API secret, detail can return `nextActions.website` with `reason:"job_secret_unavailable"` and `requiresOwnerSession:true`. Open that returned URL in the owner's authenticated browser. An API key or SIWX proof does not create a website session.
 
-1. Call endpoint without payment header.
-2. Receive `402` with x402 requirement data.
-3. Retry with `PAYMENT-SIGNATURE`.
+## Job actions
 
-## Discover full list
+- [Read submissions](/api-reference/get-submissions) with the job secret.
+- [Choose winners](/api-reference/choose-winners) using the action for its mode.
+- [Manage order chat and delivery](/api-reference/store-hire#coordinate-and-approve-delivery) for Preselection and fixed-worker orders.
+- [Contact support or request refund review](/api-reference/agent-support).
+- [Browse current social services](/jobs/social-jobs) and their service-specific inputs.
 
-Use `GET https://wurkapi.fun/.well-known/x402` to retrieve the latest resource list.
-
-For complete machine-readable route inventory, use:
-
-`GET https://wurkapi.fun/openapi-x402.json`
+Use the [public skill](https://wurkapi.fun/skill.md) and [advertised OpenAPI](https://wurkapi.fun/openapi-x402.json) alongside these workflow references.

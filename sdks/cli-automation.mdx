@@ -1,0 +1,143 @@
+---
+title: 'CLI automation'
+description: 'Parse WURK CLI results, follow structured next steps, and recover without repeating a payment'
+---
+
+The published **`@wurk/cli` 0.7.1** provides JSON results for scripts and agents. Complete the [CLI setup](/quickstart) first and keep its private state directory. For an integration inside your Node application, see the [Node SDK](/sdks/node).
+
+## Read the command envelope
+
+A normal invocation writes one JSON object followed by a newline to **stdout**, including handled errors. Capture stderr separately for diagnostics. Parse stdout even when the process exits with a nonzero code: the envelope can contain the references and recovery guidance you need.
+
+| Field | Meaning |
+| --- | --- |
+| `schemaVersion` | Currently `1`. Optional fields can extend this version; tolerate fields you do not use. |
+| `command` | The recognized command, such as `payments resume`; an unrecognized command can be `unknown`. |
+| `ok`, `status`, `exitCode` | The command's result. `ok` is true when `exitCode` is zero. Check the resource's state separately. |
+| `operation`, `operationRef`, `clientRequestId` | Saved payment-operation summary and recovery references, or `null` when unavailable or inapplicable. |
+| `data` | The command's result, including SDK resource fields where applicable. Normal command errors have `data: null`; stream events have their own error handling below. |
+| `error` | Structured error information, or `null`. Read its `code`, `message`, `httpStatus`, `retryAfterSeconds`, and request `outcome` when present. |
+| `nextCommand` | A structured suggested next step, or `null`. It does not run automatically. |
+| `financialOutcome` | Additional outcome information on individual swap/withdrawal results and uncertain finance mutations. It is not an aggregate for history lists. |
+
+There are three output exceptions:
+
+- `--help` and `--version` print text. Help needs no account or state directory and makes no network request.
+- `notifications watch` is a long-lived [JSONL stream](#consume-notification-jsonl), with one envelope per event.
+- `mcp serve` reserves stdout for the MCP protocol. Connect it through an [MCP client](/sdks/mcp-local).
+
+A hard kill, process-start failure, or interrupted output can leave no complete envelope. Missing output does not prove that a mutation failed. Retain the original references and reconcile before another action.
+
+## Parse a normal command from Node
+
+Save this as `inspect.mjs` in the project where you installed the CLI. Run it from that project, passing your existing state directory as the first argument, for example `node inspect.mjs "/absolute/private/wurk-state"`. On Windows, pass your local NTFS state path instead.
+
+The example reads the local operation journal without contacting WURK. It invokes the installed Node entry point directly with an argument array, so it also works on Windows without launching a `.cmd` shim through a shell.
+
+```javascript
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
+
+const stateDir = process.argv[2];
+if (!stateDir) throw new Error('Pass the existing WURK state directory.');
+
+const cli = resolve('node_modules/@wurk/cli/dist/main.js');
+const child = spawnSync(process.execPath, [
+  cli, 'operations', 'list', '--state-dir', stateDir,
+], { encoding: 'utf8' });
+
+if (child.stderr) process.stderr.write(child.stderr);
+if (child.error || child.signal || child.status === null) {
+  throw new Error('No reliable command result; keep the original state.', {
+    cause: child.error,
+  });
+}
+
+const result = JSON.parse(child.stdout);
+if (!result || result.schemaVersion !== 1 || result.exitCode !== child.status) {
+  throw new Error('Unexpected CLI envelope; inspect before continuing.');
+}
+
+console.log(JSON.stringify(result, null, 2));
+process.exitCode = result.exitCode;
+```
+
+This parses nonzero command results too. A parse error stops the script; it does not retry the command. Use this pattern for normal commands only. A stream needs incremental line parsing, and your application must interpret each command's `data` before deciding what to do next.
+
+## Follow `nextCommand` deliberately
+
+A hint describes a possible next invocation. Its fields preserve known references while leaving decisions and missing input to your application.
+
+| Field | How to use it |
+| --- | --- |
+| `command` | The suggested command name, without the `wurk` executable. Choose a supported handler in your application. |
+| `flags` | Already known flag values, such as `operation`, `account`, `wallet`, or the signing `network`. |
+| `reuseFlags` | Copy only these named values from the original invocation. Every hint includes `state-dir`; key-file rotation recovery also includes `key-file`. Private local paths are not echoed. |
+| `requiredFlags` | Additional flags you must supply, such as `network` and `key-file` for wallet import. |
+| `input` | Known JSON fields for the next command. Supply them through a new `--input-file` or `--input-stdin`. |
+| `requiredInput` | JSON fields you must add, such as an approved `grant`, an invitation `decision`, or the `idempotencyKey` for a withdrawal confirmation. Recover an existing request's original key when following its status. |
+| `requiresInput` | Explicit flags and/or JSON input still need to be supplied. This remains true even when `input` already contains the complete JSON object. |
+| `retryAfterSeconds` | Wait at least this long before the suggested request; honor any longer `error.retryAfterSeconds` too. |
+| `guidance` | Explanation for a decision or recovery step. Treat it as text, not command syntax. |
+
+For example, a swap result can suggest the following status read. This illustration omits its explanatory `guidance`:
+
+```json
+{
+  "command": "swap status",
+  "flags": { "account": "acct_RETURNED_REFERENCE" },
+  "reuseFlags": ["state-dir"],
+  "requiresInput": true,
+  "input": { "idempotencyKey": "earnings-swap-001" }
+}
+```
+
+Run `swap status` using that account, the original state directory, and a new JSON input containing only the selector shown. Do not reuse the swap creation body as status input. Wallet-authenticated hints retain the original signing network even when a withdrawal's destination network differs.
+
+Construct arguments from a supported command, its `flags`, the named `reuseFlags`, and the completed input. Do not copy all flags from the previous command or shell-evaluate a hint, returned text, or JSON. A hint does not authorize spending, choose winners, accept an invitation, or permit a mutation retry. A `null` hint does not establish workflow completion.
+
+## Handle exit codes
+
+| Exit | Meaning and next step |
+| --- | --- |
+| `0` | The command completed, a quote was prepared/authorized, or a known result is pending. Inspect `status` and the actual payment/work fields. |
+| `2` | Invalid command/input or unsupported capability. Correct the input before retrying. |
+| `3` | Missing, invalid, or blocked credential/wallet. Resolve authentication using the intended identity. |
+| `4` | Spending authorization is missing, inadequate, or outside its allowed window. Review the saved quote and approved allowance. |
+| `5` | Known transient, rate-limit, or capacity failure. Honor retry timing and the operation's recovery rules. |
+| `6` | Uncertain payment/mutation or review required. Reconcile the original operation and state. |
+| `7` | Conflict, expired unpaid quote, missing resource, or a stream cursor requiring reset. Inspect the error and saved state. |
+| `8` | Local configuration, storage, or protocol failure. Resolve the reported problem before continuing. |
+| `130` | Cancellation before an uncertain side effect was recorded. Retain references and inspect the result before another mutation. |
+
+For `CLI_INPUT_INVALID` errors, `error.reason`, `error.flag`, `error.argumentIndex`, `error.helpCommand`, and nearby supported-name `error.suggestions` can identify the correction. These fields are present where applicable. Suggestions never change or execute your request.
+
+## Check payment and work progress separately
+
+`ok: true`, exit `0`, and outer `status: "completed"` describe the command. They do not alone prove payment, delivery approval, moderation, or earnings.
+
+For individual swaps and withdrawals, inspect **`financialOutcome.status` and `financialOutcome.settled`**. A successful `withdraw status` read can return outer `status: "completed"` while its financial outcome is `pending`, `sourceStatus` is `initiated`, and `settled` is `false`. A quote has financial status `prepared`. EVM withdrawals require returned finality to be `finalized`; a transaction ID alone does not establish settlement. `review` and `unknown` require reconciliation, and `failed` alone does not prove a refund. Follow the [swap](/finance/swaps) or [withdrawal](/finance/withdrawals) workflow with the original identifiers.
+
+For jobs and submissions, inspect the resource fields in `data`. Where present, `lifecycle.stage` describes work progress and submission `lifecycle.reward` distinguishes credited rewards from pending or unknown outcomes. `operation.paymentLifecycle` and checkout `paymentLifecycle` describe payment progress separately. These descriptions are advisory and can be absent from older saved objects. Refresh current details before acting; a selected submission alone does not prove [recorded earnings](/finance/balances-and-earnings).
+
+Local `operations inspect`, `operations list`, and `payments inspect` can complete while the saved payment remains pending. Read the operation's `phase`, `doNotPayAgain`, and `nextAction`; local inspection cannot prove fresh server or chain state.
+
+## Recover with the original intent
+
+Persist the original state directory, authentication references, operation/request IDs, idempotency keys, quote IDs, and exact input before progressing through a workflow. Keep amount strings and the approved spending/fee limits unchanged. The local stores contain recovery records that a new directory cannot reconstruct.
+
+After a lost response, timeout, or uncertain result, use the original operation's recovery/status command. For payments this is commonly `payments resume --operation ORIGINAL_OPERATION`, with the same state directory. For swaps and withdrawals, read status using the original key and credentials. Do not create a replacement request, change a key, increase a spending limit, or repeat a financial mutation to resolve uncertainty.
+
+For **social jobs and raids**, `payments resume` in 0.7.1 uses only saved local journal evidence; it makes no HTTP request. It cannot fetch remote payment or fulfillment status or retrieve missing job/raid IDs. An unresolved result requires preserving the original references and [contacting support](/jobs/social-jobs#recover-a-social-payment), not repeated polling with `resume` or a replacement payment.
+
+Mutations are not retried automatically by default. Contact `messages` commands can explicitly opt into bounded `--wait-for-rate-limit` retries after a known rate-limit rejection; that option never retries uncertain writes. Other explicit retry options have command-specific rules. Read the relevant command's help and workflow before using them. A delay or exit code alone is insufficient permission to repeat a mutation.
+
+## Consume notification JSONL
+
+`notifications watch` emits one envelope per event. Read complete lines as they arrive; do not parse the entire stdout stream as one JSON object. First handle any ordinary error envelope with `data: null`, which can occur during startup or a runtime failure. Otherwise dispatch on `data.type`. Stream envelope statuses include `streaming`, `reconnecting`, `reset`, and `error`. A terminal `stream-error` event remains in `data`, with outer `status: "error"` and `error: null`.
+
+Without `--consumer`, keep your own durable cursor. Handle each `notification` once using its notification ID, then persist its `cursor` only after all preceding work has been durably processed. A `checkpoint` can advance that processed cursor after earlier notifications are handled. Cursors are exact decimal strings; do not convert them to JavaScript numbers. Discard an incomplete final line after interruption and resume from your last processed cursor.
+
+The watcher reconnects on transient failures with backoff and server retry guidance. `--no-reconnect` opens once and can end normally with exit `0` and no final summary. A `reset` event exits `7`; reconcile the history gap before explicitly replaying retained history. A reset cursor is diagnostic, not processed progress. Ctrl-C or SIGTERM cancels the stream with exit `130`; closing its output pipe stops it quietly.
+
+For durable reception, `--consumer NAME` stores events before printing them; your application still acknowledges processing through `notifications inbox ack`. Restart with the same state, account, and consumer, omitting `--after`. This mode requires server support for `ready.accountId`; otherwise it stops with `NOTIFICATION_COLLECTOR_IDENTITY_REQUIRED`. Stream eligibility, acknowledgment, reset recovery, and the local inbox are covered in [Notifications](/communication/notifications). Notifications do not report every job or chat change: read current details before taking action.

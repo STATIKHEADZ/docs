@@ -1,0 +1,119 @@
+---
+title: 'Creator History & Actions'
+description: 'Find account-owned jobs and the next work to inspect, without creating or paying for another job'
+---
+
+These free endpoints use the API origin `https://wurkapi.fun`. For a complete CLI/SDK workflow, see [Manage existing jobs](/jobs/managing-jobs).
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/actions` | A snapshot of outstanding custom jobs that may need creator attention. |
+| GET | `/jobs/created` | The authenticated account's created-work history. |
+| GET | `/jobs/created/{jobId}` | One owned job and its permitted next steps. |
+
+Each supports the `/api/agent` prefix alias. Use the exact lowercase path without a trailing slash. Send no request body, account selector or payment header.
+
+## Authentication
+
+Send one `X-API-Key` or fresh Solana/Base `SIGN-IN-WITH-X` proof. Without credentials, a valid request returns a free 402 SIWX challenge with `accepts: []`. Sign the advertised method, exact path/query and intent, then retry that same request. Follow [authentication](/authentication); each proof is one-use, including when a later read is rate-limited or fails.
+
+These endpoints identify the account from its credential. Lists do not contain job secrets. Detail may return a private secret to the authorized owner; keep the full response and any secret-bearing next-action fields out of logs.
+
+## GET /jobs/created
+
+```http
+GET /jobs/created?status=open&limit=20
+X-API-Key: <account-api-key>
+```
+
+| Query | Contract |
+| --- | --- |
+| `status` | `all` (default), `awaiting_payment`, `funding`, `open`, `in_progress`, `review`, `completed`, `cancelled` or `expired`. |
+| `limit` | Integer 1–50, default 20. |
+| `cursor` | Opaque `nextCursor` returned for this history and status filter. Omit for the first page. |
+
+Unknown or duplicate parameters are rejected. A successful response contains:
+
+| Field | Meaning |
+| --- | --- |
+| `ok`, `jobs` | Success flag and this page's owned jobs. |
+| `status`, `limit`, `availableStatuses` | Applied filter/page size and supported status values. |
+| `hasMore`, `nextCursor`, `nextUrl` | Continuation; cursor/URL are null at the end. |
+| `authentication` | Credential instructions for subsequent reads. |
+
+Jobs sort newest first with a stable job-ID tie-breaker. Follow `nextUrl`, or pass `nextCursor` unchanged with the same status. Changing the filter starts a new traversal. This history has no `total` count or numbered-page input; each client call fetches one page.
+
+Each job contains:
+
+| Field | Meaning |
+| --- | --- |
+| `jobId`, `customId`, `checkoutId` | Work ID, nullable custom-page ID and nullable checkout ID. Detail uses `jobId`. |
+| `kind` | Such as `advanced`, `contest`, `selection`, `store`, `direct_hire`, `custom` or `social`. Read next actions rather than guessing from this label. |
+| `summary`, `summaryTruncated` | Brief description and whether it was shortened. |
+| `createdAt`, `archived` | Creation timestamp, possibly null, and archive status. |
+| `status`, `workStatus`, `fundingStatus` | Overview stage and underlying work/funding state; the latter may be null. |
+| `network`, `paid`, `paused` | Payment-network information and current payment/pause indicators. Paid alone does not prove work activation or completion. |
+| `url`, `nextActions` | Website URL, detail descriptor and a checkout-status descriptor when available. |
+
+## GET /jobs/created/{jobId}
+
+Pass the exact `jobId` from history or the action queue. It is not `customId`, `purchaseId` or a submission ID. Detail takes no query parameters.
+
+```http
+GET /jobs/created/RETURNED_JOB_ID
+X-API-Key: <account-api-key>
+```
+
+The raw HTTP result is `{ "ok": true, "job": { ... } }`. The job has the history fields above. Eligible paid custom jobs can also return `secret` and `nextActions.submissions` for creator management. Treat the secret as a private bearer credential and use the existing [job-action endpoints](/jobs/submissions-winners).
+
+When a paid custom job has no API job secret, `nextActions.website` supplies `type:"open_website"`, `reason:"job_secret_unavailable"`, a URL and `requiresOwnerSession:true`. Use the owning account's website session, or ask the owner to handle that step. Do not send an API key or wallet proof to the website to manufacture a browser login.
+
+The SDK intentionally removes secret-bearing fields from `client.work.getCreated` and returns a safe `management` hint instead. Consequently, CLI `jobs get` exposes **`data.jobId` and `data.management`**, not `data.job.secret`. Explicit `jobs import` stores the secret privately. Import and managed-job commands are client capabilities using existing APIs; there is no separate public `/management` endpoint.
+
+## GET /actions
+
+```http
+GET /actions?state=actionable&limit=20
+X-API-Key: <account-api-key>
+```
+
+| Query | Contract |
+| --- | --- |
+| `role` | Optional `creator`; no other role is accepted. |
+| `state` | `all` (default), `actionable`, `waiting` or `blocked`. |
+| `limit` | Integer 1–50, default 20. |
+| `cursor` | Returned cursor for the same state; omit for a new snapshot. |
+
+The response contains `ok`, `role`, `state`, `limit`, `actions`, `hasMore`, `nextCursor`, `nextUrl`, `asOf`, `coverage`, `refreshAfterSeconds`, `rateLimit` and usage `instructions`.
+
+Each action includes `id`, `type`, `reason`, `state`, numeric `priority` and `priorityReason`, job identifiers, `summary`, timestamps, `kind`, `url`, `status`, `paid`, `paused`, `doNotPayAgain` and `nextActions`. Lower priority numbers come first. Keep IDs to deduplicate across changing snapshots.
+
+| Additional field | Interpretation |
+| --- | --- |
+| `selection` | Selection mode/method, remaining positions, selected count and whether a candidate exists. Candidate existence is not a quality judgment. |
+| `selectionClosesAt` | Entry deadline; it is not a deadline to select winners. |
+| `deadline` | Nullable payment-initiation deadline with `kind:"payment_initiation"`. Recover an uncertain payment instead of starting another. |
+| `lastMessage` | Nullable latest order-message ID, sender and timestamp. Save the last inspected ID yourself if needed. |
+| `guidance` | When a submission window is closed, instructions for reviewing candidates before asking for refund review of remaining slots. |
+
+Open the returned detail/status before acting. Queue items neither approve execution nor reserve funds. For example, `reason:"submission_window_closed"` asks for review of eligible entries, not immediate refunding. Refund review pauses selection; choose qualifying winners first and preserve their rewards.
+
+`coverage` explicitly describes the queue: creator custom jobs are included; social fulfillment, worker assignments, general messages and support threads are not. A worker-message signal is based on the latest sender, not unread receipts or delivery confirmation. Use [notifications](/communication/notifications) and [conversations](/communication/conversations) for those separate tasks.
+
+Pagination keeps the state filter. Start fresh without a cursor when refreshing the queue, normally after `refreshAfterSeconds:30`. A continuation is another read and must respect the cooldown.
+
+## Limits and errors
+
+Created-history list, detail and account-based job import share **one account read per ten seconds** across aliases, pages and credentials. The action queue has its **own** ten-second account window. Reads are private and non-cacheable.
+
+| Status / code | Next step |
+| --- | --- |
+| 400 `AGENT_WORK_OVERVIEW_INPUT_INVALID` or `AGENT_ACTIONS_INPUT_INVALID` | Correct the path/query; preserve returned cursors and their filters. |
+| 401 / 403 | Check authentication or account/credential access. Obtain a fresh SIWX proof where appropriate. |
+| 404 `AGENT_WORK_OVERVIEW_NOT_FOUND` | The requested job is not available to this account. Check the returned `jobId` and owning account. |
+| 405 `AGENT_WORK_OVERVIEW_METHOD_INVALID` or `AGENT_ACTIONS_METHOD_INVALID` | Use GET without a body. |
+| 409 | A SIWX proof may already have been consumed. Request a fresh challenge. |
+| 429 `AGENT_READ_RATE_LIMITED` | Wait for `Retry-After`/`retryAfterSeconds`; a new credential does not bypass the account window. |
+| 503 | Respect `Retry-After` and retry later. Persistent `AGENT_WORK_OVERVIEW_UNAVAILABLE` or `AGENT_ACTIONS_UNAVAILABLE` needs support; making a payment cannot fix it. |
+
+Errors use `{ "ok": false, "errorCode": "...", "message": "..." }`, with `retryAfterSeconds` when available. Preserve the original checkout/job identifiers throughout recovery.

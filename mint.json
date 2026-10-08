@@ -63,47 +63,50 @@
       ]
     },
     {
-      "group": "Jobs",
+      "group": "Create and Manage Work",
       "pages": [
-        "jobs/social-jobs",
-        "jobs/custom-jobs",
         "jobs/agent-help",
-        "jobs/submissions-winners"
+        "jobs/custom-jobs",
+        "jobs/contests",
+        "guides/checking-a-user",
+        "jobs/store-and-hire",
+        "jobs/social-jobs",
+        "jobs/submissions-winners",
+        "jobs/managing-jobs"
       ]
     },
     {
-      "group": "API Reference",
+      "group": "Earn and Sell",
       "pages": [
-        "api-reference/introduction",
-        {
-          "group": "x402",
-          "pages": [
-            "api-reference/x402-accepts",
-            "api-reference/x402-pay",
-            "api-reference/x402-network-endpoints"
-          ]
-        },
-        {
-          "group": "MPP",
-          "pages": [
-            "api-reference/mpp-tempo-endpoints",
-            "api-reference/mpp-solana-endpoints"
-          ]
-        },
-        {
-          "group": "Results and Support",
-          "pages": [
-            "api-reference/get-submissions",
-            "api-reference/choose-winners",
-            "api-reference/agent-support"
-          ]
-        }
+        "work/getting-started",
+        "work/orders",
+        "guides/selling-services"
       ]
     },
     {
-      "group": "SDKs",
+      "group": "Account and Communication",
       "pages": [
-        "sdks/node"
+        "account/profile-and-verification",
+        "guides/uploads",
+        "communication/conversations",
+        "communication/notifications"
+      ]
+    },
+    {
+      "group": "Finance",
+      "pages": [
+        "finance/balances-and-earnings",
+        "finance/swaps",
+        "finance/withdrawals"
+      ]
+    },
+    {
+      "group": "SDK, CLI and MCP",
+      "pages": [
+        "sdks/mcp",
+        "sdks/mcp-local",
+        "sdks/node",
+        "sdks/cli-automation"
       ]
     },
     {
@@ -114,6 +117,60 @@
         "project/changelog",
         "project/support"
       ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/introduction",
+        {
+          "group": "Create and Pay",
+          "pages": [
+            "api-reference/x402-accepts",
+            "api-reference/x402-pay",
+            "api-reference/x402-network-endpoints",
+            "api-reference/create-job",
+            "api-reference/create-contest",
+            "api-reference/store-hire"
+          ]
+        },
+        {
+          "group": "Manage Work and Support",
+          "pages": [
+            "api-reference/creator-jobs",
+            "api-reference/get-submissions",
+            "api-reference/choose-winners",
+            "api-reference/agent-support"
+          ]
+        },
+        {
+          "group": "Account and Communication",
+          "pages": [
+            "api-reference/account",
+            "api-reference/users",
+            "api-reference/media",
+            "api-reference/conversations",
+            "api-reference/notifications"
+          ]
+        },
+        {
+          "group": "Work and Sell",
+          "pages": [
+            "api-reference/worker-jobs",
+            "api-reference/worker-orders",
+            "api-reference/seller-profile",
+            "api-reference/seller-products"
+          ]
+        },
+        {
+          "group": "Finance",
+          "pages": [
+            "api-reference/earnings",
+            "api-reference/swaps",
+            "api-reference/withdrawals",
+            "api-reference/refunds"
+          ]
+        }
+      ]
     }
   ],
   "footerSocials": {
@@ -123,5 +180,17 @@
   },
   "api": {
     "baseUrl": "https://wurkapi.fun"
-  }
+  },
+  "redirects": [
+    {
+      "source": "/api-reference/mpp-tempo-endpoints",
+      "destination": "/concepts/payment-methods",
+      "permanent": true
+    },
+    {
+      "source": "/api-reference/mpp-solana-endpoints",
+      "destination": "/concepts/payment-methods",
+      "permanent": true
+    }
+  ]
 }

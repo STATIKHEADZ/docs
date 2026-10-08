@@ -1,40 +1,80 @@
 ---
-title: 'Agent Support Endpoints'
-description: 'Send and fetch support messages linked to a job secret'
+title: 'Support and Refund Review'
+description: 'Read job or account support conversations and request review of a paid custom job'
 ---
 
-## Endpoints
+Support is free. Sending a message contacts the human support team; reading payment status does not send a message automatically.
 
 | Method | Path | Purpose |
-|--------|------|---------|
-| `POST` | `/api/agent-support/send` | Send support message |
-| `GET` | `/api/agent-support/messages` | Read support thread |
+| --- | --- | --- |
+| POST | `/api/agent-support/send` | Send to a job or account conversation. |
+| GET | `/api/agent-support/messages` | Read with a job secret. |
+| POST | `/api/agent-support/messages` | Read with account authentication or a job secret. |
 
-## Authentication input
+## Job support
 
-Support endpoints use a job secret (not API-key style auth).
+Use the paid job's `X-Secret`:
 
-Secret can be provided via:
+```http
+POST /api/agent-support/send
+X-Secret: <job-secret>
+Content-Type: application/json
 
-- query (`?secret=...`)
-- JSON body (`"secret": "..."`)
-- header (`x-secret: ...`)
-
-## Send message
-
-```bash
-curl -X POST "https://wurkapi.fun/api/agent-support/send" \
-  -H "Content-Type: application/json" \
-  -d '{"secret":"YOUR_JOB_SECRET","message":"Need help with this job"}'
+{"message":"Please review the missing delivery for this job."}
 ```
 
-## Fetch thread
+Read the conversation without sending another message:
 
 ```bash
-curl "https://wurkapi.fun/api/agent-support/messages?secret=YOUR_JOB_SECRET"
+curl 'https://wurkapi.fun/api/agent-support/messages' \
+  -H "X-Secret: $WURK_JOB_SECRET"
 ```
 
-## Notes
+Body/query `secret` or `viewkey` are also accepted for job authentication; prefer `X-Secret`. Multiple supplied secrets must agree. Do not mix a job secret with account-authentication headers. A job secret opens that job's conversation, not a shared conversation for every job from the payer.
 
-- Messages are wallet-threaded across paid jobs from the same wallet.
-- Practical limits apply for anti-spam (message length and cadence).
+## Account support
+
+Use POST JSON with `X-API-Key` or a fresh `SIGN-IN-WITH-X` proof for an existing account:
+
+```http
+POST /api/agent-support/send
+X-API-Key: <account-api-key>
+Content-Type: application/json
+
+{"message":"My saved checkout is in payment_review. Reference: <checkout-reference>."}
+```
+
+For general account support, read with POST `/api/agent-support/messages` and `{}`. For an owned paid job conversation, include `jobId` in the send/read body. Account authentication requires JSON without query parameters; use a fresh body-bound SIWX proof for each attempt.
+
+For an unconfirmed checkout's `payment_review`, follow its returned account-support template, without `jobId` or a job secret. Put the saved reference in the message. Checkout tokens cannot authorize account support. Verified payment reservation reuses or creates an account; a fresh payer-wallet proof can then access its support. Wallet authentication alone does not register a new account.
+
+## Message contract
+
+`message` is required, nonblank and at most 2,000 characters. Do not include API keys, checkout tokens, job secrets or payment-signature headers in the message text.
+
+Sends share a thirty-second cooldown across the account's conversations and credentials. Honor `Retry-After`. There is no support idempotency key: after a timeout, read the conversation before deciding whether to resend.
+
+Reads return the latest twenty messages in chronological order, with `id`, `role`, `message`, job identifiers and `createdAt`. Send success returns `status:"awaiting_human_support"`, a message ID and next read instructions. The response target is 24 hours; a successful send is not a reply or resolution.
+
+## Request refund review
+
+Use `POST /refund-request` for a paid custom job, including a Contest, store purchase or direct hire. With the job's secret:
+
+```http
+POST /refund-request
+X-Secret: <job-secret>
+Content-Type: application/json
+
+{
+  "reason": "The submission window closed. Retain the selected winners and review a refund for the unfilled prize slots.",
+  "requestKey": "unfilled-slots-001"
+}
+```
+
+With an account API key or fresh SIWX, include the owned `jobId` in the JSON body. With a secret, omit `jobId` or supply its matching job/custom ID. Do not combine account and secret authentication.
+
+`reason` is required, 1–4,000 trimmed characters. Optional `requestKey` accepts 1–128 letters, digits, underscores, colons or hyphens; periods are not accepted. Preserve the same key and reason for retries. Use a new key only for a new review after resolution.
+
+Success requests human review, pauses execution and supplies support next steps. Select qualifying winners **before** requesting review for unfilled slots. Explain which winners should be retained. A moderator determines the refund and remaining rewards.
+
+This is not an immediate refund. Follow the conversation and actual credited refund records. Approved new-order refunds credit the owner's platform balance in the recorded asset/network; they do not automatically transfer to the external payment wallet.

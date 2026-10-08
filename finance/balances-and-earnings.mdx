@@ -1,0 +1,130 @@
+---
+title: 'Balances and Earnings'
+description: 'Read platform balances, track recorded rewards and find the history behind each financial operation'
+---
+
+Use your account profile to check available platform balances and an earnings report to understand recorded income. Both are free account reads. Complete [account access](/authentication#free-account-access) first; the [CLI quickstart](/quickstart) and [Node.js SDK setup](/sdks/node) explain how to retain your account reference.
+
+## Choose the right amount
+
+| Measurement | What it tells you |
+| --- | --- |
+| Platform balance | The amount currently held in your WURK account, grouped by network and asset. Use it when planning a platform [swap](/finance/swaps) or [withdrawal](/finance/withdrawals). |
+| Earned amount | A recorded reward or receipt for this account. Earlier spending, swaps or withdrawals can make it differ from the current balance. |
+| Pending reward | Work or a payout that has not established a completed earning. Do not count it as earned or available to spend. |
+| Advertised reward | The job's offer or budget. Submission and selection alone do not establish your personal credited amount. |
+| Wallet balance | Assets held at your external blockchain address. Read these through your wallet; the profile endpoint does not query them. |
+
+Keep financial amounts as decimal strings. Do not convert them through JavaScript `Number`, add different assets together or assume USDC on separate networks is one available balance. Earnings reports do not include fiat valuations or future reward estimates.
+
+## Check your platform balance
+
+With **`@wurk/cli` 0.7.1**, use the initialized `$WURK_STATE` directory and `$WURK_ACCOUNT` reference saved from `account access`:
+
+```bash
+wurk account profile --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT"
+```
+
+Read `data.balances` in the CLI's JSON output:
+
+| Field | Platform asset |
+| --- | --- |
+| `balances.solana.SOL` | Solana SOL |
+| `balances.solana.USDC` | Solana USDC |
+| `balances.solana.WURK` | Solana WURK |
+| `balances.solana.SKR` | Solana SKR |
+| `balances.base.USDC` | Base USDC |
+| `balances.robinhood.USDG` | Robinhood USDG |
+
+The HTTP equivalent is authenticated `GET /profile`. Profile reads have their own ten-second account cooldown. Refresh the profile after a completed financial operation; an earnings report is not a substitute for that balance check.
+
+## Read an earnings report
+
+The published **SDK and CLI 0.7.1** overview includes **jobs, tips and vault payouts**. Its `includedCategories` is `["jobs", "tips", "vault"]`, and it calculates every summary, rolling total and daily total from those categories. The [direct HTTP earnings API](/api-reference/earnings) also includes referrals in its totals and offers referral history. Version 0.7.1 has no referral method or CLI command, so its combined total can differ from the HTTP total.
+
+Choose the report you need. Wait at least ten seconds between earnings reads for the same account, including when switching reports:
+
+```bash
+# Selected-period totals and daily amounts
+wurk earnings overview --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --range 30d
+
+# Run subsequent reports only after the account cooldown
+wurk earnings jobs --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --page 1 --per-page 20
+wurk earnings tips --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --page 1 --per-page 20
+wurk earnings vault --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --range 30d --page 1 --per-page 20
+```
+
+Each command requires `--state-dir`; there is no default state directory. To authenticate an existing account with a fresh wallet proof, replace `--account "$WURK_ACCOUNT"` with `--network solana --wallet "$WURK_WALLET"`, or use `--network base` for your registered Base wallet.
+
+| Report | Result inside CLI `data` |
+| --- | --- |
+| `overview` | `summary`, rolling `kpis`, daily `bars`, and `includedCategories` |
+| `jobs` | `items` containing your recorded job rewards, including pending entries |
+| `tips` | `items` containing received job and blog tips in WURK |
+| `vault` | `items` containing recorded distributions for the account's supported Solana wallets, plus the full report's completeness status |
+
+Overview and vault accept `7d` (default), `30d` or `90d`. These are UTC calendar days including today. The overview's `kpis["24h"]` and `kpis["7d"]` use rolling windows, so a calendar total and a rolling total can differ. Jobs and tips include history beyond that window and accept no `range`.
+
+## Use the Node.js SDK
+
+These helpers work with **`@wurk/sdk` 0.7.1** and an already configured client. Pass `account.access` returned by `client.account.access` for saved account authentication. Earnings methods also accept `{kind: 'wallet', network: 'solana', wallet: walletRef}` or the corresponding Base wallet form.
+
+```typescript
+import type {
+  AccountAccess,
+  AuthenticatedAccess,
+  WurkClient,
+} from '@wurk/sdk';
+
+export async function readBalances(client: WurkClient, access: AccountAccess) {
+  const profile = await client.account.profile(access);
+  return profile.balances;
+}
+
+export async function readEarnings(client: WurkClient, access: AuthenticatedAccess) {
+  const report = await client.account.earningsOverview({ access, range: '30d' });
+  return {
+    categories: report.includedCategories,
+    status: report.summary.earningsStatus,
+    amounts: report.summary.totalByAsset,
+  };
+}
+
+export async function readJobEarningsPage(
+  client: WurkClient,
+  access: AuthenticatedAccess,
+  page = 1,
+) {
+  return client.account.jobEarnings({ access, page, perPage: 20 });
+}
+```
+
+Use `client.account.tipEarnings({access, page, perPage})` for tips and `client.account.vaultEarnings({access, range, page, perPage})` for vault history. Each call fetches one report or page. Schedule earnings calls at least ten seconds apart and honor an error's `retryAfterSeconds`; the clients do not retry or paginate automatically.
+
+## Interpret completed and unknown amounts
+
+In SDK/CLI job and vault history, inspect `items[].reward.status`. Direct HTTP uses `rows[].rewardEarning.status`:
+
+| Status | Meaning |
+| --- | --- |
+| `ready` | The returned `amount` is the recorded earning in `assetId`. Keep its exact decimal string. |
+| `pending` | No completed earning is established; `amount` is `null`. |
+| `unavailable` | The earning cannot be established from the available evidence; `amount` is `null`. |
+
+Tips use `earningsStatus` and `amountWurk`. Overview categories use `earningsStatus`, `byAsset` and `count`. When an included category is unavailable, its amounts and the corresponding combined `totalByAsset` are `null`. Show these as unknown, not zero. Other available categories can still be displayed separately.
+
+Vault history's `reportStatus` is `complete`, `partial` or `unavailable`; `unavailableBatchCount` describes missing evidence across the **whole selected period**, including when the current page is empty. History may include pending entries, but only confirmed completed distributions enter earned totals. These payouts go directly to wallets and are already included in the overview's combined total. Do not add the vault subtotal again or treat it as spendable platform balance.
+
+History defaults to page 1 with 20 items, allows `perPage` up to 50 and stops at page 1,000. Request the returned `nextPage` after the cooldown and stop at `null`. `paginationLimited: true` means the page ceiling prevents access to some older entries. Keep the returned pagination values; do not infer that an empty out-of-range page means there was no income.
+
+## Find other financial activity
+
+Earnings history explains income. Use the operation histories to understand swaps, payouts and credited refunds:
+
+| Activity | HTTP read | Guide and response contract |
+| --- | --- | --- |
+| Platform balance conversion, including website and AutoSwap activity | `POST /swaps` | [Swapping balances](/finance/swaps) and [swap history](/api-reference/swaps) |
+| Withdrawals across supported payout networks | `POST /withdraws` | [Withdrawing to a wallet](/finance/withdrawals) and [withdrawal history](/api-reference/withdrawals) |
+| Credited job refunds | `POST /refunds` | [Refund history](/api-reference/refunds) |
+
+These free account reads each have their own ten-second cooldown. They use `limit` and `offset` with a returned `nextOffset`, rather than earnings' page numbers. Follow their response contracts and deduplicate records when new activity shifts pages. A transaction hash alone does not establish a finalized withdrawal; refund history describes credited job refunds. None of these history reads moves money.

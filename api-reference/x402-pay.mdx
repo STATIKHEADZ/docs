@@ -1,117 +1,59 @@
 ---
-title: 'x402 Paid Request Pattern'
-api: 'GET /{network}/agenttohuman'
-description: 'Two-step x402 challenge and paid retry flow for public routes'
+title: 'Payments and Safe Retries'
+description: 'Sign the actual x402 quote, preserve checkout credentials and recover uncertain payments'
 ---
 
-## Path parameters
+WURK accepts x402 v2 payments in native USDC on Solana and Base. Start without `PAYMENT-SIGNATURE`; a payable response has HTTP `402`, `PAYMENT-REQUIRED` and nonempty `accepts`. Use your x402 client to sign the complete returned requirements, then send the saved payment once.
 
-<ParamField path="network" type="string" required>
-  `solana` or `base`.
-</ParamField>
+Creation/payment rejects `X-API-Key`, `SIGN-IN-WITH-X`, `Authorization` and `X-WURK-Auth` with `400 X402_PAYMENT_AUTH_FORBIDDEN`. The verified paying wallet determines ownership. Account authentication belongs on its documented read and account operations.
 
-## Query parameters
+## Check the quote
 
-<ParamField query="description" type="string" required>
-  Human task prompt.
-</ParamField>
+Before signing, verify the intended task and spending limit against the exact `resource`, network, USDC asset, `payTo`, atomic `amount`, expiry and all `extra` metadata. Do not reconstruct the amount from a catalog price or reward budget. Different checkouts can have identical amounts; a normal wallet transfer does not replace the x402 proof.
 
-<ParamField query="winners" type="number" required>
-  Number of requested responses.
-</ParamField>
+Privately save the original request, full challenge and signed payment **before submitting**. Save the response and any `PAYMENT-RESPONSE` receipt afterward. A payment response can precede work activation.
 
-<ParamField query="perUser" type="number" required>
-  Reward amount per participant.
-</ParamField>
+## Checkout families
 
-## Payment header
+This contract applies to Advanced with `reward_token:"USDC"`, all Contests, store purchases and direct hires.
 
-<ParamField header="PAYMENT-SIGNATURE" type="string" optional>
-  Omit on the first call. Include on retry after signing the challenge.
-</ParamField>
+1. Save the complete JSON body and a unique `idempotencyKey`: 8–128 letters, digits or `._:-`.
+2. Generate 32 cryptographically random bytes and encode them as unpadded base64url. Save this private token before the initial request and send it as `X-Checkout-Token`. An initial request without the header can return a server-generated token; save it immediately.
+3. Inspect the 402's payment requirements and `checkout`. The checkout includes `id`, `token`, payment deadlines and a `statusCheck` descriptor. An unpaid checkout has no canonical funded job yet.
+4. Sign the full returned requirement, including `extra.wurkGuestToken`. Preserve the Solana memo. On Base, use the exact advertised `extra.wurkGuestNonce` for the EIP-3009 signature.
+5. Repeat the **original endpoint, HTTP method and body/key**, retaining `X-Checkout-Token` and adding `PAYMENT-SIGNATURE`. The quote's `resource.url` can include a checkout identifier; it binds the signature and is not an instruction to replace the saved creation body.
+6. Follow `checkout.statusCheck` with the saved token and **no payment header**. After verified payment reservation the response includes the linked `job` or `purchase`; follow its funding and work state.
 
-## Challenge headers
-
-On the first call, server responses commonly include:
-
-- `Payment-Required` (or legacy casing `PAYMENT-REQUIRED`)
-- body with `x402Version`, `accepts[]`, and typically `resource`
-
-## Flow
-
-1. Call endpoint without `PAYMENT-SIGNATURE`.
-2. Receive `402 Payment Required` with payment requirements (`accepts[]`).
-3. Sign requirements with your x402 client.
-4. Retry exact same URL with `PAYMENT-SIGNATURE`.
-5. Receive `200` with paid result payload.
-
-## Quick-route nuance
-
-For many social quick flows, the public request URL can challenge with a canonical payment `resource.url` under `/api/x402/jobs/.../pay`.
-
-- First call: public route (for example `/{network}/xlikes?...`) returns challenge.
-- Paid retry: use the challenge-provided canonical `resource.url`, or retry the same public URL with the same query.
-- If pending context is lost, you may get `404` (`PENDING_JOB_NOT_FOUND`) and should restart from step 1.
-
-## Example requests
-
-<RequestExample>
-
-```bash First call (challenge)
-curl -i "https://wurkapi.fun/solana/agenttohuman?description=Rate+my+landing+page&winners=5&perUser=0.025"
-```
-
-```bash Second call (paid retry)
-curl -i "https://wurkapi.fun/solana/agenttohuman?description=Rate+my+landing+page&winners=5&perUser=0.025" \
-  -H "PAYMENT-SIGNATURE: <signed-payment>"
-```
-
-</RequestExample>
-
-## Example responses
-
-<ResponseExample>
-
-```json 402 Response
-{
-  "x402Version": 2,
-  "resource": {
-    "url": "https://wurkapi.fun/solana/agenttohuman?description=Rate+my+landing+page&winners=5&perUser=0.025",
-    "description": "Agent-to-human request",
-    "mimeType": "application/json"
-  },
-  "accepts": [
-    {
-      "scheme": "exact",
-      "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
-      "maxAmountRequired": "250000",
-      "resource": "https://wurkapi.fun/solana/agenttohuman?description=Rate+my+landing+page&winners=5&perUser=0.025",
-      "payTo": "SAT8g2xU7AFy7eUmNJ9SNrM6yYo7LDCi13GXJ8Ez9kC",
-      "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      "maxTimeoutSeconds": 60,
-      "extra": {}
-    }
-  ],
-  "extensions": {}
-}
-```
-
-```json 200 Response
-{
-  "ok": true,
-  "paid": true,
-  "jobId": "abc123",
-  "secret": "secret_...",
-  "statusUrl": "https://wurkapi.fun/solana/agenttohuman?action=view&secret=..."
-}
-```
-
-</ResponseExample>
-
-<Warning>
-  Retry the exact same URL (including query parameters). Changing URL/query between challenge and paid retry can invalidate the payment requirement.
-</Warning>
+The verified payment reuses or creates the payer's WURK account. It does not issue an API key or browser session. The checkout token authorizes only that checkout; it cannot read account history or send account support messages.
 
 <Note>
-  Some internal `/api/x402/jobs/{jobId}/pay` flows can return a raw payment-required body without the full public wrapper fields. Consumers should always parse the latest challenge response they receive.
+  A Base signer must preserve `extra.wurkGuestNonce`. The stock `@x402/evm` 2.28.0 signer generates its own nonce and needs an adapter for these checkouts. Follow the maintained [payment-client example](https://wurkapi.fun/references/payments.md#checkout-without-registration).
 </Note>
+
+## Payment-and-secret families
+
+Basic, Advanced WURK and Preselection WURK/USDC accept a complete request without payment, followed by a retry with the original input and signed proof. They do not acquire the checkout idempotency contract above. Save `jobId`, `secret`, `statusUrl` and the receipt from the result.
+
+For social quick routes, the actual challenge commonly identifies a canonical `GET /api/x402/jobs/{jobId}/pay` resource, or `/api/x402/base/jobs/{jobId}/pay`. Pay that returned resource, or retry the same public URL with unchanged input. Some utility routes use a different payment resource. Do not apply one retry-URL rule to every family.
+
+Social SDK/CLI 0.7.1 `payments resume` reads only the local journal; it does not query remote payment or fulfillment status or recover missing job/raid IDs. For an unresolved social payment, preserve the original references and follow [social recovery](/jobs/social-jobs#recover-a-social-payment) before taking further action. Do not create a replacement payment.
+
+A `PENDING_JOB_NOT_FOUND` response is not evidence that a previous payment failed. If payment was submitted, reconcile the saved job/payment before requesting a replacement. If nothing was signed or submitted, obtain a fresh challenge for the intended operation.
+
+## Status and recovery
+
+| Status | Next action |
+| --- | --- |
+| `awaiting_payment` | Inspect the saved quote and its payment deadline. |
+| `processing` / `payment_submitted` | Read the same checkout's status; keep its identifiers. |
+| `payment_review` | Follow returned `recovery`, including `doNotPayAgain`. |
+| `payment_confirmed` | Check `fundingStatus` and `workStatus` for activation. |
+| `expired` | Replace only when the original payment never submitted or entered settlement. |
+
+USDC reward and store/hire quotes last thirty minutes; SOL/WURK Contest conversion quotes last two minutes. Settlement must start with **more than sixty seconds remaining**. Use `payment.initiateBefore`, not merely `expiresAt`.
+
+After a timeout, 202 or uncertain error, read status before any payment retry. Retry a saved signed payment only with its original complete payload while the checkout is still awaiting payment. Once payment is reserved, a different payment is rejected. Do not rerun signing as automatic recovery.
+
+Advanced USDC and Contest share an idempotency namespace; store and hire share another. Changing family, network or intent under an existing key conflicts. Keep a separate key and token for each new purchase.
+
+If a token or response is lost, use the supported account authentication or fresh payer-wallet SIWX on that operation's status/recovery route. A public transaction or idempotency key alone cannot reveal a secret. See the maintained [recovery guide](https://wurkapi.fun/references/recovery.md).

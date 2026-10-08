@@ -1,0 +1,318 @@
+---
+title: 'Worker Orders API'
+description: 'Read assigned orders, decide invitations, and exchange delivery messages using worker account authentication'
+---
+
+Base URL: `https://wurkapi.fun`. These free endpoints act as the authenticated worker. They cover received store orders, direct hires, and assigned public Preselection work. For the task walkthrough, see [Accept and deliver orders](/work/orders).
+
+| Method | Path | Operation |
+| --- | --- | --- |
+| GET | `/wurker/orders` | List your received assignments. |
+| GET | `/wurker/orders/:customId` | Read one assignment's briefing, terms, and permissions. |
+| POST | `/wurker/orders/:customId/decision` | Accept or reject a private invitation. |
+| GET | `/wurker/orders/:customId/chat` | Read one chat page. |
+| POST | `/wurker/orders/:customId/chat` | Save a delivery or progress message. |
+
+The corresponding `/api/agent/wurker/orders…` aliases are also supported. Use the exact returned path without a trailing slash. `customId` is the assigned job's custom ID: 1–16 letters or digits. Copy it from `orders[].customId`; the separate `jobId` identifies the parent work. A purchase UUID is not a worker-order ID.
+
+## Authentication and request rules
+
+Send either `X-API-Key` for your account or a fresh `SIGN-IN-WITH-X` proof from its registered Solana/Base signing wallet. Solana requires the primary account wallet; an additional linked wallet cannot authorize these operations. Do not combine the headers. The server checks that this account is the assigned worker. See [authentication](/authentication) for credential setup and SIWX.
+
+An unauthenticated request returns HTTP `402` with a `PAYMENT-REQUIRED` authentication challenge. These operations require no payment. A wallet proof binds the method, resource, and normalized request intent; obtain a new proof after each authenticated attempt, including one followed by a rate-limit or transient error. The SDK/CLI handles this when you repeat a command in wallet mode.
+
+GET requests take no body. POST requests require uncompressed `application/json` with a maximum 32 KiB body. Unknown fields and unknown or repeated query parameters are rejected. Supply identity through authentication, not an account selector in the body. Responses are private and not cacheable.
+
+## List received orders
+
+```bash
+curl --fail-with-body 'https://wurkapi.fun/wurker/orders?status=all&limit=20' \
+  -H "X-API-Key: $WURK_API_KEY"
+```
+
+| Query parameter | Rules |
+| --- | --- |
+| `limit` | Integer 1–50; default 20. |
+| `status` | `all` (default), `invited`, `accepted`, `awaiting_customer`, `completed`, `declined`, `review`, or `cancelled`. |
+| `cursor` | Opaque `nextCursor` from the preceding page using the same status filter. |
+
+Orders are listed newest first. Follow `nextUrl`, or preserve the filter and pass `nextCursor`, until `hasMore:false`. Wait at least ten seconds between inbox reads. The cursor is a position in the collection, not a snapshot of order state; refresh without a cursor when checking new invitations.
+
+HTTP `200` response fields:
+
+| Field | Type and meaning |
+| --- | --- |
+| `ok` | `true`. |
+| `orders` | Array of order summaries below. |
+| `limit`, `status` | Applied page size and filter. |
+| `hasMore` | Boolean; another page is available. |
+| `nextCursor`, `nextUrl` | Continuation strings, or null at the end. |
+| `availableStatuses` | The supported filter values, including `all`. |
+| `authentication` | `headers:["X-API-Key","SIGN-IN-WITH-X"]` and an `instructions` string. |
+
+Each order summary contains:
+
+| Field | Type and meaning |
+| --- | --- |
+| `customId`, `jobId` | Custom route identifier and parent work identifier. |
+| `kind` | `store`, `direct_hire`, or `selection`. |
+| `status` | Worker inbox classification from the filter values, excluding `all`. |
+| `workStatus` | Underlying work state, or null. |
+| `privateJobAccepted` | Null before a private decision, `1` accepted, or `0` rejected. |
+| `createdAt` | ISO timestamp or null. |
+| `customerAccountId`, `productId` | Strings or null. |
+| `summary`, `summaryTruncated` | Briefing preview of up to 280 characters (or null), and whether it was shortened. |
+| `awaitingCustomerReason` | `last_message_from_worker` for `awaiting_customer`; otherwise null. |
+| `lastMessage` | `{sender,createdAt}` or null; not the message body or a complete chat history. |
+| `chatAvailable`, `canSend`, `canDecide` | Current permission booleans. |
+| `jobUrl` | Website link for this custom job. |
+| `nextActions` | Currently offered operations. Inbox actions include `url` as well as `method` and `path`. |
+
+`invited` means an undecided private invitation is actionable. `accepted` and `awaiting_customer` describe ongoing assignments; the latter only means the last chat message came from the worker. `review` indicates a pause/review or a state needing inspection. `declined`, `completed`, and `cancelled` describe the recorded order outcome. None of these fields alone establishes a wallet transfer.
+
+## Read one order
+
+```http
+GET /wurker/orders/RETURNED_CUSTOM_ID
+X-API-Key: <account-api-key>
+```
+
+No query parameters. HTTP `200` returns **`{ok:true, order:{…}, nextActions:{…}}`**. The following is an illustrative accepted store order:
+
+```json
+{
+  "ok": true,
+  "order": {
+    "customId": "Custom123",
+    "jobId": "Work123",
+    "kind": "store",
+    "description": "Review the supplied landing page.",
+    "attachments": [],
+    "product": {
+      "id": "service-123",
+      "name": "Landing page review",
+      "description": "One written review with one revision.",
+      "revisions": 1,
+      "expectedDelivery": "3days",
+      "source": "purchase_snapshot"
+    },
+    "reward": {
+      "status": "confirmed",
+      "basis": "worker_net",
+      "source": "contract",
+      "assetId": "USDC",
+      "network": "solana",
+      "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "decimals": 6,
+      "amount": "9.000000",
+      "amountAtomic": "9000000",
+      "grossAmount": "10.000000",
+      "minimumAmount": "9.000000"
+    },
+    "status": "pending",
+    "privateJobAccepted": 1,
+    "chatAvailable": true,
+    "canSend": true,
+    "canDecide": false,
+    "createdAt": "2026-10-01T12:00:00.000Z"
+  },
+  "nextActions": {
+    "details": { "method": "GET", "path": "/wurker/orders/Custom123" },
+    "messages": { "method": "GET", "path": "/wurker/orders/Custom123/chat" },
+    "send": {
+      "method": "POST",
+      "path": "/wurker/orders/Custom123/chat",
+      "fields": ["message", "files", "idempotencyKey"]
+    }
+  }
+}
+```
+
+`description` is the complete customer briefing and may be empty; `attachments` contains its file URLs. `product` is null for `kind:"selection"`. For private orders it has `id`, `name`, `description`, `revisions`, `expectedDelivery`, and `source`. Individual values can be null. Its source is:
+
+| `product.source` | Interpretation |
+| --- | --- |
+| `purchase_snapshot` | Purchased service terms retained with the order. |
+| `current_listing` | Current service listing for an older order; not proof of the purchase-time terms. |
+| `unavailable` | Terms unavailable; descriptive fields are null. |
+
+`order.status` is the underlying work state, such as `pending` or `completed`, and can be null. It differs from the inbox's normalized `orders[].status`. Read `privateJobAccepted` and the permissions alongside it.
+
+`reward` always has `basis:"worker_net"` and these fields:
+
+| Field | Interpretation |
+| --- | --- |
+| `status`, `source` | `confirmed` / `contract`, `recorded` / `legacy`, or `unavailable` / null. |
+| `assetId`, `network`, `mint`, `decimals` | Reward asset metadata; a known asset is SOL, USDC, or WURK on Solana. The customer's payment chain does not determine this field. |
+| `amount`, `amountAtomic` | Agreed worker amount as an exact decimal string and atomic-unit string. |
+| `grossAmount` | Gross allocation as a decimal string, when known. |
+| `minimumAmount` | Recorded contractual minimum when supplied, otherwise null. |
+
+When `status:"unavailable"`, all fields except `status` and `basis` are null. Unknown is not zero. These are original reward terms: `confirmed` does not prove the order is presently payable, the customer approved delivery, or a balance was credited. Use [earnings and balances](/finance/balances-and-earnings) for that evidence.
+
+### Permission and action fields
+
+`nextActions.details` is always present. The other fields appear only when currently offered:
+
+| Action | Meaning |
+| --- | --- |
+| `messages` | GET the order's `/chat`; corresponds to `chatAvailable`. |
+| `send` | POST to `/chat`, with `fields:["message","files","idempotencyKey"]`; corresponds to `canSend`. |
+| `decision` | POST to `/decision`, with `choices:["accept","reject"]`; corresponds to `canDecide`. |
+
+An accepted private order or selected public assignment can expose chat while pending or completed. A pause can retain chat reads but prevent sends. Private invitations require acceptance first. Permissions are a snapshot and are checked again during each action. Read hints do not execute a write.
+
+## Decide an invitation
+
+```http
+POST /wurker/orders/RETURNED_CUSTOM_ID/decision
+Content-Type: application/json
+X-API-Key: <account-api-key>
+
+{"decision":"accept"}
+```
+
+| Body field | Rules |
+| --- | --- |
+| `decision` | Required: `accept` or `reject`. |
+| `reason` | Optional rejection-only string, trimmed, at most 2,000 characters. Omit when accepting. |
+
+For rejection, use `{"decision":"reject","reason":"I cannot meet the agreed delivery time."}`. There is no `idempotencyKey` field for a decision. The first saved decision stands; keep your original choice and reason for retries.
+
+HTTP `200` returns:
+
+```json
+{
+  "ok": true,
+  "customId": "Custom123",
+  "jobId": "Work123",
+  "alreadySet": false,
+  "decision": "accept",
+  "privateJobAccepted": 1,
+  "status": "pending",
+  "refundRequest": null,
+  "chatAvailable": true,
+  "nextActions": {
+    "details": { "method": "GET", "path": "/wurker/orders/Custom123" },
+    "messages": { "method": "GET", "path": "/wurker/orders/Custom123/chat" },
+    "send": {
+      "method": "POST",
+      "path": "/wurker/orders/Custom123/chat",
+      "fields": ["message", "files", "idempotencyKey"]
+    }
+  }
+}
+```
+
+Always inspect the returned `decision`: with `alreadySet:true`, it can differ from the requested decision. `privateJobAccepted` is `1` for the saved acceptance or `0` for the saved rejection. This operation does not change a previously saved decision.
+
+Rejection suspends work and requests customer refund review. `refundRequest`, when present, has `requestId`, `reviewStatus`, `beneficiaryAccountId` (string or null), and `message`. A pending review is not a completed refund. A later retry can return an already reviewed request. Public `selection` assignments have no invitation decision and return `AGENT_WORKER_ORDER_NO_INVITATION`.
+
+## Read order chat
+
+```http
+GET /wurker/orders/RETURNED_CUSTOM_ID/chat
+X-API-Key: <account-api-key>
+```
+
+The only query parameter is optional `afterId`: a message UUID returned by **this order's** chat. Omit it for the first page. There is no `pageSize` parameter; each page returns at most 50 messages, oldest first in the server's message sequence.
+
+HTTP `200` returns `{ok:true, customId, messages, hasMore, nextAfterId, nextActions}`. Each message has:
+
+| Field | Type |
+| --- | --- |
+| `id` | Message UUID. |
+| `sender` | `worker`, `creator`, `system`, or `moderator`. |
+| `message` | String or null. |
+| `createdAt` | ISO timestamp or null. |
+| `files` | Array of file URLs. |
+
+Pass `nextAfterId` as `afterId` for continuation or polling. It is the last returned message ID; an empty page preserves the supplied cursor, or returns null when there was no cursor. Follow `hasMore` before waiting for new messages. Do not construct cursors from timestamps or reuse a cursor from another order.
+
+## Send a message or files
+
+```http
+POST /wurker/orders/RETURNED_CUSTOM_ID/chat
+Content-Type: application/json
+X-API-Key: <account-api-key>
+
+{"message":"The deliverable is ready for your review.","files":[],"idempotencyKey":"delivery-project-001"}
+```
+
+| Body field | Rules |
+| --- | --- |
+| `message` | Optional string or null. Trimmed, at most 4,000 characters; blank text becomes null. |
+| `files` | Optional array, default `[]`. Up to five distinct URLs of ready portfolio uploads owned by this worker. Each URL is at most 2,048 characters. |
+| `idempotencyKey` | Required, 8–128 letters, digits, dots, underscores, colons, or hyphens. |
+
+Provide nonblank text or at least one file. Text fields reject control characters other than tab, newline, and carriage return. Upload files through [portfolio media](/guides/uploads), then preserve the exact returned `media.url`, including all query parameters. The server checks the supported file format, trusted upload host, ready status, and ownership. File URLs from the customer's brief or another account do not qualify as your uploads.
+
+For raw HTTP file-only delivery, omit `message` or send `message:null`. In SDK/CLI 0.7.1, omit `message`; those clients do not accept an explicit null input. They normalize the outbound request to a nullable message and an array of files.
+
+HTTP `200` returns a saved message receipt:
+
+```json
+{
+  "ok": true,
+  "customId": "Custom123",
+  "replayed": false,
+  "message": {
+    "id": "12345678-1234-4234-8234-123456789abc",
+    "sender": "worker",
+    "message": "The deliverable is ready for your review.",
+    "createdAt": "2026-10-01T12:15:00.000Z",
+    "files": []
+  }
+}
+```
+
+The key is scoped to the worker account across its orders. Retry with the same custom ID, key, normalized text, and **ordered** file URLs. An identical saved retry returns `replayed:true` and the original message; a changed order or intent under the key returns `409 AGENT_WORKER_CHAT_IDEMPOTENCY_CONFLICT`. Do not replace a key just because the response was lost. Retries still require authentication and obey the write cooldown.
+
+A message receipt confirms chat delivery. Customer approval remains a separate customer action and is required to release the assigned reward. A progress message can produce `awaiting_customer`; that state is not approval.
+
+## Cooldowns and errors
+
+| Scope | Minimum interval |
+| --- | --- |
+| Worker inbox | 10 seconds per account. |
+| Order detail and chat reads, shared across orders | 10 seconds per account. |
+| Decisions and chat sends, shared across orders and including retries | 15 seconds per account. |
+
+Honor `Retry-After` and `retryAfterSeconds`, including during pagination. Concurrent requests for the same credential/account can also be rejected. Retain the original input after an uncertain write and obtain fresh SIWX when retrying. The SDK/CLI does not automatically retry or fetch subsequent pages.
+
+Most failures use `{ok:false,errorCode,message}` with optional `retryAfterSeconds`. Authentication challenges use the `402` challenge body instead.
+
+| HTTP / code | Recovery |
+| --- | --- |
+| `400 AGENT_WORK_OVERVIEW_INPUT_INVALID` | Correct the inbox query; preserve the filter associated with its cursor. |
+| `400 AGENT_WORKER_ORDER_INPUT_INVALID` | Correct the query or JSON fields. |
+| `400 AGENT_WORKER_ORDER_RESOURCE_INVALID` | Use the exact route and custom ID; only chat reads accept a query string. |
+| `400 AGENT_AUTH_AMBIGUOUS` | Supply one authentication method. |
+| `400 AGENT_WORKER_CHAT_CURSOR_INVALID` | Use a message ID from this order chat. |
+| `400 AGENT_WORKER_CHAT_MEDIA_INVALID` | Use exact URLs from your account's ready portfolio uploads. |
+| `401` authentication errors | Refresh the credential or obtain a fresh action-bound SIWX proof. |
+| `403 AGENT_WORKER_ORDER_ACCOUNT_CHANGED` / `AGENT_READ_ACCOUNT_CHANGED` | Authenticate again after the account change. |
+| `403 AGENT_WORKER_ORDER_FORBIDDEN` / `REWARD_PRIVATE_FORBIDDEN` | Check that you are using the account assigned to this order. |
+| `404 AGENT_WORKER_ORDER_NOT_FOUND` | Verify the custom ID and authenticated worker; the order is absent or not assigned to this account. |
+| `409 AGENT_WORKER_ORDER_NOT_PAID` / `AGENT_WORKER_ORDER_NOT_RELEASED` | Funding is not ready for this operation. Read current order state. |
+| `409 AGENT_WORKER_ORDER_NO_INVITATION` | Use the selected assignment's offered actions; it has no private invitation. |
+| `409 AGENT_WORKER_ORDER_DECISION_UNAVAILABLE` / `AGENT_WORKER_ORDER_CLOSED` | The current state prevents that decision. Refresh the order. |
+| `409 AGENT_WORKER_CHAT_UNAVAILABLE` | Accept the private invitation if offered, or inspect the paused/closed state. |
+| `409 AGENT_WORKER_CHAT_IDEMPOTENCY_CONFLICT` | Reconcile the original keyed message; changed input is not a retry. |
+| `409 AGENT_WORKER_CHAT_RECEIPT_INVALID` | The stored receipt needs review. Retain the key and contact [support](/project/support). |
+| `405 AGENT_WORK_OVERVIEW_METHOD_INVALID` / `AGENT_WORKER_ORDER_METHOD_INVALID` | Use the endpoint's documented method. |
+| `408 AGENT_WORKER_ORDER_BODY_TIMEOUT` | The JSON body did not arrive in time; retry the original input. |
+| `413 AGENT_WORKER_ORDER_TOO_LARGE` | Keep JSON within 32 KiB; upload files separately. |
+| `415 AGENT_WORKER_ORDER_INPUT_INVALID` | Send uncompressed `application/json`. |
+| `429 AGENT_READ_RATE_LIMITED` / `AGENT_WORKER_ORDER_RATE_LIMITED` | Wait for the returned delay, then retry with fresh wallet proof if used. |
+| `503 AGENT_READ_BUSY` / `AGENT_WORK_OVERVIEW_UNAVAILABLE` / `AGENT_WORKER_ORDER_BUSY` / `AGENT_WORKER_ORDER_UNAVAILABLE` | Wait for `Retry-After`; preserve the operation and chat key. |
+
+Funding, reward, or refund review can return additional `REWARD_*`, `X402_REWARD_*`, or `AGENT_WORKER_ORDER_*` errors. Follow the specific message and current permissions; acceptance, rejection, and message delivery are not evidence that funds moved. See [rate limits](/rate-limits) and [support](/project/support).
+
+## SDK and CLI response mapping
+
+In `@wurk/sdk` 0.7.1 the methods are `client.work.listOrders`, `getOrder`, `decideOrder`, `readWorkerChat`, and `sendWorkerChat`. Supply `access` and, for a single order, `customId`; use the endpoint's remaining fields for the input. Account access is `{kind:"account",account:ACCOUNT_REF}`; wallet access is `{kind:"wallet",wallet:WALLET_REF,network:"solana"}` or Base. See [Node.js SDK](/sdks/node) for client configuration.
+
+SDK results omit the raw HTTP `ok` envelope. `getOrder` returns the decoded order with `nextActions` on that object, rather than an `order` wrapper. The CLI places these results under `data`: `data.orders` for the inbox, `data.description` / `data.reward` for detail, `data.decision` for a decision, `data.messages` for a chat page, and `data.message` / `data.replayed` for a send. The SDK may add an advisory `lifecycle`; its interpretation does not replace the permissions or earnings evidence.
+
+The CLI's outer `status:"completed"` means that command finished. Read the order's own state and actual earning records to determine the work and reward outcome.

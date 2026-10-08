@@ -1,0 +1,148 @@
+---
+title: 'Earnings'
+description: 'Read account earnings totals and paginated job, referral, tip and vault reports'
+---
+
+`POST https://wurkapi.fun/earnings` reads the authenticated account's recorded income. It is free and does not move funds. Use `GET /profile` for current [platform balances](/finance/balances-and-earnings).
+
+The HTTP overview includes **jobs, referrals, tips and completed vault distributions**. Published **`@wurk/sdk` and `@wurk/cli` 0.7.1** return an overview limited to jobs, tips and vault, recomputing the totals without referrals. Their history arrays use `items`, and job/vault entries use `reward`; this reference describes HTTP `rows` and `rewardEarning`. See the [client examples](/finance/balances-and-earnings#read-an-earnings-report).
+
+## Authentication and request format
+
+Send exactly one credential: `X-API-Key` or a fresh `SIGN-IN-WITH-X` proof from the existing account's registered Solana/Base wallet. The account comes from that credential; no account or wallet selector is accepted in the body.
+
+```http
+POST /earnings
+Host: wurkapi.fun
+X-API-Key: <private-account-key>
+Content-Type: application/json
+
+{"view":"overview","range":"30d"}
+```
+
+Use the exact path with no query parameters or trailing slash. The alias `/api/agent/earnings` supports the same contract. Send an uncompressed UTF-8 JSON object no larger than 16 KiB, including `{}` for the default report. Unknown fields are rejected.
+
+Without credentials, a valid request returns HTTP `402` with an empty `accepts` array and a free sign-in challenge. SIWX binds the method, exact endpoint and submitted body before defaults; changing the report, range, page or alias requires a new proof. See [authentication](/authentication#authenticate-account-requests).
+
+## Choose a view
+
+| JSON body | Result |
+| --- | --- |
+| `{}` | Seven-day overview |
+| `{"view":"overview","range":"30d"}` | Per-asset totals and daily UTC amounts |
+| `{"view":"jobs","page":1,"perPage":20}` | Own job rewards, including pending entries |
+| `{"view":"referrals","page":1,"perPage":20}` | Own completed referral earnings |
+| `{"view":"tips","page":1,"perPage":20}` | Received job and blog tips |
+| `{"view":"vault","range":"90d","page":1,"perPage":20}` | Recorded distributions for the account's supported Solana wallets |
+
+| Field | Accepted values |
+| --- | --- |
+| `view` | `overview` (default), `jobs`, `referrals`, `tips`, `vault` |
+| `range` | `7d` (default), `30d`, `90d`; only overview and vault |
+| `page` | Integer 1–1,000, default 1; history views only |
+| `perPage` | Integer 1–50, default 20; history views only |
+
+Overview rejects `page` and `perPage`. Jobs, referrals and tips reject `range`; those histories are not restricted to the overview window. An unavailable history record can remain visible so that unknown earnings are not silently omitted.
+
+## Overview response
+
+| Field | Meaning |
+| --- | --- |
+| `ok`, `view` | `true` and `overview` on success |
+| `asOf` | Time of the report |
+| `range`, `timezone` | Selected range and `UTC` |
+| `period.start`, `period.end` | Start-inclusive, end-exclusive UTC calendar window |
+| `summary` | Totals for the selected calendar period |
+| `kpis["24h"]`, `kpis["7d"]` | Rolling-window totals ending at `asOf` |
+| `bars` | One item per UTC day, with `periodStart`, `periodEnd` and the same totals structure |
+| `accounting` | Amount units and vault coverage, described below |
+
+The calendar window includes today and ends at the next UTC midnight. The summary for `7d` can differ from the rolling `kpis["7d"]` because their boundaries differ.
+
+Each summary, KPI and bar has `jobs`, `referrals`, `tips`, `vault`, `totalByAsset` and `earningsStatus`. An available category contains:
+
+```json
+{
+  "earningsStatus": "ready",
+  "byAsset": { "SOL": "0", "USDC": "0.900000", "WURK": "0" },
+  "count": 1
+}
+```
+
+The example is one category, not a complete response. Each amount is an exact string in native token units. `count` counts earnings included in that category and period.
+
+HTTP `totalByAsset` sums all four categories by asset. Vault distributions are already included in this total and also shown under `vault`; adding them again double counts income. A category with unavailable evidence has `earningsStatus: "unavailable"`, `byAsset: null` and `count: null`. If any category is unavailable, the corresponding combined total is `null` and its `earningsStatus` is `unavailable`. Available category subtotals remain usable.
+
+The 0.7.1 SDK/CLI also recompute availability from their three included categories. An unavailable referral category does not make their combined total unavailable.
+
+`accounting` reports:
+
+```json
+{
+  "amounts": "exact_native_token_units",
+  "fiatValuationIncluded": false,
+  "vaultWallets": [],
+  "vaultScope": "confirmed_holder_payouts",
+  "pendingVaultRewardsIncluded": false
+}
+```
+
+`vaultWallets` lists the account's included Solana wallets; it is empty when none apply. This is a report of recorded payouts, not a prediction of eligibility or future rewards. Vault payouts go directly to wallets, while profile balances describe funds held on the platform.
+
+## History response and pagination
+
+Every history view returns `ok`, `view`, `asOf`, `rows`, `page`, `perPage`, `total`, `totalPages`, `hasMore`, `nextPage` and `paginationLimited`.
+
+`totalPages` is at least 1, including an empty history. Pages beyond the available history return an empty `rows` array at the requested page. Follow a non-null `nextPage` after the cooldown and stop at `null`. At page 1,000, traversal stops even if `totalPages` is greater; `paginationLimited: true` identifies that ceiling. These page numbers are separate from the offset pagination used by [swap](/api-reference/swaps), [withdrawal](/api-reference/withdrawals) and [refund](/api-reference/refunds) histories.
+
+### Jobs and referrals
+
+Rows contain `id`, `jobShortId`, `jobUrl`, `status`, `firstSeen`, `completedAt`, `payoutMode` and `rewardEarning`. Job identifiers, links and dates can be `null`. Treat row IDs as opaque and use links for navigation only; never forward account credentials to them.
+
+`rewardEarning` has the following fields:
+
+| Field | Meaning |
+| --- | --- |
+| `status` | `ready`, `pending` or `unavailable` |
+| `assetId` | `SOL`, `USDC` or `WURK`; can be `null` when not established |
+| `amount` | Exact decimal string when ready; `null` otherwise |
+| `role` | `worker` for jobs or `referral` for referrals |
+| `source` | Receipt metadata; it does not change the returned amount's units |
+
+Use the earning's status to interpret money. A job budget, overall job status or historical payout metadata does not establish this account's amount. Pending rewards are excluded from completed overview totals. An unavailable earning is unknown, not a zero-value receipt.
+
+### Tips
+
+Rows contain `id`, `sourceType` (`custom` or `blog`), `sourcePath`, `sourceUrl`, `sourceLabel`, `assetId: "WURK"`, `amountWurk`, `earningsStatus`, `message` and `createdAt`. The source URL/path, message and date can be `null`.
+
+`amountWurk` is an exact decimal string when `earningsStatus` is `ready`; it is `null` when unavailable. The report includes received tips. Returned labels and messages are user content, and source links are for navigation without credentials.
+
+### Vault distributions
+
+The envelope adds `range`, `timezone: "UTC"`, `period`, `wallets`, `reportStatus` and `unavailableBatchCount`. Rows contain `id`, `walletAddress`, `batchNumber`, `status`, `createdAt`, `transactionSignature` and `rewardEarning`.
+
+Vault `rewardEarning` uses `assetId: "WURK"`, a receipt `source`, and `status: "ready" | "pending" | "unavailable"`. Only a confirmed completed payout has a ready amount. Other states have `amount: null`; associated dates or transaction details can also be null.
+
+| `reportStatus` | Meaning across the whole selected period |
+| --- | --- |
+| `complete` | No unavailable batches; history can still contain pending entries |
+| `partial` | Unavailable batches coexist with at least one ready payout |
+| `unavailable` | Unavailable batches exist and no ready payout is established |
+
+`unavailableBatchCount` counts unavailable batches across the full report, not just this page. Preserve these fields even on an empty page and do not turn incomplete evidence into a zero total.
+
+## Cooldown and recovery
+
+Allow **one earnings read per account every ten seconds**, shared across views, credentials and aliases. HTTP `429 EARNINGS_RATE_LIMITED` includes `Retry-After` and `details.retryAfterSeconds`. Wait that long before the next read. Each SDK/CLI call reads one report or page; neither client automatically retries or requests the next page.
+
+| Response | Recovery |
+| --- | --- |
+| `400 EARNINGS_INPUT_INVALID` | Correct the fields, numeric pagination, body or exact path. |
+| `405 EARNINGS_METHOD_INVALID` | Use POST. |
+| `413 EARNINGS_REQUEST_TOO_LARGE` | Reduce the JSON body to at most 16 KiB. |
+| `415 EARNINGS_INPUT_INVALID` | Send uncompressed UTF-8 `application/json`. |
+| `429 EARNINGS_RATE_LIMITED` | Honor the returned retry delay. |
+| `503 EARNINGS_UNAVAILABLE` or `EARNINGS_RATE_LIMIT_UNAVAILABLE` | Honor `Retry-After` when present, then retry; a shorter overview/vault range can help a report complete. |
+| `403 EARNINGS_ACCOUNT_CHANGED` | Start a fresh authenticated request for the intended account. |
+
+A SIWX proof may already be consumed when a read returns an error or times out. Obtain a fresh proof for the retry. Preserve null/unavailable results in your application; an unsuccessful read does not establish a zero balance or zero income.

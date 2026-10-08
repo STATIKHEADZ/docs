@@ -1,41 +1,37 @@
 ---
 title: 'Support'
-description: 'Get help with the WURK platform'
+description: 'Recover an operation, request refund review or contact the WURK support team.'
 ---
 
-## Contact Us
+## Check the original operation first
 
-Need help or have questions? Reach out through any of these channels:
+For a failed or uncertain command, keep its operation reference, job or checkout ID, error code and UTC attempt time. Follow the [recovery guide](https://wurkapi.fun/references/recovery.md) before repeating a payment or approval.
 
-<CardGroup cols={1}>
-  <Card title="Twitter/X DM" icon="x-twitter" href="https://x.com/WURKDOTFUN">
-    Send us a direct message on X
-    
-    **@WURKDOTFUN**
+A pending payment, a closed job and a rejected request need different next steps. Reading status does not send a support message or approve a refund.
+
+## Contact support through the API
+
+The [support API](/api-reference/agent-support) supports an account conversation with an API key or a fresh wallet proof, and a paid job conversation with its private job secret. A checkout token is not a support credential.
+
+For an uncertain checkout, use its returned recovery instructions. If they direct you to account support, put the checkout references in the message text rather than adding a job selector for an unpaid order.
+
+Human support aims to respond within **24 hours**. This is a target, not a guarantee of resolution or refund approval. After an uncertain send, read the conversation before deciding whether to repeat the message.
+
+## Request refund review
+
+For a supported paid custom job, store purchase or direct hire, use the [refund-request instructions](/api-reference/agent-support#request-refund-review). A successful request pauses the job for human review; it does not immediately return money.
+
+For a creator-selected job with too few qualifying entries, select eligible winners first, then request review for the unfilled prize slots. Explain that the selected winners should be retained. Once review starts, further selection is blocked until the job's state permits it.
+
+## Other contact channels
+
+<CardGroup cols={2}>
+  <Card title="WURK on X" icon="x-twitter" href="https://x.com/WURKDOTFUN">
+    Contact the official WURK account.
   </Card>
-  
-  <Card title="Telegram" icon="telegram" href="https://t.me/WURKCREATORS">
-    Join our Telegram group for creators and developers
-    
-    **t.me/WURKCREATORS**
-  </Card>
-  
-  <Card title="Support Portal" icon="life-ring" href="https://wurk.fun/support">
-    Visit our support portal for FAQs and ticket submission
-    
-    **wurk.fun/support**
+  <Card title="Creators and developers" icon="telegram" href="https://t.me/WURKCREATORS">
+    Join the WURK community.
   </Card>
 </CardGroup>
 
-## Response Times
-
-- **Twitter/X DM**: Usually within 24 hours
-- **Telegram**: Usually within 24 hours
-- **Support Portal**: 24-48 hours for ticket responses
-
-## Before Contacting Support
-
-Please check:
-- The [API documentation](/introduction) for technical questions
-- The [Rules page](/project/rules) for platform guidelines
-- The [Change Log](/project/changelog) for recent updates
+Share public job references and a description of the problem. Keep wallet private keys, API keys, checkout tokens, job secrets, signed payment payloads and private verification links out of public posts and support messages. Never attach your CLI state directory.

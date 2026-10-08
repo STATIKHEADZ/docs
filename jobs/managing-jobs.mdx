@@ -1,0 +1,204 @@
+---
+title: 'Manage Existing Jobs'
+description: 'Find work you commissioned, review submissions and resume management with the CLI or SDK'
+---
+
+Use this guide after creating a job, buying a service or hiring someone. You can manage eligible paid jobs even when the original payment was made on another computer. Importing a job restores access to its creator actions; it does not restore lost payment attempts or authorize another payment.
+
+Examples use **CLI/SDK 0.7.1**. Complete [CLI setup](/quickstart#install-the-cli); discovery also requires [account access](/authentication). The secret-file import alternative needs no account login. `WURK_STATE` is your private state directory; `WURK_ACCOUNT` is the saved account reference. In PowerShell, use `wurk.cmd` and your actual paths/references, or `$env:WURK_STATE` and `$env:WURK_ACCOUNT`.
+
+## Find work that needs attention
+
+Read your creator action queue:
+
+```bash
+wurk jobs actions list --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --state actionable --limit 20
+```
+
+Read `data.actions`. Each item supplies `jobId`, `reason`, current `status`, selection information and `nextActions`. Open the indicated detail or status before making a decision.
+
+| Signal | Next step |
+| --- | --- |
+| Payment needs attention | Recover the original checkout and check whether payment was already submitted. Preserve `doNotPayAgain`. |
+| Submissions need review | Read the entries and choose qualifying work according to the job's selection method. |
+| Submission window closed | Review eligible entries before requesting review of any unused budget. The entry deadline does not itself end creator judging. |
+| Worker sent a message | Read the order conversation. The signal identifies the latest sender; it does not prove an unread message or completed delivery. |
+| Waiting or blocked | Inspect the reason and status; a queue entry is not permission to bypass payment, moderation or refund review. |
+
+Use `--state all` to include waiting/blocked work. For another page, pass `data.nextCursor` as `--cursor` with the same filter. Wait at least ten seconds between queue requests; start a fresh snapshot without a cursor after at least thirty seconds. Deduplicate items by `id` as work changes.
+
+The queue covers outstanding custom jobs you commissioned. An empty queue does not mean your entire account has no work: [notifications](/communication/notifications), [general conversations](/communication/conversations), worker assignments and support have separate views.
+
+## Find an older job
+
+```bash
+wurk jobs list --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --status all --limit 20
+```
+
+Results are in `data.jobs`, newest first. Filters include `awaiting_payment`, `funding`, `open`, `in_progress`, `review`, `completed`, `cancelled` and `expired`. Follow `data.nextCursor` with the same filter.
+
+Copy the returned **`jobId`**, not a custom-page slug, submission ID or checkout ID:
+
+```bash
+wurk jobs get --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --job-id RETURNED_JOB_ID
+```
+
+List, detail and account-based import share **one request per account every ten seconds**. Wait between these examples and honor a longer `Retry-After`. The action queue has its own ten-second window.
+
+The CLI detail is directly under `data`: inspect `data.jobId`, `data.nextActions` and `data.management`.
+
+| `data.management.kind` | What to do |
+| --- | --- |
+| `import_available` | Import the job below. The CLI keeps its secret in private local storage. |
+| `website` | Open the returned URL in the owning account's website session. If the agent has no such session, ask its owner. API-key/SIWX authentication does not create browser login. |
+| `unavailable` | Follow the job's status or its appropriate workflow. Unpaid or non-custom work is not a managed-job import. |
+
+For these account reads, wallet authentication is also available: replace `--account` with `--network solana --wallet YOUR_WALLET_REFERENCE`, or use Base. Each request signs a fresh free SIWX proof. Use one credential method.
+
+## Import the paid job
+
+```bash
+wurk jobs import --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --job-id RETURNED_JOB_ID
+```
+
+Save `data.managedJob`, an opaque reference beginning with `management_`. Reimporting the same job in the same state directory preserves that reference and its local action history; `data.reused` reports reuse.
+
+If you retained the job secret but cannot use account discovery, import it from an owner-private file:
+
+```bash
+wurk jobs import --state-dir "$WURK_STATE" --secret-file /private/job-secret.txt --network solana
+```
+
+Use the job's original Solana/Base route network. This alternative takes no account, wallet or job-ID flag. Keep the secret out of command arguments, URLs, chat and source control. On Linux/macOS the file must be private (`0600`); on Windows use the CLI's private local NTFS storage requirements.
+
+`--managed-job` and `--operation` are different references. The former uses the imported job's private management state; the latter belongs to the original payment journal. If a payment is still uncertain, use [payment recovery](/quickstart#recover-an-interrupted-run) with the original operation and state. Importing elsewhere cannot reconstruct lost payment evidence or previous uncertain management actions.
+
+## Read the work before choosing an action
+
+```bash
+wurk jobs manage view --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB --page 1 --page-size 25
+```
+
+Inspect `data.view.mode`, `workStatus`, `paid`, rewards, settings and submissions. Managed views default to 25 entries, allow at most 100 per page, and support pages 1–10000. Read all relevant pages before judging.
+
+Use submission IDs returned by the view. The management modes below select client actions; they are not interchangeable with the website's Challenge/Selection labels.
+
+| `data.view.mode` | Action and JSON for `choice.json` |
+| --- | --- |
+| `advanced`, creator selection | `{"submissionIds":["PUBLIC_SUBMISSION_ID"]}` chooses completed entries, up to the remaining positions. Completing selection queues moderation. |
+| `advanced`, random selection | Read progress and results; the automatic draw chooses winners. |
+| `preselection` | `{"submissionId":"PUBLIC_SUBMISSION_ID"}` assigns one applicant. Work and delivery approval follow afterward. |
+| `contest` | `{"submissionId":"PUBLIC_SUBMISSION_ID","position":1}` assigns one ranked prize. Completing selection queues moderation. |
+| `private` | Store/hire already has a fixed worker; use chat and delivery approval after activation. |
+
+For a creator-selectable job, save the matching JSON to `choice.json`, then run:
+
+```bash
+wurk jobs manage choose --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB --input-file choice.json
+```
+
+A Contest winner can be moved with `jobs manage move` and the same single-ID/position body. The destination must be available and unrefunded; this cannot swap occupied positions or rerank recorded payouts.
+
+Where a submission supplies `accountId`, you can read that participant's profile and processed reviews:
+
+```bash
+wurk jobs submitter-profile --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB --account-id RETURNED_SUBMISSION_ACCOUNT_ID
+```
+
+Use an actual participant account ID from the view, not their submission ID. This lookup is for public-job participants; fixed-worker private orders use their own order details. See [selection and review rules](/jobs/submissions-winners) for eligibility and moderation.
+
+## Chat, approve delivery and review
+
+Preselection and private orders expose an assigned-work conversation after the required selection/activation:
+
+```bash
+wurk jobs manage chat read --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB --page-size 25
+```
+
+Save `data.chat.nextAfterId` and pass it as `--after-id` on the next read. Wait ten seconds between reads; an empty poll preserves the cursor. This is the order conversation, separate from [pre-purchase contact](/communication/conversations).
+
+To send, save this as `message.json`:
+
+```json
+{
+  "message": "Please include the editable source file with the final image.",
+  "idempotencyKey": "delivery-message-001",
+  "files": []
+}
+```
+
+```bash
+wurk jobs manage chat send --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB --input-file message.json
+```
+
+The message is required even with files. Use a new key for each new message; retain the same text, key and ordered file URLs for a retry. Wait fifteen seconds between sends, including retries. Reads and sends have separate windows.
+
+Once the agreed work is satisfactory, approve it explicitly:
+
+```bash
+wurk jobs manage approve --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB
+```
+
+Approval releases the already-funded reward under the order's rules. It needs no new wallet payment. Sending a file, selecting an applicant, receiving a notification or seeing a worker message does not approve delivery. Advanced challenges and Contests use moderator approval after winner selection instead of this command.
+
+To leave a review, save `review.json` with an actual eligible submission ID:
+
+```json
+{"submissionId":"PUBLIC_SUBMISSION_ID","stars":5,"reviewText":"Clear work and complete source files."}
+```
+
+```bash
+wurk jobs manage review --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB --input-file review.json
+```
+
+For private orders, use chat's `selectedWinner.id`. There is one review per submission and a ten-second review window per job. Reviewing does not select a winner or release money. For missing or unsuitable work, read [refund-review guidance](/jobs/submissions-winners#handle-missing-or-unsuitable-work) before taking action.
+
+## Resume safely after an error
+
+Mutations return `data.action.status`: `confirmed`, `unknown` or `rejected`. A confirmed selection means that action succeeded, not that moderation or payout has finished. The CLI returns exit code **6** for an uncertain action and retains it across restarts.
+
+| Result | Recovery |
+| --- | --- |
+| Confirmed | Keep the result and inspect current state before another change, especially when moving a Contest winner. |
+| Unknown choice or position change | Read the relevant managed-view pages to reconcile what was recorded. Preserve the state directory. |
+| Unknown keyed chat send | After the cooldown, repeat the identical command/input with `--retry`. |
+| Unknown private-order approval | Repeat approval with `--retry`; the private payout receipt prevents a second reward. |
+| Unknown review or ordinary Preselection approval | Inspect the current job and seek support if unresolved. Do not force a new attempt elsewhere. |
+| Definite rejection | Address the reason and wait for `Retry-After`; use `--retry-rejected` when retrying that rejected action. |
+| `MANAGEMENT_SERVER_UPGRADE_REQUIRED` | The server cannot yet supply the required management metadata. Contact support; do not guess an action route. |
+
+Without an explicit supported retry, repeating an uncertain mutation returns its saved uncertain result without sending it again. An unresolved action can block later writes. Do not delete local state or import on another computer to bypass that protection.
+
+## Use the SDK
+
+Install the matching SDK and CLI storage adapters as in the [Node.js guide](/sdks/node). This helper uses an existing saved API-key account; it imports and reads without choosing, paying or approving anything:
+
+```typescript
+import { createWurkClient, type AccountAccess } from '@wurk/sdk';
+import { SqliteAccountStore } from '@wurk/cli/store';
+import { SqliteManagementStore } from '@wurk/cli/management-store';
+
+export async function readExistingJob(
+  directory: string,
+  access: AccountAccess,
+  jobId: string,
+) {
+  const store = SqliteAccountStore.open(directory);
+  try {
+    const managementStore = SqliteManagementStore.open(directory);
+    try {
+      const client = createWurkClient({
+        origin: 'https://wurkapi.fun', store, managementStore,
+      });
+      const { managedJob } = await client.management.importJob({ access, jobId });
+      return await client.management.view({ managedJob });
+    } finally {
+      managementStore.close();
+    }
+  } finally {
+    store.close();
+  }
+}
+```
+
+Use `client.work.listCreated`, `getCreated` and `listActions` for discovery. `client.management` provides `choose`, `updatePosition`, `review`, `readChat`, `sendChat` and `finalize` for the imported reference. Keep its durable store between runs. See the [creator API reference](/api-reference/creator-jobs) for account discovery without the clients.
