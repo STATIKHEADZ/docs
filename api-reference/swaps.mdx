@@ -1,0 +1,186 @@
+---
+title: 'Swaps'
+description: 'Create an internal balance swap, read its settled output, and paginate account swap history'
+---
+
+These endpoints use `https://wurkapi.fun`. A swap reserves the source **platform balance**, queues conversion, and credits the destination platform balance after completion. External wallet payouts use [withdrawals](/api-reference/withdrawals). For the complete CLI workflow, see [Swap balances](/finance/swaps).
+
+| Method and path | Purpose | Alias |
+| --- | --- | --- |
+| `POST /swap` | Reserve an exact amount and queue a swap | `/api/agent/swap` |
+| `POST /swap/status` | Read one existing swap | `/api/agent/swap/status` |
+| `POST /swaps` | Read account swap history | `/api/agent/swaps` |
+
+Send `Content-Type: application/json` and a JSON object. Query parameters, arrays, and unknown body fields are rejected. History without pagination uses `{}`. Successful responses have HTTP `200` and `ok: true`; create success does not mean settlement. Monetary values in responses are decimal strings, or `null` where indicated.
+
+## Authentication
+
+All three operations accept **exactly one** of:
+
+- `X-API-Key`: the existing account's active API key, with API-key access enabled.
+- `SIGN-IN-WITH-X`: a fresh proof from its primary Solana wallet or registered, enabled Base wallet, bound to this exact request.
+
+The signing chains are Solana mainnet (`solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`, Ed25519/SIWS) and Base mainnet (`eip155:8453`, EIP-191). The signing chain does not restrict the asset pair. The endpoint derives the account from the credential; callers cannot supply an `accountId` or another wallet's source balance.
+
+A valid unauthenticated request returns HTTP `402`, a `PAYMENT-REQUIRED` header, and an x402 v2 challenge with **`accepts: []`** and a `sign-in-with-x` extension. This requests free authentication. No x402 payment is required to authenticate the swap.
+
+Verify and sign the advertised origin, exact path, `POST` method, purpose, and intent statement. The statement includes the SHA-256 hash of the complete canonical JSON body, including the amount and idempotency key for create, selector for status, or pagination for history. Repeat the same request with the proof. Changing between the short path and alias requires a new proof. Proofs are single-use and valid for at most five minutes; obtain a fresh one after a retryable failure. A profile proof does not authorize a swap.
+
+API-key headers are trimmed, must be nonempty, and must not exceed 512 characters before trimming. SIWX headers must be nonempty and at most 12,000 characters. Supplying both headers, including empty values, returns `400 AGENT_AUTH_AMBIGUOUS`. See [Authentication](/authentication) for account setup.
+
+## Create a swap
+
+```http
+POST /swap
+Host: wurkapi.fun
+Content-Type: application/json
+X-API-Key: <private-account-key>
+
+{
+  "fromToken": "USDC",
+  "toToken": "SOL",
+  "amount": "0.60",
+  "idempotencyKey": "earnings-swap-001"
+}
+```
+
+All four fields are required:
+
+| Field | Contract |
+| --- | --- |
+| `fromToken` | Case-sensitive asset ID from the table below |
+| `toToken` | Supported asset ID, different from `fromToken` |
+| `amount` | Positive plain decimal amount, less than `10^21`, within the available source balance; use a decimal string |
+| `idempotencyKey` | String matching `^[A-Za-z0-9._:-]{8,128}$`; preserve it for the original operation |
+
+| Asset ID | Network and asset | Input decimal places |
+| --- | --- | --- |
+| `SOL` | Solana SOL | 9 |
+| `WURK` | Solana WURK | 0 |
+| `USDC` | Solana USDC | 6 |
+| `SKR` | Solana SKR | 6 |
+| `USDC_BASE` | Base USDC | 6 |
+| `USDG_ROBINHOOD` | Robinhood USDG | 6 |
+
+All unequal pairs are supported. The trimmed amount text must match `digits` or `digits.digits`, with at most 80 characters. Nonzero digits beyond the source asset's precision are rejected; extra trailing fractional zeros are accepted. Exponents, signs, zero, and `all` are invalid string amounts. There is no full-balance flag or caller-selected slippage field.
+
+The raw API also accepts finite JSON numbers no greater than `Number.MAX_SAFE_INTEGER` when their decimal representation satisfies those same amount rules. **The CLI and SDK require strings.** Keep strings throughout your application to avoid floating-point rounding. The canonical request body must fit within 16,384 UTF-8 bytes.
+
+New `SOL` → `USDC` swaps require at least `0.0001` SOL. Zero output after fees is rejected when detected; execution can also safely fail an amount that is too small at execution time.
+
+### Fees and estimates
+
+Cross-network routes charge a 0.3% fee on the stablecoin bridge amount, rounded up to `0.000001`. Small internal Solana conversions charge 1.5%; larger Solana conversions use a 5% slippage setting. A route with both conversion and bridging can incur both costs. Read `bridgeFeeAmount` when available.
+
+The small-conversion limits are `0.01` SOL, `4000` WURK, `1` USDC, and `50` SKR, inclusive, for the amount entering the Solana conversion. An inbound bridge fee is deducted before evaluating that conversion amount.
+
+`expectedAmountOut` and `expectedAmountOutMin` are **indicative estimates, not guaranteed or enforced execution minimums**. Estimates can be `null` when pricing is unavailable. There is no separate quote/accept endpoint for swaps. Actual credited output appears as `received` on status and history after completion.
+
+### Create response
+
+The object contains `ok: true` and these fields:
+
+| Field | Meaning |
+| --- | --- |
+| `swapId` | UUID of the saved swap |
+| `pairKey` | Pair identifier in `toToken_fromToken` order |
+| `fromToken`, `toToken`, `amountIn` | Saved assets and normalized source amount |
+| `status` | Swap state; a new request starts `pending` or `bridge_pending` |
+| `replayed` | `true` when returning a previously saved request, with no second debit |
+| `balance`, `wurkBalance`, `usdcBalance`, `skrBalance`, `usdcBalanceBase`, `usdgBalanceRobinhood` | Current SOL, WURK, Solana USDC, SKR, Base USDC, and Robinhood USDG account balances; a new reservation has already reduced its source balance |
+| `expectedAmountOut`, `expectedAmountOutMin` | Destination-asset estimates as strings or `null` |
+| `routeVersion` | Numeric route version or `null` |
+| `bridgeGrossAmount`, `bridgeFeeAmount` | Stablecoin bridge amounts as strings or `null`; may become known later for a conversion-first route |
+| `failureReason` | Optional `"SWAP_AMOUNT_TOO_SMALL"` on a safely failed dust swap |
+
+Preserve the key and returned ID. Creation does not return `received`; use status for the actual output. An exact retry returns the existing swap's current state and account balances, which may have changed since its first response. Reusing the key with a different asset pair or amount returns `409 SWAP_IDEMPOTENCY_CONFLICT`.
+
+Only one new attempt per account is admitted every **15 seconds**. Admitted business failures can consume the window. Stored requests can be replayed without a second reservation, but use status first after an uncertain result. An active or review swap blocks another new swap even when the cooldown has elapsed.
+
+## Read one swap
+
+Use exactly one selector:
+
+```http
+POST /swap/status
+Host: wurkapi.fun
+Content-Type: application/json
+X-API-Key: <private-account-key>
+
+{"idempotencyKey":"earnings-swap-001"}
+```
+
+Alternatively, send `{"swapId":"RETURNED_SWAP_ID"}` with a UUID in `8-4-4-4-12` hexadecimal format. `idempotencyKey` uses the same bounds as create. Do not include both selectors or any create fields. The query is scoped to the authenticated account; a missing or unowned record returns `404 SWAP_NOT_FOUND`.
+
+Success is `{"ok":true,"swap":{...}}`. Each swap record has:
+
+| Field | Type and meaning |
+| --- | --- |
+| `id` | Swap UUID |
+| `pairKey` | Pair identifier; can be `null` on older records |
+| `fromToken`, `toToken` | Asset IDs |
+| `amountIn` | Source amount, decimal string |
+| `received` | Actual output credited in `toToken`, decimal string or `null`; assess it together with `status` |
+| `status` | One of the states below |
+| `expectedAmountOut`, `expectedAmountOutMin` | Indicative destination estimates, strings or `null` |
+| `createdAt` | UTC ISO timestamp or `null` |
+| `txId` | Transaction identifier or `null`; its presence does not prove completion |
+| `routeVersion` | Number or `null` |
+| `bridgeGrossAmount`, `bridgeFeeAmount` | Stablecoin bridge amounts, strings or `null` |
+| `failureReason` | Optional `"SWAP_AMOUNT_TOO_SMALL"` for a safely failed dust swap |
+
+| State | Interpretation |
+| --- | --- |
+| `pending`, `initiated`, `bridge_pending`, `bridge_initiated` | Processing; output is not yet confirmed credited |
+| `bridge_review` | Requires reconciliation; retain the original request and seek account support if needed |
+| `completed` | Output was credited; read `received` and refresh [account balances](/finance/balances-and-earnings) |
+| `failed` | Resolve the recorded failure and check balances before a new operation |
+
+`failureReason: "SWAP_AMOUNT_TOO_SMALL"` identifies the safe dust-failure path that returned the source amount. A generic `failed` status or a request timeout alone does not establish a returned balance. Status reads never create, retry, or reverse a swap.
+
+## Read swap history
+
+```http
+POST /swaps
+Host: wurkapi.fun
+Content-Type: application/json
+X-API-Key: <private-account-key>
+
+{"limit":10,"offset":0}
+```
+
+| Field | Bounds | Default |
+| --- | --- | --- |
+| `limit` | JSON integer from 1 to 50 | `10` |
+| `offset` | JSON integer from 0 to 10,000 | `0` |
+
+Success includes `ok: true`, `swaps` (records with the status shape above), `total`, `limit`, `offset`, `hasMore`, `nextOffset`, and `pending`. `pending` is `null` or `{id,status}` for an active swap, including `bridge_review`, regardless of the requested page.
+
+History includes website and AutoSwap activity. Records are newest first, with undated records last. Follow `nextOffset`, retain the limit, and deduplicate by `id` if new records shift offset pages. Stop when `nextOffset` is `null`; it can be `null` at the traversal ceiling while `hasMore` remains true.
+
+The history cooldown is **10 seconds per account**, shared across pages, aliases, and credentials. It is separate from the create cooldown. Use individual status to follow a known swap. This history reads recorded activity without moving funds; [earnings](/api-reference/earnings), [withdrawals](/api-reference/withdrawals), and [credited job refunds](/api-reference/refunds) have their own endpoints.
+
+## Errors and recovery
+
+Errors normally return `{"ok":false,"errorCode":"CODE","message":"..."}` with optional `details`. The free HTTP 402 authentication challenge has the x402 shape described above. Rate limits include a `Retry-After` header; account cooldown responses also include `details.retryAfterSeconds`. CLI/SDK errors expose the delay as `retryAfterSeconds`.
+
+| HTTP | Code | Recovery |
+| --- | --- | --- |
+| `400` | `SWAP_INPUT_INVALID`, `SWAP_ASSET_INVALID`, `SWAP_AMOUNT_INVALID`, `SWAP_REQUEST_KEY_INVALID` | Correct the body, asset, precision, or key before submitting a valid request |
+| `400` | `SWAP_AMOUNT_TOO_SMALL`, `SWAP_INVALID_REQUEST` | Review minimums and fees; a stablecoin input entirely consumed by its bridge fee is invalid |
+| `400` | `SWAP_INSUFFICIENT_BALANCE` | Refresh the source platform balance and respect the consumed create cooldown |
+| `400` | `AGENT_AUTH_AMBIGUOUS`, `AGENT_SWAP_INTENT_INVALID` | Send one credential and a valid bounded body |
+| `401` | `AGENT_API_KEY_INVALID` | Recover the current active account key |
+| `401` | `SIWX_INVALID_PROOF`, `SIWX_INVALID_SIGNATURE`, `SIWX_INVALID_TIME`, `SIWX_RESOURCE_MISMATCH`, `SIWX_SCOPE_MISMATCH`, `SIWX_CHAIN_MISMATCH` | Obtain a fresh exact-request proof from the correct registered wallet |
+| `403` | `ACCOUNT_BLOCKED`, `ACCOUNT_API_KEY_BLOCKED`, `WALLET_CREDENTIAL_DISABLED`, `EVM_CREDENTIAL_DISABLED` | Resolve account or credential access before retrying |
+| `403` | `SWAP_ACCOUNT_CHANGED`, `SWAP_HISTORY_ACCOUNT_CHANGED` | Re-establish the original account identity and reconcile the original request |
+| `404` | `AGENT_ACCOUNT_NOT_FOUND`, `ACCOUNT_NOT_FOUND` | Use the account associated with the credential; complete account access if needed |
+| `404` | `SWAP_NOT_FOUND` | Verify the original account, origin, and selector; do not assume an uncertain create is safe to replace |
+| `409` | `SWAP_IDEMPOTENCY_CONFLICT` | Recover the original key and terms; changing the key does not resolve uncertainty |
+| `409` | `SWAP_ALREADY_PENDING` | Follow the active swap through status/history |
+| `409` | `SIWX_NONCE_ALREADY_USED` | Obtain a fresh proof for the same intended request |
+| `409` | `WALLET_DUPLICATE_ACCOUNTS`, `EVM_LEGACY_ACCOUNT_REVIEW_REQUIRED` | Ask account support to resolve the wallet association |
+| `429` | `SWAP_RATE_LIMITED`, `SWAP_HISTORY_RATE_LIMITED` | Wait for `Retry-After`; a later wallet request needs a new proof |
+| `503` | `AGENT_SWAP_UNAVAILABLE`, `AGENT_SWAP_SCHEMA_NOT_READY`, `SWAP_RATE_LIMIT_UNAVAILABLE`, `SWAP_HISTORY_UNAVAILABLE`, `SWAP_HISTORY_RATE_LIMIT_UNAVAILABLE` | Wait for availability; after an uncertain create, check the original key before further action |
+
+After a lost response, query `/swap/status` with the original key. Retain that key and the original terms for any permitted retry. In CLI/SDK integrations, also retain the original state/finance store: `FINANCE_INTENT_CONFLICT` means a local request key already has different saved terms. Neither a successful HTTP response nor a CLI command's outer status replaces the financial state of the swap.

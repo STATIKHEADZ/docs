@@ -1,0 +1,136 @@
+---
+title: 'Withdraw to a Wallet'
+description: 'Quote your available balance, confirm with your registered wallet, and follow the original withdrawal to completion'
+---
+
+A withdrawal transfers a WURK platform balance to an external wallet. It withdraws the **full available balance of the selected asset and payout network at quote time**, rounded down to its supported precision. There is no custom `amount` field. Credits received after that quote remain in your account.
+
+Check [balances and earnings](/finance/balances-and-earnings) first. Selecting a payout network does not convert or bridge a different balance. If you need another asset or network, complete a separate [balance swap](/finance/swaps) before requesting the withdrawal quote.
+
+## Prepare your signing wallet and destination
+
+The examples use the published **CLI 0.7.1**. Start with the [CLI setup](/quickstart) and [free account access](/authentication#free-account-access). Keep your original `WURK_STATE` directory and imported `WURK_WALLET` reference. The wallet must already be registered to the account whose balance you want to withdraw; a withdrawal request does not register it.
+
+Quote, confirmation, and individual status require that wallet's free SIWX signature. The CLI obtains and validates each challenge. An API key cannot authorize these three commands. The signing wallet needs no funds to sign these requests.
+
+| Setting | Meaning |
+| --- | --- |
+| CLI `--network solana` or `--network base` | The imported wallet's **signing network**, used for quote, confirmation, and status. |
+| Quote JSON `network` | The **payout network**: `solana`, `base`, or `robinhood`. |
+| Quote JSON `asset` | `SOL`, `WURK`, `USDC`, or `SKR` on Solana; `USDC` on Base; `USDG` on Robinhood. |
+| Quote JSON `walletAddress` | The destination owner wallet. Omit it for the signing wallet's own network, or supply that same address. Supply it explicitly for any other payout network. |
+
+For example, a Base signer requesting Robinhood USDG still uses `--network base` and supplies `{"network":"robinhood","asset":"USDG","walletAddress":"YOUR_ROBINHOOD_WALLET"}`. An explicit destination is required even when its EVM address matches the Base signer. Robinhood is a payout network, not a supported signing network.
+
+Solana destinations must be on-curve wallet addresses. Supply the owner wallet, not its associated token account (ATA). EVM destinations must be valid receiving addresses; the zero address, payout token contract, and WURK payout sender are rejected.
+
+## Check minimums, fees, and token accounts
+
+| Payout | Minimum gross balance | Withdrawal precision | Fee and prerequisite |
+| --- | --- | --- | --- |
+| Solana SOL | `0.001` SOL | 9 decimals | No fee deducted from the quoted asset; no ATA required. |
+| Solana WURK | `1001` WURK | 6 decimals | No fee deducted; existing valid WURK ATA required. |
+| Solana USDC | `0.50` USDC | 6 decimals | No fee deducted; existing valid USDC ATA required. |
+| Solana SKR | `25` SKR | 6 decimals | No fee deducted; existing valid SKR ATA required. |
+| Base USDC | `0.50` USDC | 6 decimals | Network fee deducted in USDC, as shown in the quote. |
+| Robinhood USDG | `0.50` USDG | 6 decimals | Network fee deducted in USDG, as shown in the quote. |
+
+For Base and Robinhood, WURK estimates the transfer's network fee, converts it using the ETH/USD price, and rounds up to a stablecoin micro-unit. It is a live estimate, not a fixed percentage. The gross amount must exceed the fee so that `amountNet` is positive. Preserve monetary values as decimal strings and review `amountGross = feeAmount + amountNet`.
+
+Create and fund any required Solana ATA before confirming. The quote includes its `mint`; `requiresAta:true` does **not** mean WURK has checked that the ATA exists. Confirmation rejects missing, invalid, or frozen ATAs. ATA creation is not sponsored and the CLI does not create one automatically. A `WITHDRAWAL_ATA_REQUIRED` error identifies the missing account and owner wallet. Alternatively, explicitly [swap to SOL](/finance/swaps), wait for completion, and then quote a SOL withdrawal; swap fees and the SOL minimum still apply.
+
+## 1. Request and review a quote
+
+Save `withdraw-quote.json`:
+
+```json
+{"network":"solana","asset":"SOL"}
+```
+
+```sh
+wurk withdraw quote --state-dir "$WURK_STATE" --wallet "$WURK_WALLET" --network solana --input-file withdraw-quote.json
+```
+
+For a Base signer withdrawing Base USDC, use `--network base` and change the JSON to `{"network":"base","asset":"USDC"}`. To withdraw Solana SOL with a Base signer, keep `"network":"solana"` in the JSON and also supply the Solana destination `walletAddress`; changing only the CLI flag is insufficient.
+
+Inspect the returned `data.quoteId`, `data.network`, `data.asset`, `data.walletAddress`, `data.amountGross`, `data.feeAmount`, `data.amountNet`, `data.requiresAta`, and `data.expiresAt`. Preparing a quote does not reserve or transfer funds. A new quote lasts **60 seconds**. An identical request may return `data.reused:true` with the original expiry; it does not restart that minute.
+
+## 2. Confirm the saved quote
+
+Save `withdraw-confirm.json`, replacing the quote placeholder with `data.quoteId`:
+
+```json
+{
+  "quoteId": "RETURNED_QUOTE_ID",
+  "idempotencyKey": "earnings-withdraw-001"
+}
+```
+
+Choose and retain a unique key for this intended withdrawal: 8–128 letters, digits, dots, underscores, colons, or hyphens. Confirm within the quote's expiry using the **same wallet, signing network, and state directory** that saved it:
+
+```sh
+wurk withdraw confirm --state-dir "$WURK_STATE" --wallet "$WURK_WALLET" --network solana --input-file withdraw-confirm.json
+```
+
+Confirmation reserves the quoted gross amount and queues the transfer. A `pending` receipt is not a completed payout. The CLI saves the quote and original confirmation intent in its finance state and rejects changed terms or a different key for that quote.
+
+## 3. Follow the original withdrawal
+
+Save `withdraw-status.json` with the original key:
+
+```json
+{"idempotencyKey":"earnings-withdraw-001"}
+```
+
+```sh
+wurk withdraw status --state-dir "$WURK_STATE" --wallet "$WURK_WALLET" --network solana --input-file withdraw-status.json
+```
+
+The outer CLI `status:"completed"` means the command completed. Check `data.status` and `financialOutcome` for the transfer itself:
+
+| Withdrawal result | What to do |
+| --- | --- |
+| `pending`, `initiated`, `signed`, or `broadcast` | Keep the original references and read status again later. |
+| Solana `completed` | The withdrawal is reported completed. Do not repeat it. |
+| Base/Robinhood `completed` with `finalityStatus:"pending"` | Execution is reported completed; wait for `finalityStatus:"finalized"`. |
+| Base/Robinhood `completed` with `finalityStatus:"finalized"` | The payout is reported finalized. |
+| `review` or `unknown` | Resolve the original outcome before another withdrawal. |
+| `failed` | Check the account balance and resolve the original outcome; failure alone does not prove a refund. |
+
+A transaction ID alone does not establish completion. For EVM payouts, missing finality is not proof of finalization. The CLI's `financialOutcome.settled` reflects these distinctions; a quote has financial status `prepared`.
+
+## Recover a timeout or expired quote
+
+After a lost confirmation response, read status with the original key first. If retrying confirmation is appropriate, use the **same quote ID, key, wallet, signing network, and saved input**. Each CLI invocation obtains a fresh proof. A confirmation already recorded by the server returns the same withdrawal with `replayed:true`, including after the quote expires, without another debit.
+
+The CLI permits recovery after expiry when the original confirmation intent was saved locally. If no local confirmation was saved, it rejects an expired quote. A fresh quote is appropriate only after establishing that the earlier quote was never submitted. A `WITHDRAWAL_NOT_FOUND` response identifies no recorded request for that account/key at the time of the read; it does not by itself settle a concurrent or timed-out confirmation.
+
+Keep the whole state directory and original JSON files. Reimporting a wallet does not reconstruct lost finance state. If the quote or confirmation cannot be recovered, resolve the original request rather than changing the key to bypass the error. [Job refund history](/api-reference/refunds) does not report withdrawal reversals.
+
+Honor `error.retryAfterSeconds`. New Solana confirmations share a 15-second account cooldown across assets, including admitted requests whose ATA check fails. EVM confirmations have a 30-second cooldown per payout network and reject another active or review withdrawal. Solana also prevents a new withdrawal for an asset with an outstanding transfer or unresolved failed transfer. At most ten unused, unexpired quotes may exist; wait on `WITHDRAWAL_QUOTE_RATE_LIMIT`. For `WITHDRAWAL_QUOTE_BUSY`, wait the returned delay and retry the quote with a fresh proof.
+
+## Read withdrawal history
+
+History can use a saved account API key, unlike individual status:
+
+```sh
+wurk withdraws list --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT"
+```
+
+Use the account reference returned by `account access`. A registered wallet is also supported with `--wallet "$WURK_WALLET" --network solana` instead of `--account`.
+
+For another page, save `withdraw-page.json` using the returned `data.nextOffset`:
+
+```json
+{"limit":10,"offset":10}
+```
+
+```sh
+wurk withdraws list --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --input-file withdraw-page.json
+```
+
+`limit` defaults to 10 and accepts 1–50. Keep the same limit and follow `nextOffset` until null. Wait at least ten seconds between withdrawal-history reads for the same account, including empty pages and requests with different credentials. Deduplicate by each row's `id` if new activity shifts the pages.
+
+`data.withdrawals` includes all supported payout networks and withdrawals requested through the website. Quotes alone do not appear. Read each record's amounts, `status`, `tx`, and `finalityStatus`; history does not move funds or authorize a replacement.
+
+See the [withdrawal API reference](/api-reference/withdrawals) for exact fields and errors, [earnings API](/api-reference/earnings) for earned income, and [swap API](/api-reference/swaps) for balance conversions.

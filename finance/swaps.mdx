@@ -1,0 +1,150 @@
+---
+title: 'Swap balances'
+description: 'Convert available WURK account balances, follow settlement, and recover with the original request key'
+---
+
+A swap reserves an amount of your **internal WURK account balance** and queues its conversion into another supported balance. It does not spend funds from your external signing wallet. Once the swap completes, its output becomes available in your WURK account; [withdraw separately](/finance/withdrawals) to send funds to a wallet.
+
+The examples use **`@wurk/cli` 0.7.1**. Complete the [CLI setup](/quickstart) and [free account access](/authentication#free-account-access) first. Keep the same `WURK_STATE` directory and saved account reference throughout this workflow.
+
+## Choose authentication
+
+Create, status, and history accept either a saved account API key or a fresh wallet signature:
+
+| CLI flags | Authentication |
+| --- | --- |
+| `--account "$WURK_ACCOUNT"` | The saved account's API key |
+| `--network solana --wallet "$WURK_WALLET"` | A fresh SIWX signature from the account's primary Solana wallet |
+| `--network base --wallet "$WURK_WALLET"` | A fresh SIWX signature from its registered, enabled Base wallet |
+
+Use exactly one mode. The signing network identifies your account and does not restrict the assets you can swap. Wallet authentication is free and needs no funded signing wallet. The CLI handles the challenge and signature; direct clients must bind each proof to the exact endpoint and JSON body. See the [swap API authentication contract](/api-reference/swaps#authentication).
+
+## Check the available balance
+
+Set `WURK_ACCOUNT` to the `data.access.account` reference returned by account access, then read the profile:
+
+```sh
+WURK_ACCOUNT='acct_RETURNED_REFERENCE'
+wurk account profile --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT"
+```
+
+Use the spendable balance for the source asset. [Earnings totals and pending rewards](/finance/balances-and-earnings) are different measurements. Preserve monetary values as decimal strings.
+
+| Asset ID | Account balance | Input precision |
+| --- | --- | --- |
+| `SOL` | Solana SOL | 9 decimal places |
+| `WURK` | Solana WURK | Whole tokens |
+| `USDC` | Solana USDC | 6 decimal places |
+| `SKR` | Solana SKR | 6 decimal places |
+| `USDC_BASE` | Base USDC | 6 decimal places |
+| `USDG_ROBINHOOD` | Robinhood USDG | 6 decimal places |
+
+Every pair of different assets is supported. Choose a positive plain decimal amount within the source balance. There is no `all` option; round a full-balance amount **down** to the source asset's input precision. New `SOL` → `USDC` swaps require at least `0.0001` SOL. An amount too small to produce output after fees can be rejected or safely fail during execution.
+
+## Understand fees before submitting
+
+Cross-network swaps charge a **0.3% bridge fee** on the stablecoin amount, rounded up to one micro-unit (`0.000001`). Small internal Solana conversions charge **1.5%**; larger Solana conversions use a **5% slippage setting**. A route that converts a token and crosses networks can incur both conversion and bridge costs.
+
+Small conversion limits are up to `0.01` SOL, `4000` WURK, `1` USDC, or `50` SKR entering the Solana conversion. A bridge into Solana applies its fee before that conversion.
+
+`expectedAmountOut` and `expectedAmountOutMin` are indicative estimates. **Neither guarantees the execution price or enforces a minimum output.** Missing prices can leave estimates `null`. There is no separate swap quote/accept step or caller-selected slippage. Submitting `swap create` authorizes the reservation immediately.
+
+## Create one swap
+
+Choose a stable `idempotencyKey` for this intended swap and save it with the exact request. Keys contain 8–128 letters, digits, or `._:-`. A genuinely new swap needs its own key; an uncertain result keeps its original key.
+
+Save `swap.json`. This example converts `0.60` of your **Solana USDC** balance to SOL; adjust the terms before the first submission:
+
+```json
+{
+  "fromToken": "USDC",
+  "toToken": "SOL",
+  "amount": "0.60",
+  "idempotencyKey": "earnings-swap-001"
+}
+```
+
+```sh
+wurk swap create --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --input-file swap.json
+```
+
+Keep `data.swapId`, the original JSON, and the state directory. The result reports the reserved input, remaining balances, estimates, and any known bridge fee. New swaps normally return `pending` or `bridge_pending`; this is queued work, not credited output.
+
+Only one new swap attempt per account is allowed every **15 seconds**. Insufficient balance and other admitted business failures can consume that window. An active swap, including `bridge_review`, can still prevent another swap after the cooldown ends.
+
+## Read status until settled
+
+Save a separate `swap-status.json` containing only the original key:
+
+```json
+{"idempotencyKey":"earnings-swap-001"}
+```
+
+```sh
+wurk swap status --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --input-file swap-status.json
+```
+
+Alternatively, the status file can contain only `{"swapId":"RETURNED_SWAP_ID"}`. Do not include both selectors or reuse the create JSON as the status body.
+
+The CLI's outer `status` describes the command. Read `data.swap.status` and `financialOutcome` to determine whether money settled:
+
+| Swap status | Meaning and next action |
+| --- | --- |
+| `pending`, `initiated`, `bridge_pending`, `bridge_initiated` | Processing. Keep the original identifiers and read status again later. |
+| `bridge_review` | Requires reconciliation. Preserve the request and use account support if needed; creating a replacement does not resolve it. |
+| `completed` | Output was credited. Read `data.swap.received`, the actual amount in the destination asset. The CLI reports `financialOutcome.settled: true`. |
+| `failed` | Check the recorded result and balances before authorizing any new operation. Failure alone is not proof of a returned source balance. |
+
+A safely failed dust swap can include `failureReason: "SWAP_AMOUNT_TOO_SMALL"`, which identifies a returned source amount. Verify that balance before considering a larger, separately authorized swap. A transaction ID or a successful status read alone does not establish completion.
+
+After `completed`, refresh the profile to see the spendable output:
+
+```sh
+wurk account profile --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT"
+```
+
+## Recover a timeout or lost response
+
+Keep the original state directory, account or signing wallet, key, and terms. Run `swap status` with the original key first, including when create never returned a swap ID. Follow the CLI's `nextCommand` and `financialOutcome.guidance`; `unknown` or `review` is not permission to submit a replacement.
+
+An explicitly retried create must preserve the original request. A saved server request returns its existing swap with `replayed: true` and does not debit twice. The CLI also saves the intent before submission and rejects changed terms with `FINANCE_INTENT_CONFLICT`; the API uses `SWAP_IDEMPOTENCY_CONFLICT`. Recover the original request instead of changing its key to bypass either error.
+
+`SWAP_NOT_FOUND` means no record was found for that authenticated account and selector. Recheck the original account, origin, and key; it is not proof that an earlier uncertain request cannot still complete. For rate limits, honor `error.retryAfterSeconds`. Each wallet-authenticated invocation obtains a fresh proof.
+
+## Read history
+
+```sh
+wurk swaps list --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT"
+```
+
+The result's `data.swaps` includes API, website, and AutoSwap records. `data.pending` identifies an active swap, even when it is outside the returned page. Reading history never starts or retries a swap.
+
+For pagination, save `{"limit":10,"offset":0}` in `swap-history.json` and pass `--input-file swap-history.json`. Follow returned `nextOffset` with the same limit, waiting at least **10 seconds** between history requests for the account. Deduplicate by `id` if new records shift pages. Stop at `nextOffset: null`; the 10,000 offset ceiling can leave older records outside this traversal even when `hasMore` is true.
+
+## Use the Node.js SDK
+
+In **`@wurk/sdk` 0.7.1**, the methods are `client.swaps.create`, `client.swaps.status`, and `client.swaps.list`. Configure a durable `financeStore` before creating a swap; the matching CLI package exports `SqliteFinanceStore` from `@wurk/cli/finance-store`. Preserve that store across restarts alongside your account storage. See [SDK configuration](/sdks/node).
+
+This helper accepts an already configured client and account or wallet access. It reads the existing request without creating another swap:
+
+```typescript
+import type { FinanceAccess, WurkClient } from '@wurk/sdk';
+
+export async function readSwap(
+  client: WurkClient,
+  access: FinanceAccess,
+  originalKey: string,
+) {
+  const { swap } = await client.swaps.status({
+    access,
+    idempotencyKey: originalKey,
+  });
+  return {
+    status: swap.status,
+    settled: swap.status === 'completed',
+    received: swap.status === 'completed' ? swap.received : null,
+  };
+}
+```
+
+For raw request and response fields, use the [swap API reference](/api-reference/swaps). Continue with [withdrawals](/finance/withdrawals) when you want to transfer a settled balance to a wallet.

@@ -43,3 +43,9 @@ Replace the example target before requesting a real quote. Inspect its exact net
 A social quote commonly binds a canonical `/api/x402/jobs/{jobId}/pay` resource, or `/api/x402/base/jobs/{jobId}/pay`. Use that returned payment resource, or retry the unchanged public request with the saved proof. Preserve all identifiers, the original signed payment and any receipt. See [payment and recovery rules](/api-reference/x402-pay).
 
 An uncertain response does not authorize another charge. A 409 can mean a similar paid job is already open; inspect the returned details before trying again. Order creation and paid status establish a funded campaign, not completed engagement or guaranteed delivery speed.
+
+## Recover a social payment
+
+With SDK/CLI 0.7.1, `payments resume` for social jobs and raids uses only the original local journal and makes no HTTP request. It can restore a complete quote or validated response already saved there. It cannot query remote payment or fulfillment status or retrieve job/raid IDs missing from a lost or truncated response. A result with `fulfillment:"not_observed"` does not establish delivery.
+
+Keep the original state directory, operation and request references, any job/raid IDs, transaction ID and `paymentAttemptId`. If the outcome remains unresolved, [contact support](/project/support) with the available references and attempt time. Keep signed payments and the state directory private. Do not change the request ID, prepare a replacement order or sign another payment to resolve uncertainty.

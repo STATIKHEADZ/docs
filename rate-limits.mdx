@@ -1,9 +1,9 @@
 ---
 title: 'Rate Limits'
-description: 'Respect checkout, account, worker, and chat cooldowns while keeping the original operation'
+description: 'Respect checkout, account, upload, finance, and chat limits while keeping the original operation'
 ---
 
-On HTTP `429`, wait at least the returned `Retry-After` delay. The SDK exposes `retryAfterSeconds`; the CLI reports it in `error` and may include a delayed `nextCommand`. Apply the delay while paginating too.
+On HTTP `429`, wait at least the `Retry-After` delay when supplied. The SDK exposes `retryAfterSeconds`; the CLI reports it in `error` and may include a delayed `nextCommand`. Apply the delay while paginating too.
 
 Limits belong to an account, checkout, job secret, or client network. Changing pages, aliases, credentials, or devices does not give the same owner a new allowance. These minimum intervals are limits, not suggested polling frequencies.
 
@@ -48,6 +48,38 @@ Unless indicated otherwise, each row is a separate account scope.
 
 Free account access has additional shared limits across its aliases and signing networks, including clients sharing an IP address. On `SIWX_ACCOUNT_RATE_LIMITED`, wait for `Retry-After`, then request and sign a fresh challenge.
 
+## Uploads
+
+Profile pictures and portfolio files share the same account allowance across upload flows and orders.
+
+| Limit | Allowance |
+| --- | --- |
+| New upload reservation | One every 15 seconds |
+| Admitted reservations per rolling 24 hours | 250 |
+| Total declared original file bytes in that window | 500 MiB (524,288,000 bytes) |
+| Completion verification for one unfinished upload | One every 10 seconds; concurrent checks can return `409` |
+
+Admitted failures count toward the rolling allowance. Exact reservation replays and retrieval of a ready receipt do not reserve another quota slot. The 500 MiB per-file maximum for portfolio files does not increase the account's total allowance.
+
+`WURKER_MEDIA_QUOTA_EXCEEDED` can return `429` without `Retry-After` or a reset timestamp. Wait for earlier reservations to leave the rolling 24-hour window; the allowance does not reset at midnight. Keep the original file and any upload key. The completion interval applies to checking an unfinished upload for a ready receipt; a ready receipt can be retrieved without another verification. Follow the [upload recovery guide](/guides/uploads) and any returned delay.
+
+## Swaps, withdrawals, and histories
+
+| Operation | Scope | Minimum interval |
+| --- | --- | --- |
+| New [swap](/finance/swaps) attempt | Account, shared across assets | 15 seconds |
+| New [Solana withdrawal](/finance/withdrawals) confirmation | Account, shared across Solana assets | 15 seconds |
+| New Base or Robinhood withdrawal confirmation | Account, separately per payout network | 30 seconds |
+| Swap history | Account, separate history scope | 10 seconds |
+| Withdrawal history | Account, separate history scope | 10 seconds |
+| [Job refund history](/api-reference/refunds) | Account, separate history scope | 10 seconds |
+
+An admitted swap attempt can consume its window even when the balance is insufficient. A Solana confirmation can consume its window when the destination token-account check fails. Saved exact retries recover the original recorded swap or withdrawal without another debit. Active or unresolved requests can prevent a new operation after its cooldown has passed; inspect the original status before proceeding.
+
+At most **ten unused, unexpired withdrawal quotes** may exist for an account. Quotes last **60 seconds**; reusing an identical quote keeps its original expiry. On `WITHDRAWAL_QUOTE_RATE_LIMIT`, wait for a quote to expire. On `WITHDRAWAL_QUOTE_BUSY`, honor the returned delay and retry with a fresh wallet proof.
+
+The three histories have independent cooldowns, separate from money-moving requests. Each history's pages, endpoint aliases, and credentials share its account window, including empty pages and admitted reads that later fail. See [swap history](/finance/swaps#read-history), [withdrawal history](/finance/withdrawals#read-withdrawal-history), and [refund pagination](/api-reference/refunds#pagination-and-limits).
+
 ## Creator actions and communication
 
 | Operation | Scope | Minimum interval |
@@ -59,7 +91,9 @@ Free account access has additional shared limits across its aliases and signing 
 | General conversation open / send / read acknowledgement | Account, separate scopes | 15 / 15 / 10 seconds |
 | Support sends across own conversations | Account or supported owner credential | 30 seconds |
 
-Use one [notification stream](https://wurkapi.fun/references/account.md#notifications) for ongoing account updates, then read the relevant job or conversation before acting. Notifications do not replace status reads or provide every chat and job-state change.
+Use one [notification stream](/communication/notifications) for ongoing account updates, then read the relevant job or conversation before acting. Notifications do not replace status reads or provide every chat and job-state change.
+
+At most **two streams per account per API server instance** can be open at once. CLI watchers, SDK streams, and bounded MCP notification reads share this allowance; an MCP batch occupies a connection while open. Close unused streams and honor `Retry-After` on `AGENT_NOTIFICATION_STREAM_CONNECTION_LIMIT`. Waiting alone does not free an occupied slot.
 
 ## Retry the right operation
 

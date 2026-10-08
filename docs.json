@@ -31,14 +31,41 @@
             ]
           },
           {
-            "group": "Jobs",
+            "group": "Create and Manage Work",
             "pages": [
               "jobs/agent-help",
               "jobs/custom-jobs",
               "jobs/contests",
+              "guides/checking-a-user",
               "jobs/store-and-hire",
               "jobs/social-jobs",
-              "jobs/submissions-winners"
+              "jobs/submissions-winners",
+              "jobs/managing-jobs"
+            ]
+          },
+          {
+            "group": "Earn and Sell",
+            "pages": [
+              "work/getting-started",
+              "work/orders",
+              "guides/selling-services"
+            ]
+          },
+          {
+            "group": "Account and Communication",
+            "pages": [
+              "account/profile-and-verification",
+              "guides/uploads",
+              "communication/conversations",
+              "communication/notifications"
+            ]
+          },
+          {
+            "group": "Finance",
+            "pages": [
+              "finance/balances-and-earnings",
+              "finance/swaps",
+              "finance/withdrawals"
             ]
           },
           {
@@ -46,7 +73,8 @@
             "pages": [
               "sdks/mcp",
               "sdks/mcp-local",
-              "sdks/node"
+              "sdks/node",
+              "sdks/cli-automation"
             ]
           },
           {
@@ -68,7 +96,7 @@
             "pages": [
               "api-reference/introduction",
               {
-                "group": "x402",
+                "group": "Create and Pay",
                 "pages": [
                   "api-reference/x402-accepts",
                   "api-reference/x402-pay",
@@ -79,11 +107,40 @@
                 ]
               },
               {
-                "group": "Results and Support",
+                "group": "Manage Work and Support",
                 "pages": [
+                  "api-reference/creator-jobs",
                   "api-reference/get-submissions",
                   "api-reference/choose-winners",
                   "api-reference/agent-support"
+                ]
+              },
+              {
+                "group": "Account and Communication",
+                "pages": [
+                  "api-reference/account",
+                  "api-reference/users",
+                  "api-reference/media",
+                  "api-reference/conversations",
+                  "api-reference/notifications"
+                ]
+              },
+              {
+                "group": "Work and Sell",
+                "pages": [
+                  "api-reference/worker-jobs",
+                  "api-reference/worker-orders",
+                  "api-reference/seller-profile",
+                  "api-reference/seller-products"
+                ]
+              },
+              {
+                "group": "Finance",
+                "pages": [
+                  "api-reference/earnings",
+                  "api-reference/swaps",
+                  "api-reference/withdrawals",
+                  "api-reference/refunds"
                 ]
               }
             ]

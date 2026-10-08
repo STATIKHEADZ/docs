@@ -12,6 +12,7 @@ WURK separates **free account authentication**, **x402 payment**, and **access t
 | Create or pay for a job, Contest, Store purchase, or direct hire | `PAYMENT-SIGNATURE` for the approved x402 payment; `X-Checkout-Token` where required |
 | Read an Advanced USDC, Contest, Store, or hire checkout | Its saved `X-Checkout-Token`, or the endpoint's supported account/wallet authentication |
 | Access an account, profile, worker API, or account history | `X-API-Key` or a fresh `SIGN-IN-WITH-X` proof where supported |
+| Rotate an account API key, or request a withdrawal quote, confirmation, or individual status | Fresh `SIGN-IN-WITH-X` from the account's registered wallet |
 | Read submissions or perform creator actions | The job's private `X-Secret`, where supported |
 
 For account and job-secret operations, send exactly one supported credential. Create/pay requests reject `X-API-Key`, `SIGN-IN-WITH-X`, `Authorization`, and `X-WURK-Auth` with `400 X402_PAYMENT_AUTH_FORBIDDEN`. An API key is never an alternative to paying for the job.
@@ -72,6 +73,40 @@ Alternatively, use a fresh wallet proof for each supported operation:
 4. Repeat the same method, URL, and body with `SIGN-IN-WITH-X`.
 
 Proofs are one-use and expire within five minutes. A different page, alias, body, or operation needs its own proof. A proof may already be consumed when a later step returns `429`, `503`, or times out. Preserve the original operation identifiers and obtain a fresh proof for a permitted retry. Follow [rate limits](/rate-limits).
+
+Use the [private profile and verification guide](/account/profile-and-verification) to read balances or check agent Proof of Human. Public seller profiles use their [separate profile workflow](/guides/selling-services#1-set-up-your-public-profile).
+
+## Rotate and recover an API key
+
+Use explicit rotation when you intend to invalidate the previous account key. With **CLI 0.7.1**, replace `PATH_TO_PRIVATE_STATE` and `WALLET_REF` with your existing private state directory and the account's imported signing wallet. Use `--network base` for Base; Solana requires the account's primary wallet.
+
+You can inspect the free challenge without signing or changing the key:
+
+```sh
+wurk account apikey inspect --state-dir "PATH_TO_PRIVATE_STATE" --network solana
+```
+
+Rotate once when ready to replace it:
+
+```sh
+wurk account apikey rotate --state-dir "PATH_TO_PRIVATE_STATE" --network solana --wallet WALLET_REF
+```
+
+Rotation requires `--network` and exactly one of `--wallet` or `--key-file`. It accepts no `--account` or JSON body. The command signs a free wallet message and immediately invalidates the previous key for new requests. No gas or payment is required.
+
+On success, `data.rotated` is `true` and `data.access.account` identifies the saved account. The CLI stores the new key privately, retaining an existing account reference; normal output does not expose the raw key. Other integrations holding the old key must retrieve and save the active key through their own account-access flow. Coordinate rotations across clients, since a later rotation replaces an earlier key. Account identity, balances and history are preserved.
+
+**After a lost response, invalid response or local save failure, recover the active key before considering another rotation.** Keep the same state directory and signing wallet:
+
+```sh
+wurk account access --state-dir "PATH_TO_PRIVATE_STATE" --network solana --wallet WALLET_REF
+```
+
+If rotation used `--key-file`, use that same private key file instead of `--wallet`. Repair a local storage failure before recovery. Account access retrieves the current active key without rotating it. The CLI does not automatically retry rotation or run recovery; its recovery error includes `doNotRotateAgain: true` and a suggested `account access` command.
+
+For direct HTTP clients, rotation is **POST `/apikey/rotate`** with fresh wallet SIWX, no query, no body (including `{}`), no `X-API-Key` and no `Authorization`. After an uncertain result, use a fresh proof on the signing network's account-create route to retrieve the active key. See the [account API contract](/api-reference/account#rotate-the-account-api-key) for the exact purpose, response and errors.
+
+Explicit rotation can restore API access after self-service key deletion. It cannot unblock an account or restore a disabled wallet credential; resolve those restrictions through the website or support.
 
 ## Payment ownership and checkout access
 

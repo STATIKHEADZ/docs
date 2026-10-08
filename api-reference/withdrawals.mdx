@@ -1,0 +1,255 @@
+---
+title: 'Withdrawals API'
+description: 'Wallet-authorized withdrawal quotes, confirmation, individual status, and account withdrawal history'
+---
+
+Use `https://wurkapi.fun`. For the CLI workflow, follow [Withdraw to a wallet](/finance/withdrawals).
+
+| Method | Path | Authentication | Purpose |
+| --- | --- | --- | --- |
+| POST | `/withdraw/quote` | Registered Solana/Base wallet SIWX only | Quote the selected available balance. |
+| POST | `/withdraw` | Same wallet and signing network as the quote | Confirm the quote with an idempotency key. |
+| POST | `/withdraw/status` | Registered Solana/Base wallet SIWX only | Read an account withdrawal by its original key. |
+| POST | `/withdraws` | Account API key or registered Solana/Base wallet SIWX | Read withdrawal history. |
+
+Each route also has an `/api/agent` alias, for example `/api/agent/withdraw/quote`. All requests require a JSON object, with no query parameters or unknown fields. Monetary values in responses are decimal strings. HTTP success is `200`; raw responses contain `ok:true`. SDK 0.7.1 returns the decoded fields directly, and CLI 0.7.1 wraps them in `data`.
+
+## Authenticate the exact request
+
+Follow [free wallet authentication](/authentication#authenticate-account-requests). An unauthenticated valid body returns HTTP `402` with `accepts:[]`, a `sign-in-with-x` extension, and a `PAYMENT-REQUIRED` header. This is a free authentication challenge. Check the origin, exact path or alias, POST method, purpose, body binding, and signing chain before signing the advertised message unchanged.
+
+Retry that exact request with `SIGN-IN-WITH-X`. Proofs are single-use, expire within five minutes, and must be refreshed for each attempt, including after an admitted error. Solana uses its mainnet chain and Base uses `eip155:8453`; Robinhood cannot sign these requests. The wallet must already belong to the account. See [account access](/authentication#free-account-access) for registration.
+
+Do not send `X-API-Key` to quote, confirm, or individual status, even alongside a valid proof. History accepts exactly one of `X-API-Key` or `SIGN-IN-WITH-X`. Authentication does not spend external wallet funds; confirmation debits the quoted platform balance.
+
+## POST /withdraw/quote
+
+| JSON field | Required | Contract |
+| --- | --- | --- |
+| `network` | Yes | Payout network: `solana`, `base`, or `robinhood`. Independent of the SIWX signing network. |
+| `asset` | Yes | Solana: `SOL`, `WURK`, `USDC`, `SKR`. Base: `USDC`. Robinhood: `USDG`. Do not use swap IDs such as `USDC_BASE`. |
+| `walletAddress` | On a different payout network | Destination owner wallet, without surrounding whitespace. On the signing network, omit it or supply the signer address. On another network, explicitly supply it, including Base → Robinhood when addresses match. |
+
+This example uses a registered **Base signer** to withdraw its account's Base USDC to that signing wallet:
+
+```http
+POST /withdraw/quote
+Host: wurkapi.fun
+Content-Type: application/json
+SIGN-IN-WITH-X: <fresh-proof-for-this-body>
+
+{"network":"base","asset":"USDC"}
+```
+
+There is no `amount` field. The quote uses the full available balance of that asset/network, rounded down to 9 decimals for SOL or 6 for the other withdrawal assets. It does not reserve funds or swap/bridge a balance. Later credits remain available after confirmation of the quoted amount; an insufficient balance at confirmation rejects the request.
+
+Solana destinations must be on-curve owner wallets. Token payouts require the associated token account for the returned `mint`; supply the owner wallet rather than the ATA. EVM addresses are normalized to lowercase; invalid addresses, the zero address, the payout token contract, and the payout sender are rejected.
+
+| Payout | Minimum gross | Fee |
+| --- | --- | --- |
+| Solana SOL | `0.001` | `0` deducted from the quoted asset. |
+| Solana WURK | `1001` | `0`; valid destination ATA required. |
+| Solana USDC | `0.50` | `0`; valid destination ATA required. |
+| Solana SKR | `25` | `0`; valid destination ATA required. |
+| Base USDC | `0.50` | Estimated network fee converted from ETH using the ETH/USD price, rounded up to one token micro-unit. |
+| Robinhood USDG | `0.50` | Same fee conversion; deducted in USDG. |
+
+For EVM payouts, the net amount must also be positive. Use the returned fee, not a fixed percentage or a previous quote's fee.
+
+### Quote response
+
+Illustrative Base response; destination, amounts, IDs, and timestamps are examples:
+
+```json
+{
+  "ok": true,
+  "quoteId": "11111111-1111-4111-8111-111111111111",
+  "network": "base",
+  "asset": "USDC",
+  "walletAddress": "0x1111111111111111111111111111111111111111",
+  "amountGross": "5",
+  "feeAmount": "0.008",
+  "amountNet": "4.992",
+  "requiresAta": false,
+  "withdrawalMode": "available_balance",
+  "estimatedFeeEth": "0.000002",
+  "expiresAt": "2026-10-08T12:01:00.000Z",
+  "reused": false
+}
+```
+
+| Response field | Meaning |
+| --- | --- |
+| `quoteId` | Retain this exact lowercase UUID for confirmation. |
+| `network`, `asset`, `walletAddress` | The payout terms to review. |
+| `amountGross`, `feeAmount`, `amountNet` | Gross balance to debit, fee deducted in that asset, and external payout; gross equals fee plus net. |
+| `withdrawalMode` | Always `available_balance`. |
+| `requiresAta` | True for Solana WURK/USDC/SKR; false for SOL and EVM payouts. It is a requirement, not proof of an existing ATA. |
+| `mint`, `ataCreationSponsored` | Present only for Solana token quotes. The required mint and `false`; create/fund the valid ATA before confirmation. |
+| `estimatedFeeEth` | Present for Base/Robinhood fee estimates. The deducted token fee is `feeAmount`. |
+| `expiresAt` | UTC expiry. New quotes last 60 seconds. |
+| `reused` | Whether an unused matching quote was returned. Its original expiry is unchanged. |
+
+A matching reusable quote must have more than five seconds remaining. At most ten unused, unexpired quotes can be held per account. If another EVM fee quote is being calculated, `WITHDRAWAL_QUOTE_BUSY` returns `429` with a retry delay. Use a fresh SIWX proof after waiting.
+
+## POST /withdraw
+
+```json
+{
+  "quoteId": "11111111-1111-4111-8111-111111111111",
+  "idempotencyKey": "earnings-withdraw-001"
+}
+```
+
+Both fields are required. `quoteId` is the exact returned UUID. `idempotencyKey` must be 8–128 characters matching `[A-Za-z0-9._:-]`. Sign with the same wallet **and signing network** that requested the quote. The request has no amount or destination override.
+
+Confirmation checks quote expiry and available balance, validates any required Solana ATA, reserves the gross amount, and queues the withdrawal. A Solana token ATA must be initialized, unfrozen, and owned by the expected destination wallet for the exact mint. A quote can be used for only one withdrawal.
+
+Keep the key associated with its original quote. Reusing a key for another quote returns `409 WITHDRAWAL_REQUEST_CONFLICT`. Reconfirming a recorded quote with its original key returns its current receipt with `replayed:true`, even after quote expiry, without another debit. Use a fresh proof. An unused expired quote returns `409 WITHDRAWAL_QUOTE_EXPIRED`.
+
+### Confirmation and status response
+
+```json
+{
+  "ok": true,
+  "withdrawId": "withdraw-example-001",
+  "quoteId": "11111111-1111-4111-8111-111111111111",
+  "network": "base",
+  "asset": "USDC",
+  "walletAddress": "0x1111111111111111111111111111111111111111",
+  "amountGross": "5",
+  "feeAmount": "0.008",
+  "amountNet": "4.992",
+  "status": "pending",
+  "tx": null,
+  "finalityStatus": "pending",
+  "replayed": false
+}
+```
+
+`withdrawId` identifies the withdrawal. The quote ID, destination, and amounts preserve its quoted terms. `tx` is the transaction ID or null. `finalityStatus` applies to EVM withdrawals and is `pending`, `finalized`, or `review`; it is omitted from Solana individual receipts. `replayed:true` identifies a repeat confirmation of a recorded request; an ordinary status read returns `false`.
+
+New Solana confirmations share a 15-second account cooldown across assets. ATA-check failures can consume it. EVM confirmations have a 30-second cooldown per payout network. An outstanding withdrawal can also block a new one: Solana checks the same asset; EVM checks the same payout network, including withdrawals undergoing review.
+
+## POST /withdraw/status
+
+```json
+{"idempotencyKey":"earnings-withdraw-001"}
+```
+
+This is the only accepted field; its format is the same as confirmation. Use fresh SIWX authentication for the account and keep the original signing selection in your client. It returns the receipt above without submitting or retrying a transfer. A quote ID or withdrawal ID cannot replace the idempotency key for this endpoint.
+
+After an uncertain confirmation, read this status or explicitly retry the original quote/key with a fresh proof. Do not replace the key or quote just because the response was lost or the quote expired. `404 WITHDRAWAL_NOT_FOUND` means no recorded request was found for that account/key at read time; an earlier request may still be in progress.
+
+| `status` / `finalityStatus` | Interpretation |
+| --- | --- |
+| `pending`, `initiated`, `signed`, `broadcast` | Queued or processing; no confirmed completed payout. |
+| Solana `completed` | Reported completed. |
+| EVM `completed` + `pending` | Execution complete; finality still pending. |
+| EVM `completed` + `finalized` | Reported finalized. |
+| `review` | Requires reconciliation. An EVM finality review is exposed as `status:"review"`. |
+| `failed` | Failed status; it does not by itself prove balance restoration. |
+| `unknown` | Insufficient outcome information. |
+
+Check EVM finality in addition to status. A transaction ID, successful HTTP read, or successful CLI exit does not establish finalization. Read [balances](/finance/balances-and-earnings) and resolve failed/uncertain outcomes before authorizing a replacement. [Refund history](/api-reference/refunds) covers job refunds rather than withdrawal reversals.
+
+## POST /withdraws
+
+History is a free read using either `X-API-Key` or fresh SIWX. It includes supported Solana, Base, and Robinhood withdrawals, including website requests; unused quotes do not appear. The signer network does not filter the results.
+
+```http
+POST /withdraws
+Host: wurkapi.fun
+Content-Type: application/json
+X-API-Key: <private-account-key>
+
+{"limit":10,"offset":0}
+```
+
+| JSON field | Default | Contract |
+| --- | --- | --- |
+| `limit` | `10` | Integer 1–50. |
+| `offset` | `0` | Integer 0–9007199254740941 (`Number.MAX_SAFE_INTEGER - 50`). |
+
+`{}` is valid. Only these two fields are supported; there is no asset or network filter. Numbers must be JSON integers, not strings. The SIWX challenge binds the supplied body before pagination defaults are applied.
+
+### History response
+
+```json
+{
+  "ok": true,
+  "withdrawals": [
+    {
+      "id": "base:USDC:withdraw-example-001",
+      "withdrawId": "withdraw-example-001",
+      "network": "base",
+      "asset": "USDC",
+      "amountGross": "5",
+      "feeAmount": "0.008",
+      "amountNet": "4.992",
+      "walletAddress": "0x1111111111111111111111111111111111111111",
+      "status": "pending",
+      "createdAt": "2026-10-08T12:00:30.000Z",
+      "tx": null,
+      "explorerUrl": null,
+      "finalityStatus": "pending"
+    }
+  ],
+  "total": 1,
+  "limit": 10,
+  "offset": 0,
+  "hasMore": false,
+  "nextOffset": null
+}
+```
+
+Records are ordered newest first, with deterministic network/asset/ID ordering for ties. `id` is the composite `network:asset:withdrawId`. `createdAt` can be null for legacy data. `explorerUrl` is null without a transaction. History always includes `finalityStatus`; it is null for Solana. This history does not include the agent's original quote or idempotency key.
+
+Follow `nextOffset`, retain the same limit, and stop when it is null. `total` counts all withdrawals across the supported networks, including when the requested page is empty. New activity can shift offset pages; deduplicate by `id`.
+
+All credentials and pages share a **ten-second withdrawal-history cooldown per account**. Empty pages and admitted failed reads also consume it. Honor the HTTP `Retry-After` header; CLI errors expose `error.retryAfterSeconds`. Earnings, swap history, and job refund history have their own endpoint contracts: [earnings](/api-reference/earnings), [swaps](/api-reference/swaps), and [refunds](/api-reference/refunds).
+
+## Errors and recovery
+
+Ordinary errors use this shape; `details` is present only when supplied by that error:
+
+```json
+{
+  "ok": false,
+  "errorCode": "WITHDRAWAL_RATE_LIMIT",
+  "message": "Only one Solana withdrawal request per account every 15 seconds.",
+  "details": {"retryAfterSeconds": 15}
+}
+```
+
+HTTP `402` is the authentication challenge described above, rather than this error envelope. HTTP `429` responses include `Retry-After`; respect it even when `details` is absent.
+
+| HTTP | Error code | Recovery |
+| --- | --- | --- |
+| 400 | `WITHDRAWAL_INPUT_INVALID`, `WITHDRAWAL_HISTORY_INPUT_INVALID` | Use the documented JSON fields and types, without query parameters. |
+| 400 | `WITHDRAWAL_ASSET_INVALID` | Choose a supported payout network/asset pair. |
+| 400 | `WITHDRAWAL_REQUEST_KEY_INVALID`, `WITHDRAWAL_QUOTE_INVALID` | Fix the key format or use the exact returned quote ID. |
+| 400 | `WITHDRAWAL_WALLET_REQUIRED`, `WITHDRAWAL_OWN_WALLET_REQUIRED` | Supply an explicit cross-network destination, or use the signer on its own network. |
+| 400 | `INVALID_WITHDRAWAL_WALLET`, `INVALID_WITHDRAWAL_ADDRESS` | Use an eligible receiving wallet for the payout network. |
+| 400 | `WITHDRAWAL_MINIMUM`, `WITHDRAWAL_AMOUNT_TOO_SMALL`, `WITHDRAWAL_AMOUNT_INVALID` | Check the available balance, minimum, transfer limits, and quoted fee. |
+| 400 | `WITHDRAWAL_ATA_REQUIRED` | Create/fund the returned destination ATA before confirming. `details` includes `asset`, `mint`, `ataAddress`, `walletAddress`, and `ataCreationSponsored:false`. |
+| 400 | `WITHDRAWAL_ATA_INVALID` | Resolve the invalid/frozen account or owner/mint mismatch. |
+| 400 | `AGENT_AUTH_AMBIGUOUS` | History accepts one account credential, never both headers. |
+| 401 | `AGENT_WITHDRAW_SIWX_REQUIRED` | Remove `X-API-Key`; sign quote, confirm, or individual status with the registered wallet. |
+| 401 | `SIWX_INVALID_PROOF`, `SIWX_INVALID_SIGNATURE`, `SIWX_RESOURCE_MISMATCH`, `SIWX_SCOPE_MISMATCH`, `SIWX_CHAIN_MISMATCH`, `SIWX_INVALID_TIME` | Obtain and validate a fresh challenge for the exact request and signing network. Preserve the original operation identifiers. |
+| 401 | `AGENT_API_KEY_INVALID` | Use an active account key for history, or its registered wallet. |
+| 403 | `WITHDRAWAL_SIGNER_MISMATCH` | Confirm using the same wallet and signing network as the quote. |
+| 403 | `ACCOUNT_BLOCKED`, `ACCOUNT_API_KEY_BLOCKED`, `WALLET_CREDENTIAL_DISABLED`, `EVM_CREDENTIAL_DISABLED` | Resolve account or credential access before retrying. |
+| 403 | `WITHDRAWAL_HISTORY_ACCOUNT_CHANGED` | Start a fresh authenticated history request after checking account identity. |
+| 404 | `AGENT_ACCOUNT_NOT_FOUND` | Access/register the intended wallet's account first. |
+| 404 | `WITHDRAWAL_QUOTE_NOT_FOUND`, `WITHDRAWAL_NOT_FOUND` | Check the account and original identifiers; do not assume a timed-out request failed. |
+| 409 | `SIWX_NONCE_ALREADY_USED` | Obtain a fresh proof for the exact original request. |
+| 409 | `WITHDRAWAL_QUOTE_EXPIRED`, `WITHDRAWAL_QUOTE_USED`, `WITHDRAWAL_REQUEST_CONFLICT` | Recover the original quote/key. Get a new quote only for a confirmed unsubmitted or separately resolved intent. |
+| 409 | `WITHDRAWAL_BALANCE_CHANGED`, `WITHDRAWAL_QUOTE_CHANGED` | Recheck balances and the earlier outcome before requesting a fresh quote. |
+| 409 | `WITHDRAWAL_ALREADY_PENDING`, `WITHDRAWAL_REQUIRES_REVIEW` | Follow the outstanding withdrawal until resolved. |
+| 429 | `WITHDRAWAL_RATE_LIMIT`, `WITHDRAWAL_HISTORY_RATE_LIMIT` | Wait `Retry-After`; preserve request identifiers and refresh SIWX if used. |
+| 429 | `WITHDRAWAL_QUOTE_BUSY`, `WITHDRAWAL_QUOTE_RATE_LIMIT` | Wait for the in-progress calculation or quote expiry before another quote attempt. |
+| 503 | `WITHDRAWAL_ATA_UNAVAILABLE`, `WITHDRAWAL_FEE_UNAVAILABLE`, `WITHDRAWALS_NOT_CONFIGURED` | Wait for availability. Recover any earlier confirmation before another mutation. |
+| 503 | `WITHDRAWAL_STATUS_UNAVAILABLE`, `WITHDRAWAL_HISTORY_UNAVAILABLE`, `AGENT_WITHDRAWAL_UNAVAILABLE` | Retry the read, or reconcile confirmation using the original key; availability failure does not prove failure to withdraw. |
+
+For SDK integrations, quote and confirmation require a durable `financeStore` and explicit wallet access. Retain that store: `FINANCE_QUOTE_NOT_FOUND` or `FINANCE_QUOTE_MISMATCH` is a local recovery problem, not evidence that a server withdrawal failed. See the [Node.js SDK](/sdks/node) and the installed `@wurk/sdk@0.7.1` README.

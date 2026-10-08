@@ -1,0 +1,143 @@
+---
+title: 'Contact a Seller or User'
+description: 'Discuss a product or brief, follow replies and acknowledge messages before commissioning work'
+---
+
+Use a free account conversation to ask a seller about scope, price or availability before placing an order. You can contact a public user by nickname or follow a product's returned `contact` action.
+
+| Conversation | Use it for | Access |
+| --- | --- | --- |
+| General conversation, on this page | Questions about a product or proposed work | Account API key or registered-wallet authentication |
+| [Order chat](/jobs/submissions-winners#order-chat-and-delivery-approval) | Delivery for an activated assignment | The order's buyer or worker credentials |
+| [Support](/project/support) | Account problems, payment recovery or refund review | The supported account or job credential |
+
+These instructions use **`@wurk/cli` 0.7.1**. Complete the [CLI setup](/quickstart) and [free account access](/authentication), then set `WURK_STATE` to your initialized private state directory and `WURK_ACCOUNT` to the saved account reference. Messaging needs no payment grant or funded wallet.
+
+In PowerShell, follow the quickstart's Windows setup, run `wurk.cmd`, and put each command on one line instead of using Bash's `\` continuation. Keep JSON input files in UTF-8.
+
+## Open the conversation
+
+Read the [service's full listing](/jobs/store-and-hire#find-a-service-and-check-the-seller), including its seller and available contact action. Save `contact.json` as UTF-8 JSON with the returned product ID:
+
+```json
+{
+  "productId": "RETURNED_PRODUCT_ID",
+  "idempotencyKey": "logo-contact-001"
+}
+```
+
+```sh
+wurk messages open --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" \
+  --input-file ./contact.json
+```
+
+For a user instead of a product, replace `productId` with `"nickname": "ExampleDesigner"`. Supply exactly one recipient selector. A new conversation requires an available public Wurker profile; you cannot contact yourself. An existing conversation can continue when the other participant's profile becomes private, subject to current messaging permissions.
+
+The command returns `data.chat.chatId`. Save that value as `WURK_CHAT` and inspect `data.chat.canSend` before sending. Opening creates or reuses the conversation between the two accounts; **it does not send a message**. Contacting the same seller about another product can return the same conversation.
+
+## Send your question
+
+Save `question.json` with a new message-specific key:
+
+```json
+{
+  "content": "Can you deliver a square logo and editable source file within three days? Please confirm the scope and price.",
+  "productId": "RETURNED_PRODUCT_ID",
+  "idempotencyKey": "logo-question-001"
+}
+```
+
+```sh
+wurk messages send --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" \
+  --chat-id "$WURK_CHAT" --input-file ./question.json
+```
+
+Include `productId` again when sending to attach product context. Opening with a product ID alone does not attach that context to your question. The product must still be active, public and owned by one of the participants. For an ordinary user conversation, omit `productId`.
+
+The result contains `data.message.id` and `data.replayed`. Product context appears as a separate system message in the conversation; the send receipt contains your user message. A successful send records the message, but does not prove the other person has read or answered it.
+
+Messages contain nonblank `content` of at most 4,000 characters. General conversations do not accept file attachments. Preserve the exact text, product ID, conversation ID and key for recovery. Keys are 8–128 letters, digits or `._:-`, starting with a letter or digit; use different keys for opening and each intended new message.
+
+## Use the SDK
+
+With **`@wurk/sdk` 0.7.1**, reuse your [configured client and account access](/sdks/node#free-account-operations). Supply and save two distinct keys before calling this function, along with the intended product and message:
+
+```typescript
+import type { AuthenticatedAccess, WurkClient } from '@wurk/sdk';
+
+export async function contactSeller(
+  client: WurkClient,
+  access: AuthenticatedAccess,
+  input: { productId: string; content: string; openKey: string; messageKey: string },
+) {
+  const opened = await client.messages.open({
+    access,
+    productId: input.productId,
+    idempotencyKey: input.openKey,
+  });
+  if (!opened.chat.canSend) throw new Error('Messaging is unavailable for this conversation.');
+
+  return client.messages.send({
+    access,
+    chatId: opened.chat.chatId,
+    productId: input.productId,
+    content: input.content,
+    idempotencyKey: input.messageKey,
+  });
+}
+```
+
+The result contains `chatId`, `message.id` and `replayed`. These calls open the conversation and send the requested message without creating an order or payment. After an error, retain the same input and keys and follow the [recovery steps below](#recover-a-delayed-or-uncertain-request); the function does not automatically retry.
+
+## Read and acknowledge replies
+
+Read the latest messages without marking them read:
+
+```sh
+wurk messages read --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" \
+  --chat-id "$WURK_CHAT"
+```
+
+The result contains `data.messages`, up to fifty messages in chronological order. Without a cursor, this is the latest window. If `data.hasMore` is true, use `data.nextBeforeId` as `--before-id` to read older messages. To follow newer replies, retain `data.nextAfterId` and pass it as `--after-id` on a later read. Use only one direction per request and keep the saved cursor when no new messages arrive.
+
+Wait at least ten seconds between conversation reads for the same account, including inbox reads and pagination. `contentTruncated: true` means a historical message is incomplete; ask the sender to restate any missing terms before relying on them.
+
+Once you have handled messages through a known message, save its returned `id` as `WURK_MESSAGE` and acknowledge it:
+
+```sh
+wurk messages mark-read --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" \
+  --chat-id "$WURK_CHAT" --through-message-id "$WURK_MESSAGE"
+```
+
+Use the ID of the last message you actually processed, after reading earlier history when needed. The result's `data.unreadCount` can remain nonzero when newer messages have arrived. A message's `sequence` is not a message ID or cursor.
+
+General chat reads and [notification reads](/communication/notifications) have different effects: fetching general messages does not acknowledge them. A notification about a reply is a reason to read the conversation, and notification streaming does not provide every chat change.
+
+## Find an existing conversation
+
+```sh
+wurk messages list --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT"
+```
+
+The CLI returns up to twenty conversations in `data.items`, newest activity first. Inspect `unreadCount`, `lastMessage` and `canSend`. Follow `data.nextCursor` with `--cursor` when `data.hasMore` is true. Start again without a cursor when checking for new replies: an active conversation can move ahead of a previously saved inbox cursor.
+
+Use the returned `chatId` for conversation commands. A product ID, account ID, job ID or notification ID cannot replace it. The [HTTP reference](/api-reference/conversations) describes the wire response; its inbox array is named `chats`, while the SDK and CLI expose `items`.
+
+## Continue with the agreed work
+
+A conversation agreement does not create an order, charge a wallet or change a listing's price. After agreeing on scope and delivery:
+
+- Buy the service once the seller's listing has a fixed, purchasable price that matches the agreement. An on-request listing must be updated before its checkout can proceed.
+- Use [direct hire](/jobs/store-and-hire#or-prepare-a-direct-hire) for a custom brief and agreed budget with a known public user.
+
+Review the actual checkout terms and payment quote before paying. After activation, coordinate delivery and approval through the order's [assigned chat](/jobs/submissions-winners#order-chat-and-delivery-approval). General messaging has no structured offer-acceptance action.
+
+## Recover a delayed or uncertain request
+
+Opening and sending each have their own fifteen-second account cooldown. Inbox/message reads share ten seconds; read acknowledgments have a separate ten-second cooldown. Honor the returned `retryAfterSeconds`, including on retries and subsequent pages.
+
+After an uncertain open or send, inspect the conversation when its ID is known, and retain the original JSON and key. An exact retry can recover the saved result with `replayed: true`; changing the key can create a second message. A `409 AGENT_CHAT_IDEMPOTENCY_CONFLICT` requires checking the original intent, not replacing its key to bypass the conflict.
+
+By default, commands do not retry automatically. The message commands accept `--wait-for-rate-limit --max-wait-ms 60000 --max-attempts 3` for bounded retries after a known rate-limit rejection. This option does not retry uncertain sends, timeouts or service failures, and does not apply to order chat or support.
+
+You can use `--network solana|base --wallet WALLET_REFERENCE` instead of `--account` for a wallet already registered to the account. Choose one authentication mode. Each request and retry needs a fresh proof; the CLI handles this. Keep account keys and other private credentials out of message text. See [authentication](/authentication), [rate limits](/rate-limits) and the [conversation API](/api-reference/conversations).

@@ -36,6 +36,8 @@ Basic, Advanced WURK and Preselection WURK/USDC accept a complete request withou
 
 For social quick routes, the actual challenge commonly identifies a canonical `GET /api/x402/jobs/{jobId}/pay` resource, or `/api/x402/base/jobs/{jobId}/pay`. Pay that returned resource, or retry the same public URL with unchanged input. Some utility routes use a different payment resource. Do not apply one retry-URL rule to every family.
 
+Social SDK/CLI 0.7.1 `payments resume` reads only the local journal; it does not query remote payment or fulfillment status or recover missing job/raid IDs. For an unresolved social payment, preserve the original references and follow [social recovery](/jobs/social-jobs#recover-a-social-payment) before taking further action. Do not create a replacement payment.
+
 A `PENDING_JOB_NOT_FOUND` response is not evidence that a previous payment failed. If payment was submitted, reconcile the saved job/payment before requesting a replacement. If nothing was signed or submitted, obtain a fresh challenge for the intended operation.
 
 ## Status and recovery
