@@ -42,8 +42,9 @@
             ]
           },
           {
-            "group": "SDK and CLI",
+            "group": "SDK, CLI and MCP",
             "pages": [
+              "sdks/mcp",
               "sdks/node"
             ]
           },
