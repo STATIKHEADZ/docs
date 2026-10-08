@@ -1,58 +1,45 @@
 ---
 title: 'Social Jobs'
-description: 'Run social growth campaigns through x402 or MPP rails'
+description: 'Create social engagement jobs with native USDC on Solana or Base'
 ---
 
-## Overview
+Social orders use `/{network}/{service}`, where `network` is `solana` or `base`. Send the intended target and quantities, inspect the returned x402 quote, and pay with `PAYMENT-SIGNATURE`. Creation does not require an API key or account login.
 
-Social services are available on all rails:
+## Public services
 
-- x402: `/{network}/{service}`
-- MPP Tempo: `/mpp/{service}`
-- MPP Solana: `/mpp-solana/{service}`
+| Service | Path after `/{network}/` | Target input |
+| --- | --- | --- |
+| X likes and views | `xlikes`, `xviews` | Post `url`. |
+| X reposts, comments and bookmarks | `reposts`, `comments`, `xbookmarks` | Post `url`. |
+| X followers | `xfollowers`, `xfollowers/xverified` | `handle` or profile `url`. |
+| Instagram | `insta-likes`, `instacomments`, `instafollowers` | Content `url`; followers use `handle` or profile `url`. |
+| YouTube | `ytlikes`, `ytcomments`, `ytsubs` | Video `url`; subscriptions use `handle` or channel `url`. |
+| Telegram members | `tgmembers` | Join link using `join` or `url`, or supported `group` input. |
+| DexScreener rockets | `dex` | Pair `url`. |
+| CoinGecko and CoinMarketCap votes | `cgvote`, `cmcvote` | Supported coin `url`. |
+| X raid packages | `xraid`, `xraid/small`, `xraid/medium`, `xraid/large`, `xraid/mega` | Post `url`; dynamic `xraid` also takes `size`. |
+| X verified raid packages | `xraid/xverified`, `xraid/xverified/small`, `xraid/xverified/medium` | Post `url`. |
 
-## Common services
+The unified `vote` endpoint accepts `voteType:"coingecko_vote"` or `"coinmarketcap_vote"`, `url` and `amount`. Consult [advertised x402 OpenAPI](https://wurkapi.fun/openapi-x402.json) for service-specific schemas and aliases.
 
-| Service group | Examples |
-|---------------|----------|
-| X/Twitter (x402) | `xlikes`, `xfollowers`, `reposts`, `comments`, `bookmarks`, `xraid/*` |
-| X/Twitter (MPP) | `xlikes`, `xfollowers`, `xreposts`, `xcomments`, `xbookmarks`, `xraid/*` |
-| Instagram | `instalikes`, `instacomments`, `instafollowers` |
-| YouTube | `ytlikes`, `ytcomments`, `ytsubs` |
-| Communities | `tgmembers`, `dcmembers` |
+## Counts and instructions
 
-## Amount defaults and requirements
+Many single-action routes accept `amount`; bounds and defaults differ by service. For example, X likes accepts 5–250, default 40; X views accepts 10–5000, default 100; X verified followers accepts 5–100, default 100. Use explicit integer counts so the request reflects the intended purchase.
 
-- x402 social quick routes typically accept omitted `amount` and default to `40` slots.
-- MPP routes generally require `amount` (or compatible winners alias).
-- Many social services use `$0.025` per slot; follower/member families commonly use `$0.04` per slot.
+Instagram and YouTube comments accept optional `instructions`. Use a canonical public target URL; a missing target can return a discovery descriptor rather than a quote for an actual job.
 
-## Parameter checklist
+For custom raids, `xraid/custom` takes `url`, `likes`, `reposts`, `comments` and `bookmarks`. The verified variant is `xraid/xverified/custom`. For verified custom raids, each count is `0` or 5–100, with at least one active component. Inspect the returned package and every component; verified presets gate engagement components while views remain ungated.
 
-- `url` is required for content-action services (`xlikes`, `xreposts`, `xcomments`, etc.).
-- `handle` is commonly used for follower/member style services.
-- Keep URL values canonical (full post/profile links) to avoid validation failures.
-
-## x402 example
+## Quote and pay
 
 ```bash
-curl -i "https://wurkapi.fun/solana/xlikes?amount=50&url=https://x.com/user/status/123"
-curl -i "https://wurkapi.fun/solana/xlikes?amount=50&url=https://x.com/user/status/123" \
-  -H "PAYMENT-SIGNATURE: <signed-payment>"
+curl --get --include 'https://wurkapi.fun/solana/xlikes' \
+  --data-urlencode 'amount=50' \
+  --data-urlencode 'url=https://x.com/example/status/1234567890'
 ```
 
-## MPP example
+Replace the example target before requesting a real quote. Inspect its exact network, asset, recipient, amount and resource before signing. Prices in schemas or examples do not replace the actual payment requirements.
 
-```bash
-curl -i "https://wurkapi.fun/mpp/xlikes?amount=50&url=https://x.com/user/status/123"
-curl -i "https://wurkapi.fun/mpp/xlikes?amount=50&url=https://x.com/user/status/123" \
-  -H "Authorization: Payment <credential>"
-```
+A social quote commonly binds a canonical `/api/x402/jobs/{jobId}/pay` resource, or `/api/x402/base/jobs/{jobId}/pay`. Use that returned payment resource, or retry the unchanged public request with the saved proof. Preserve all identifiers, the original signed payment and any receipt. See [payment and recovery rules](/api-reference/x402-pay).
 
-## Best practices
-
-- Keep target URL/handle parameters clean and canonical.
-- Start with smaller `amount` values, then scale.
-- Track paid success (`200`) versus challenge rate (`402`) in your telemetry.
-- Keep rail-specific service naming explicit in code (`reposts` vs `xreposts`, etc.).
-- Treat `409` responses as possible duplicate/similar live jobs rather than immediate hard failures.
+An uncertain response does not authorize another charge. A 409 can mean a similar paid job is already open; inspect the returned details before trying again. Order creation and paid status establish a funded campaign, not completed engagement or guaranteed delivery speed.

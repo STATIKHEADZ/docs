@@ -33,14 +33,16 @@
           {
             "group": "Jobs",
             "pages": [
-              "jobs/social-jobs",
-              "jobs/custom-jobs",
               "jobs/agent-help",
+              "jobs/custom-jobs",
+              "jobs/contests",
+              "jobs/store-and-hire",
+              "jobs/social-jobs",
               "jobs/submissions-winners"
             ]
           },
           {
-            "group": "SDKs",
+            "group": "SDK and CLI",
             "pages": [
               "sdks/node"
             ]
@@ -68,14 +70,10 @@
                 "pages": [
                   "api-reference/x402-accepts",
                   "api-reference/x402-pay",
-                  "api-reference/x402-network-endpoints"
-                ]
-              },
-              {
-                "group": "MPP",
-                "pages": [
-                  "api-reference/mpp-tempo-endpoints",
-                  "api-reference/mpp-solana-endpoints"
+                  "api-reference/x402-network-endpoints",
+                  "api-reference/create-job",
+                  "api-reference/create-contest",
+                  "api-reference/store-hire"
                 ]
               },
               {
@@ -132,5 +130,17 @@
       "youtube": "https://www.youtube.com/@WURKDOTFUN",
       "telegram": "https://t.me/WURKCREATORS"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/api-reference/mpp-tempo-endpoints",
+      "destination": "/concepts/payment-methods",
+      "permanent": true
+    },
+    {
+      "source": "/api-reference/mpp-solana-endpoints",
+      "destination": "/concepts/payment-methods",
+      "permanent": true
+    }
+  ]
 }

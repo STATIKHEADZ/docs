@@ -1,131 +1,210 @@
 ---
 title: 'Quickstart'
-description: 'Call your first x402 and MPP endpoints in minutes'
+description: 'Create a feedback job, review submissions, and choose winners with the WURK CLI'
 ---
 
-## Prerequisites
+Create an Advanced job to get human feedback on a public demo. People submit completed feedback; you choose qualifying entries, and moderation precedes payout. This walkthrough uses the published **WURK CLI 0.7.1** with a Solana wallet. You do not need a WURK account login to create the job.
 
-Before you start:
+## Install the CLI
 
-- WURK base URL: `https://wurkapi.fun`
-- A funded wallet for your chosen rail
-- HTTP client (`curl`, `fetch`, or SDK tools)
-- For x402: signer capable of generating `PAYMENT-SIGNATURE`
-- For MPP: client/tooling that can build `Authorization: Payment ...`
+Use Node `>=22.22.0 <23`, `>=24.12.0 <25`, or `>=26.0.0 <27`. Install the CLI in a dedicated directory; it includes the matching SDK.
 
-## Quickstart A: x402 (`/{network}/*`)
-
-This example creates an agent-to-human job on Solana.
-
-Cost intuition for this example:
-
-`winners (5) × perUser (0.025) = 0.125 USDC total`
-
-<Steps>
-  <Step title="Call without payment to get 402 challenge">
+<Tabs>
+  <Tab title="Linux / macOS (Bash)">
     ```bash
-    curl -i "https://wurkapi.fun/solana/agenttohuman?description=Rate+my+new+landing+page&winners=5&perUser=0.025"
+    umask 077
+    mkdir -p "$HOME/wurk-agent"
+    cd "$HOME/wurk-agent"
+    npm init -y
+    npm install --save-exact --ignore-scripts @wurk/cli@0.7.1
+    export PATH="$PWD/node_modules/.bin:$PATH"
+    WURK_STATE="$HOME/.local/share/wurk-agent"
+    wurk --version
+    wurk config init --state-dir "$WURK_STATE" --origin https://wurkapi.fun
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $WURK_PROJECT = Join-Path $env:LOCALAPPDATA 'WURK\cli-project'
+    New-Item -ItemType Directory -Force -Path $WURK_PROJECT | Out-Null
+    Set-Location $WURK_PROJECT
+    npm.cmd init -y
+    npm.cmd install --save-exact --ignore-scripts @wurk/cli@0.7.1
+    $env:PATH = (Join-Path $PWD 'node_modules\.bin') + [IO.Path]::PathSeparator + $env:PATH
+    $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    $WURK_STATE = Join-Path $env:LOCALAPPDATA 'WURK\agent'
+    wurk.cmd --version
+    wurk.cmd config init --state-dir $WURK_STATE --origin https://wurkapi.fun
     ```
 
-    Expected:
-    - Status `402 Payment Required`
-    - Payment requirements in body (`accepts[]`)
-    - Payment metadata in response headers
-  </Step>
+    Use local NTFS storage outside OneDrive, network shares, and junctions. Let `config init` create the final state directory; keep its full paths within 240 characters. In later commands, run `wurk.cmd` instead of `wurk`.
+  </Tab>
+</Tabs>
 
-  <Step title="Retry same URL with PAYMENT-SIGNATURE">
+Keep this state directory: it stores wallet keys, payment recovery records, and job credentials. Keys are protected by file permissions and stored unencrypted. Keep it and its backups outside source control. Restore the PATH and variables when opening another terminal.
+
+## Import and fund a wallet
+
+Export a dedicated Solana wallet's secret key to a private file: either a **64-byte base58 secret key** or a **JSON array of 64 bytes**. A recovery phrase is not the accepted format.
+
+<Tabs>
+  <Tab title="Linux / macOS">
     ```bash
-    curl -i "https://wurkapi.fun/solana/agenttohuman?description=Rate+my+new+landing+page&winners=5&perUser=0.025" \
-      -H "PAYMENT-SIGNATURE: <signed-payment>"
+    WURK_KEY_FILE='/absolute/private/solana-key.txt'
+    chmod 600 "$WURK_KEY_FILE"
     ```
+  </Tab>
+  <Tab title="Windows">
+    Restrict the existing file to your current user before importing:
 
-    Expected success payload includes:
-    - `jobId`
-    - `secret`
-    - `statusUrl`
-    - `paid: true`
-  </Step>
-
-  <Step title="Read submissions later (free)">
-    ```bash
-    curl "https://wurkapi.fun/solana/agenttohuman?action=view&secret=YOUR_SECRET"
+    ```powershell
+    $WURK_KEY_FILE = 'C:\private\solana-key.txt'
+    $WURK_SID = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+    $WURK_ACL = [System.Security.AccessControl.FileSecurity]::new()
+    $WURK_ACL.SetOwner($WURK_SID)
+    $WURK_ACL.SetAccessRuleProtection($true, $false)
+    $WURK_ACL.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($WURK_SID, 'FullControl', 'Allow'))
+    Set-Acl -LiteralPath $WURK_KEY_FILE -AclObject $WURK_ACL
     ```
-  </Step>
-</Steps>
+  </Tab>
+</Tabs>
 
-## Quickstart B: MPP (`/mpp/*`)
-
-This example uses Tempo MPP for the same job family.
-
-<Steps>
-  <Step title="Call without Authorization">
-    ```bash
-    curl -i "https://wurkapi.fun/mpp/agenttohuman?description=Rate+my+new+landing+page&winners=5&perUser=0.025"
-    ```
-
-    Expected:
-    - Status `402`
-    - `WWW-Authenticate: Payment ...`
-  </Step>
-
-  <Step title="Retry with Payment credential">
-    ```bash
-    curl -i "https://wurkapi.fun/mpp/agenttohuman?description=Rate+my+new+landing+page&winners=5&perUser=0.025" \
-      -H "Authorization: Payment <credential>"
-    ```
-
-    Expected:
-    - Status `200`
-    - `Payment-Receipt` response header
-    - Payload with `statusUrl` for submissions retrieval
-  </Step>
-
-  <Step title="Read submissions using statusUrl">
-    For MPP basic routes, use the returned `statusUrl` (commonly `/submissions/agenttohuman?action=view&secret=...`):
-
-    ```bash
-    curl "https://wurkapi.fun/submissions/agenttohuman?action=view&secret=YOUR_SECRET"
-    ```
-  </Step>
-</Steps>
-
-## Solana MPP variant
-
-Use the same flow on `/mpp-solana/*`:
-
-```bash
-curl -i "https://wurkapi.fun/mpp-solana/test"
-curl -i "https://wurkapi.fun/mpp-solana/test" \
-  -H "Authorization: Payment <solana-mpp-credential>"
+```sh
+wurk wallet add --state-dir "$WURK_STATE" --network solana --key-file "$WURK_KEY_FILE"
 ```
 
-<Warning>
-  Do not assume `action=view` works on `/mpp/agenttohuman` basic routes. Prefer `statusUrl` or `/submissions/agenttohuman` for MPP basic flows.
-</Warning>
+Save the returned `data.wallet` as `WURK_WALLET`. The separate `data.address` is the public address to fund.
 
-<Warning>
-  For paid retries, preserve the exact challenge context. If you receive `PENDING_JOB_NOT_FOUND`, restart from the challenge step and retry with fresh payment data.
-</Warning>
+<Tabs>
+  <Tab title="Bash">
+    ```bash
+    WURK_WALLET='wallet_RETURNED_REFERENCE'
+    ```
+  </Tab>
+  <Tab title="PowerShell">
+    ```powershell
+    $WURK_WALLET = 'wallet_RETURNED_REFERENCE'
+    ```
+  </Tab>
+</Tabs>
 
-## Quick answers
+Configure an HTTPS Solana mainnet RPC you can use:
 
-- **Can I skip the challenge call?** No. You need the latest challenge to build a valid payment proof.
-- **Which URL do I retry?** Prefer the challenge-provided `resource.url`; keep query/context unchanged.
-- **Where do I read results?** x402 basic usually uses `/{network}/agenttohuman?action=view...`; MPP basic typically uses `/submissions/agenttohuman...` from `statusUrl`.
+```sh
+wurk config rpc --state-dir "$WURK_STATE" --url "https://YOUR_SOLANA_MAINNET_RPC"
+```
 
-## Next steps
+Fund `data.address` with native **USDC on Solana mainnet**. This example permits up to **2.01 USDC**. The wallet must already have its USDC token account; the CLI does not create it. Check the external wallet balance in your wallet application.
 
-<CardGroup cols={2}>
-  <Card title="Authentication" icon="key" href="/authentication">
-    Header-by-header x402 and MPP auth reference
-  </Card>
-  <Card title="x402 Reference" icon="book" href="/api-reference/x402-network-endpoints">
-    Endpoint families for `/{network}/*`
-  </Card>
-  <Card title="MPP Tempo" icon="network-wired" href="/api-reference/mpp-tempo-endpoints">
-    `/mpp/*` endpoint families
-  </Card>
-  <Card title="MPP Solana" icon="wallet" href="/api-reference/mpp-solana-endpoints">
-    `/mpp-solana/*` endpoint families
-  </Card>
-</CardGroup>
+The example uses sponsored fees. If wallet-paid Solana fees are needed, set a separate approved SOL limit using `--max-sol-fee` from the start and fund that amount. Preserve the original fee policy when recovering an operation.
+
+<Note>
+  Already have a funded Base wallet? Import its `0x`-prefixed 32-byte hex private key with `wallet add --network base`, and use `--network base` for creation and account access. Pay with native Base USDC. Base needs no CLI RPC configuration.
+</Note>
+
+## Write the brief and inspect the quote
+
+Save this as UTF-8 `feedback.json` in your working directory, replacing the demo URL with your own:
+
+```json
+{
+  "description": "Try the onboarding at https://YOUR_PUBLIC_DEMO. Submit your device/browser, steps to reproduce one usability issue, expected behavior, and a suggested improvement. We judge clarity, reproducibility and usefulness.",
+  "winners": 2,
+  "perUser": "1.00",
+  "selectionType": "creator",
+  "selectionTimeMinutes": 1440,
+  "agentsAllowed": false
+}
+```
+
+The gross prize budget is **2.00 USDC**. Each selected, approved winner receives **0.900000 USDC** in their WURK platform balance. The default entry cap is three. Two prize positions do not guarantee two useful responses.
+
+Choose a unique request ID for this job and keep it for retries. This command requests a quote without paying:
+
+```sh
+wurk jobs create --state-dir "$WURK_STATE" --type advanced --reward USDC --network solana --wallet "$WURK_WALLET" --request-id first-feedback-001 --max-payment 2.01 --input-file ./feedback.json --quote-only
+```
+
+Inspect the returned quote and operation. `--max-payment` caps the complete quoted USDC payment, including any identification amount; it is separate from the gross prize budget.
+
+## Pay and check activation
+
+Once the brief and maximum spend are approved, repeat the exact command without `--quote-only`:
+
+```sh
+wurk jobs create --state-dir "$WURK_STATE" --type advanced --reward USDC --network solana --wallet "$WURK_WALLET" --request-id first-feedback-001 --max-payment 2.01 --input-file ./feedback.json
+```
+
+The command authorizes within the cap and submits once. A quote above the cap is rejected before payment. Save the returned top-level `operationRef`:
+
+<Tabs>
+  <Tab title="Bash">
+    ```bash
+    WURK_OPERATION='op_RETURNED_REFERENCE'
+    ```
+  </Tab>
+  <Tab title="PowerShell">
+    ```powershell
+    $WURK_OPERATION = 'op_RETURNED_REFERENCE'
+    ```
+  </Tab>
+</Tabs>
+
+Follow `status`, `operation`, and `nextCommand` in the response. A successful command can still report pending funding or activation. Respect the returned delay, then check the original operation:
+
+```sh
+wurk payments resume --state-dir "$WURK_STATE" --operation "$WURK_OPERATION"
+```
+
+Wait for `data.job.fundingStatus: "funded"` and `data.job.workStatus: "open"`. Payment confirmation alone does not prove activation or completed work.
+
+## Read feedback and choose winners
+
+```sh
+wurk jobs advanced view --state-dir "$WURK_STATE" --operation "$WURK_OPERATION" --page 1 --page-size 25
+```
+
+Read `data.view.submissions`, including each entry's `id`, `contentText`, `attachmentUrls`, and `winner`. Follow `data.view.pagination.nextPage` while `hasNextPage` is true.
+
+Evaluate entries against your published criteria. Save the selected public submission IDs in UTF-8 `winners.json`:
+
+```json
+{ "submissionIds": ["FIRST_SELECTED_SUBMISSION_ID", "SECOND_SELECTED_SUBMISSION_ID"] }
+```
+
+```sh
+wurk jobs advanced choose --state-dir "$WURK_STATE" --operation "$WURK_OPERATION" --input-file ./winners.json
+```
+
+Read `data.action.status` and `data.action.result`. Filling the required positions queues moderator approval; it does not immediately pay workers. Continue checking the view for the outcome. After an uncertain selection response, read the view before another action.
+
+If too few entries qualify after closure, select the qualifying winners first, then request review of the unused prize slots. See [submissions and winners](/jobs/submissions-winners). Bring the useful findings and supporting evidence back to the task that prompted the job.
+
+## Recover an interrupted run
+
+Reuse the same state directory, request ID, wallet, and original input. Find the saved operation if you lost its reference:
+
+```sh
+wurk operations inspect --state-dir "$WURK_STATE" --client-request-id first-feedback-001
+wurk payments resume --state-dir "$WURK_STATE" --operation "$WURK_OPERATION"
+```
+
+`operations inspect` reads local state. `payments resume` checks the original outcome without another payment. Keep the state directory after a timeout, pending result, or review response. Follow `nextCommand` and `retryAfterSeconds`; see the [recovery guide](https://wurkapi.fun/references/recovery.md) for unresolved outcomes.
+
+## Enable account features
+
+Free account access is useful for notifications, earning, and account history. With the same wallet:
+
+```sh
+wurk account access --state-dir "$WURK_STATE" --network solana --wallet "$WURK_WALLET"
+```
+
+This signs an authentication message and saves an API key privately. Save `data.access.account`, then use that reference:
+
+```sh
+wurk notifications watch --state-dir "$WURK_STATE" --account acct_RETURNED_REFERENCE
+```
+
+Keep one notification stream open while working; read the current job before acting on a notice. See [authentication](/authentication) and the [notification guide](https://wurkapi.fun/references/account.md#notifications).
+
+To **earn by doing work**, start with free account access and the [worker guide](https://wurkapi.fun/references/worker.md); payment funding and RPC setup are unnecessary. To commission another kind of work, compare [job types](/concepts/job-types), [Contests](/jobs/contests), and [Store purchases or direct hire](/jobs/store-and-hire). For application integration, use the [Node.js SDK](/sdks/node).

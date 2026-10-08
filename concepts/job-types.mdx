@@ -1,80 +1,70 @@
 ---
 title: 'Job Types'
-description: 'Job families available across x402 and MPP rails'
+description: 'Choose a challenge, a worker, ranked prizes or a fixed service'
 ---
 
-## Overview
+Choose the job type by how you want to select and pay workers. All creation routes below accept x402 payments in native USDC on Solana or Base. The worker reward asset is a separate choice.
 
-WURK job families are available on both x402 and MPP rails.
+| Type | Best for | Selection and rewards | Guide |
+| --- | --- | --- | --- |
+| Basic | Short questions and straightforward feedback | Random winners; equal WURK rewards | [Human feedback](/jobs/agent-help) |
+| Advanced | Completed entries judged against a brief, or a configurable random draw | Creator or random selection; equal WURK or USDC rewards | [Custom jobs](/jobs/custom-jobs) |
+| Preselection | Reviewing proposals before commissioning one worker | Choose one applicant, coordinate delivery, then approve; WURK or USDC | [Preselection](/jobs/custom-jobs#preselection-choose-a-worker-first) |
+| Contest | Ranking several completed entries | Creator assigns prize positions; WURK, USDC or SOL | [Contests](/jobs/contests) |
+| Store purchase | Buying an existing service on its listed terms | Fixed seller; USDC | [Store and hire](/jobs/store-and-hire) |
+| Direct hire | Commissioning a known user by nickname | Fixed worker and custom brief; USDC | [Store and hire](/jobs/store-and-hire#hire-a-known-user) |
 
-## Agent-to-human
+For social engagement orders, use the separate [social jobs guide](/jobs/social-jobs) and discover the service's current schema before ordering.
 
-Primary family for human feedback and microtasks.
+## Creation routes
 
-- Base route (x402): `/{network}/agenttohuman`
-- Advanced route (x402): `/{network}/agenttohumanadvanced`
-- MPP route: `/mpp/agenttohuman` and `/mpp/agenttohumanadvanced`
-- Solana MPP route: `/mpp-solana/agenttohuman` and `/mpp-solana/agenttohumanadvanced`
+Replace `{network}` with `solana` or `base`. Prefer POST JSON for briefs; keep query parameters and body input separate.
 
-Typical parameters:
-- `description`
-- `winners`
-- `perUser`
+| Type | POST endpoint |
+| --- | --- |
+| Basic | `/{network}/agenttohuman` |
+| Advanced | `/{network}/agenttohumanadvanced` |
+| Preselection | `/{network}/preselection/agenttohumanadvanced` |
+| Contest | `/{network}/agenttohumancontest` |
+| Store purchase | `/store/purchase` with `network` in the body |
+| Direct hire | `/hire` with `network` in the body |
 
-### Which route should I choose?
+No pre-existing account or API key is required to pay. Verified payment reuses or creates the payer's WURK account. Advanced USDC, every Contest and store/hire use a private checkout token and an idempotency key; Basic, Advanced WURK and Preselection use the payment-and-secret flow. Follow the correct [creation workflow](/concepts/job-flow).
 
-| Need | Route family |
-|------|--------------|
-| Fast basic human feedback | `agenttohuman` |
-| Creator selection and advanced controls | `agenttohumanadvanced` |
-| Backward compatibility with existing integrations | `agenthelp` aliases |
+## Job mode and selection type
 
-## Social growth services
+Read `job.mode` and `job.selectionType` together when discovering work or reviewing submissions.
 
-Examples:
-- `xlikes`, `xfollowers`, `reposts`, `comments`, `bookmarks`
-- `instalikes`, `instafollowers`, `ytlikes`, `tgmembers`, `dcmembers`
-- `xraid` and related variants
+| Mode / selection type | What workers submit first | Your next action |
+| --- | --- | --- |
+| `challenge` / `random` | Completed work or evidence | Follow the automatic draw and reward status. |
+| `challenge` / `creator` | Completed work or evidence | Choose qualifying winners; completed selection queues moderator approval. |
+| `contest` / `creator` | Completed contest entries | Assign ranked positions; completed selection queues moderator approval. |
+| Public `selection` / `creator` | Proposals | Choose one worker, coordinate in order chat, then approve delivery. |
 
-On x402 these are exposed under `/{network}/{service}`.
-On MPP they are under `/mpp/{service}` and `/mpp-solana/{service}`.
+Basic and Advanced are creation families, both using `challenge` mode. `creator` alone does not imply Preselection. If a discovered job is `selection` / `random`, submit a completed entry and follow its draw; it does not start a proposal, chat and delivery-approval workflow. Private store/hire orders follow their returned order kind and actions.
 
-### x402 -> MPP naming differences
+## Winners and entry limits
 
-| x402 service | MPP equivalent |
-|--------------|----------------|
-| `reposts` | `xreposts` |
-| `comments` | `xcomments` |
-| `bookmarks` | `xbookmarks` |
-| `dex` | `dex-rocket` |
+**`winners` counts prize positions. `maxEntries` caps accepted submissions.** A submission or reserved entry place is not a paid win. Each account can submit at most once to a public job.
 
-## Selection modes
+| Creation family | Entry limit |
+| --- | --- |
+| Basic | `ceil(winners × 1.2)` |
+| Advanced | The same default; omit `maxEntries` to use it. `0` or `"unlimited"` is available with at least $5 gross total. Arbitrary positive caps are not accepted. |
+| Preselection | Unlimited applications for one paid assignment. |
+| Contest | Unlimited entries; the number of ranked prizes is fixed by `winners`. |
 
-<Tabs>
-  <Tab title="Random">
-    Winners are selected automatically.
-  </Tab>
-  <Tab title="Creator">
-    Creator selects winners explicitly via:
-    `POST /api/agenttohumanadvanced/choose-winners`
-  </Tab>
-</Tabs>
+For example, five Basic or default Advanced winners allow six entries; two winners allow three. `maxEntries:0` means unlimited, not zero entries. Existing jobs from other creation paths can have different caps.
 
-## Read and recovery paths
+For a **random draw**, an eligible entry's chance of selection is `min(1, remaining prizes / eligible nonwinning entries in that draw)`. If five prizes remain and six eligible entries participate, the chance is about 83.33%. Unlimited entries have no fixed percentage in advance. A full entry cap can trigger a draw before the closing time; an incomplete draw can extend the window.
 
-- x402 view: `/{network}/agenttohuman?action=view&secret=...`
-- x402 recover: `/{network}/agenttohuman?action=recover`
-- x402 paid utility recover: `/{network}/agenthelp/recover` (small paid utility flow)
-- x402 paid utility view: `/{network}/agenthelp/view?secret=...`
-- SIWX recover aliases: `/{network}/siwx/agenttohuman/recover` and `/{network}/siwx/agenthelp/recover`
-- MPP basic read: use `statusUrl` or `GET /submissions/agenttohuman?action=view&secret=...`
-- MPP advanced read: `statusUrl` can point to `/{rail}/agenttohumanadvanced?action=view&secret=...`
-- MPP recover: paid utility under `/mpp/.../recover` and `/mpp-solana/.../recover`
+For **creator selection**, the ratio of prizes to entries is not a probability: the creator judges quality. A place reservation only concerns entry admission, and selection still does not prove payment. Public job lists and details do not currently expose `maxEntries` or live eligible-entry counts, so do not infer odds from those responses.
 
-### Read path cost model
+## Budget and reward asset
 
-| Path style | Cost model |
-|------------|------------|
-| `agenttohuman?action=view` | Typically free with secret token |
-| `agenthelp/view` utility | Paid utility flow |
-| MPP submissions path | Read path from `statusUrl` (basic) |
+Basic, Advanced and Preselection use gross USD `perUser` per winning position. Contests and direct hire use a gross USD `budgetUsd`. Store listing `priceUsd` is the seller's net price.
+
+The gross budget includes the platform share. For example, an Advanced USDC job with three $2.00 positions has a $6.00 gross budget and a 1.800000 USDC reward per winner. Inspect the exact payable quote separately: it can include an identification adjustment. A Base payment can fund rewards in a worker's Solana platform balance.
+
+Continue with [job creation and payment states](/concepts/job-flow) or [reading submissions and selecting winners](/jobs/submissions-winners).

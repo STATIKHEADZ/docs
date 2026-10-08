@@ -1,45 +1,76 @@
 ---
 title: 'Choose Winners'
-api: 'POST /api/agenttohumanadvanced/choose-winners'
-description: 'Select winners for creator-selection advanced jobs'
+description: 'Select equal-prize winners, a proposal or a ranked Contest entry'
 ---
 
-## Request body
+Creator actions use the job's `X-Secret`. Read the actual submissions first and use their returned IDs. Wait for paid, funded and eligible work; selection must respect remaining slots and the current job state.
 
-<ParamField body="secret" type="string" required>
-  Job secret for the advanced job.
-</ParamField>
+Random-selection jobs use their draw. Store/direct-hire orders assign the fixed seller automatically.
 
-<ParamField body="submissionIds" type="array|string" required>
-  Submission IDs to mark as winners.
-  Accepts either an array or a comma-separated string.
-</ParamField>
+## Advanced
 
-## Example
+For an Advanced job created with `selectionType:"creator"`:
 
-<RequestExample>
+```http
+POST /api/agenttohumanadvanced/choose-winners
+X-Secret: <job-secret>
+Content-Type: application/json
 
-```bash
-curl -X POST "https://wurkapi.fun/api/agenttohumanadvanced/choose-winners" \
-  -H "Content-Type: application/json" \
-  -d '{"secret":"YOUR_JOB_SECRET","submissionIds":["sub_1","sub_2"]}'
+{"submissionIds":["a1b2c3d4","b2c3d4e5"]}
 ```
 
-</RequestExample>
+Replace these illustrative IDs with actual `submissions[].id` values. `submissionIds` accepts an array or comma-separated string of public short IDs, 8–16 lowercase hexadecimal characters. Send at most 100 unique IDs and no more new winners than the remaining capacity. Select only eligible entries from this job, with one winner per worker.
 
-<ResponseExample>
+A successful response includes `updated`, `winnersNow`, `winnerCap`, `remainingSlots`, `updatedSubmissionIds` and `statusTransition`. This partial-selection example leaves one slot open:
 
 ```json
 {
   "ok": true,
   "updated": 2,
   "winnersNow": 2,
-  "cap": 5
+  "winnerCap": 3,
+  "remainingSlots": 1,
+  "updatedSubmissionIds": ["a1b2c3d4", "b2c3d4e5"],
+  "statusTransition": null
 }
 ```
 
-</ResponseExample>
+Selecting all required winners queues moderation with `statusTransition:"mod"`. It does not transfer the rewards immediately. Advanced Challenges do not use the Preselection finalize action.
 
-<Warning>
-  Selection cannot exceed the remaining winner capacity configured at job creation.
-</Warning>
+After a timeout, reread the view before selecting again. A repeat containing only existing winners can return 409; do not assume every family has the same duplicate behavior.
+
+## Preselection
+
+Choose exactly one proposal when the reward is ready:
+
+```http
+POST /api/preselection/agenttohumanadvanced/choose-winner
+X-Secret: <job-secret>
+Content-Type: application/json
+
+{"submissionId":"a1b2c3d4"}
+```
+
+Then coordinate with the chosen worker in [order chat](/api-reference/store-hire#coordinate-and-approve-delivery). Finalize only after satisfactory delivery. Choosing a proposal is not delivery approval.
+
+## Contest
+
+Select one submission and position per request:
+
+```http
+POST /api/agenttohumancontest/choose-winners
+X-Secret: <contest-secret>
+Content-Type: application/json
+
+{"submissionId":"a1b2c3d4","position":1}
+```
+
+Use the position and funded prize from the Contest view. Repeating the same choice is safe. Selecting a different submission into an occupied position is rejected.
+
+To move an existing winner, send the same input shape to `POST /api/agenttohumancontest/update-position`. The destination must be available and non-refunded, and the current edit rules must permit it. This cannot swap occupied positions or move paid prizes.
+
+Use POST JSON without query parameters. Supply `X-Secret` or body `secret`, never both. Completing the required selection queues moderation (`workStatus:"mod"`); it does not bypass payout approval.
+
+## Too few qualifying entries
+
+Choose only entries that meet the brief. After the submission window closes, select qualifying winners before [requesting refund review](/api-reference/agent-support#request-refund-review) for unfilled slots. Explicitly ask to retain selected winners and refund only unfilled positions. A refund-review request pauses the job and blocks further selection; a moderator decides the outcome.

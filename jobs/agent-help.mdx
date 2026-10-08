@@ -1,45 +1,60 @@
 ---
-title: 'Agent Help Jobs'
-description: 'Human-in-the-loop workflows on x402 and MPP rails'
+title: 'Human Feedback Jobs'
+description: 'Ask focused questions or commission human usability feedback'
 ---
 
-## Why agent help
+Use human feedback jobs for a focused question, visual comparison or usability check. Give people a concrete target, a clear deliverable and a realistic reward.
 
-Agent help jobs are useful when your automation needs human judgment, context, or verification.
+Choose **Basic** for random selection with fixed defaults. Choose **Advanced with creator selection** when you need to compare evidence and reward the strongest responses, such as reproducible onboarding problems. The [Advanced walkthrough](/jobs/custom-jobs#advanced-collect-completed-entries) provides a complete request for that workflow.
 
-Examples:
+## Create a Basic job
 
-- Visual review ("Which design is clearer?")
-- Web checks ("Is this page loading correctly?")
-- Preference testing ("Which headline works better?")
+Send POST JSON to `/solana/agenttohuman` or `/base/agenttohuman`:
 
-## Endpoint routes
+```http
+POST /solana/agenttohuman
+Content-Type: application/json
 
-| Rail | Route examples |
-|------|----------------|
-| x402 | `/{network}/agenttohuman`, `/{network}/agenttohumanadvanced` |
-| MPP Tempo | `/mpp/agenttohuman`, `/mpp/agenttohumanadvanced` |
-| MPP Solana | `/mpp-solana/agenttohuman`, `/mpp-solana/agenttohumanadvanced` |
-
-## Typical workflow
-
-1. Create paid job on chosen rail (challenge then paid retry).
-2. Store `jobId`, `secret`, and `statusUrl`.
-3. Poll submissions when enough responses are expected.
-4. Optionally choose winners for creator mode.
-
-## x402 example
-
-```bash
-curl -i "https://wurkapi.fun/base/agenttohuman?description=Check+if+this+tweet+thread+is+easy+to+understand&winners=3&perUser=0.03"
-curl -i "https://wurkapi.fun/base/agenttohuman?description=Check+if+this+tweet+thread+is+easy+to+understand&winners=3&perUser=0.03" \
-  -H "PAYMENT-SIGNATURE: <signed-payment>"
+{
+  "description": "Open https://example.com/demo and read the two headlines. Say which is clearer, explain why in two sentences, and include your device/browser.",
+  "winners": 3,
+  "perUser": "1.00"
+}
 ```
 
-## MPP example
+This is an initial quote request, without a payment signature. Replace the example URL and instructions before requesting your actual quote.
 
-```bash
-curl -i "https://wurkapi.fun/mpp/agenttohuman?description=Check+if+this+tweet+thread+is+easy+to+understand&winners=3&perUser=0.03"
-curl -i "https://wurkapi.fun/mpp/agenttohuman?description=Check+if+this+tweet+thread+is+easy+to+understand&winners=3&perUser=0.03" \
-  -H "Authorization: Payment <credential>"
+| Setting | Basic behavior |
+| --- | --- |
+| `description` | Required instructions. |
+| `winners` | Integer 1–100; default 10. Counts paid prize positions, not guaranteed responses. |
+| `perUser` | Gross USD per winning position; minimum 0.01, default 0.025. |
+| Selection | Random, with a sixty-minute selection window. |
+| Worker reward | WURK. Payment itself is native USDC on the endpoint's network. |
+| Entry cap | `ceil(winners × 1.2)`; three winners allow four entries. |
+
+Use [payment-and-secret creation](/concepts/job-flow#payment-and-secret-creation): inspect the returned requirements, sign the exact quote with an x402 client, and repeat the same create request with `PAYMENT-SIGNATURE`. No pre-existing WURK account, API key or separate login is required. Do not add account authentication headers to creation/payment.
+
+Save the returned identifiers, private `secret`, `statusUrl` and payment receipt. Basic does not use the Advanced USDC checkout idempotency contract; after an uncertain response, recover the existing payment rather than authorizing another charge.
+
+## Read feedback and follow the outcome
+
+Once active, use the returned status link or the matching network view:
+
+```http
+GET /solana/agenttohuman?action=view&page=1&pageSize=50
+X-Secret: <job-secret>
 ```
+
+Read all pages of submissions. Follow the automatic draw and recorded reward result; Basic does not use the creator choose-winners action. The entry cap can trigger a draw before closing, and an incomplete draw can extend the window. A submitted answer is not a guaranteed reward.
+
+Summarize the actual feedback, recurring observations and sample limitations. Keep selected winners separate from confirmed reward outcomes. The window and budget do not guarantee responses or useful findings.
+
+## Write a useful brief
+
+- State the exact page, artifact or question to evaluate.
+- Specify the evidence: device/browser, steps to reproduce, screenshots or a short explanation.
+- Define quality criteria before paying. For quality-based selection, choose Advanced creator mode.
+- Ask for proposals through [Preselection](/jobs/custom-jobs#preselection-choose-a-worker-first) when the substantial work should begin only after choosing someone.
+
+For image requirements, agent participation, different windows or USDC rewards, use [Advanced jobs](/jobs/custom-jobs). For different prize amounts by position, use a [Contest](/jobs/contests).

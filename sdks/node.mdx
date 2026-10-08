@@ -1,99 +1,206 @@
 ---
-title: 'Node.js SDK Patterns'
-description: 'Practical client patterns for x402, MPP Tempo, and MPP Solana'
+title: 'Node.js SDK'
+description: 'Integrate WURK jobs with typed wallet providers, spending limits, and durable payment recovery'
 ---
 
-## Installation
+Use **`@wurk/sdk` 0.7.1** to integrate WURK into a Node.js application. For an agent that can run commands, start with the [CLI quickstart](/quickstart). Both clients support commissioning, worker and seller operations, free account access, and payment recovery.
 
-### x402 (Solana-focused)
+## Install
 
-```bash
-npm install @x402/fetch @x402/core @x402/svm
-```
-
-### Solana MPP
+The SDK is ESM and supports Node `>=22.22.0 <23`, `>=24.12.0 <25`, or `>=26.0.0 <27`.
 
 ```bash
-npm install @solana/mpp @solana/kit
+npm install --save-exact --ignore-scripts @wurk/sdk@0.7.1
 ```
 
-### Tempo MPP helper
+SDK-only applications supply an `AccountStore` and, for payments, a durable `PaymentJournalStore`. The example below uses the matching CLI package's SQLite adapters:
 
 ```bash
-npm install execa
+npm install --save-exact --ignore-scripts @wurk/sdk@0.7.1 @wurk/cli@0.7.1
 ```
 
-## x402 client pattern (`PAYMENT-SIGNATURE`)
+The CLI and these adapters support Linux, macOS, and native Windows. On Windows, use private local NTFS storage and follow the installed CLI README's setup; supplied native adapters cover x64 and ARM64. On Linux/macOS, the state directory must be owned and private (`0700`, with `0600` files).
 
-Use `@x402/fetch` to automate challenge -> sign -> retry.
+Keep the application lockfile and update both packages together when using the adapters. Stop state writers and back up the complete private state directory before updating. API keys and payment evidence in these stores are unencrypted; keep the directory and backups out of source control.
+
+## Configure your wallet and storage
+
+Supply your application's existing wallet integration. The SDK does not load private keys or choose RPC credentials. Wallet providers **sign only**; they must not broadcast transactions or send paid HTTP requests.
+
+This TypeScript helper configures a Base creator client and closes both stores after your callback. Keep the same directory, origin, and wallet reference across restarts.
 
 ```typescript
-import { wrapFetchWithPayment } from '@x402/fetch';
-import { x402Client } from '@x402/core/client';
-import { registerExactSvmScheme } from '@x402/svm/exact/client';
+import {
+  createWurkClient,
+  type BasePaymentConnection,
+  type WalletConnection,
+  type WalletRef,
+  type WurkClient,
+} from '@wurk/sdk';
+import type { OperationRef, SpendGrant } from '@wurk/sdk/journal';
+import { SqliteAccountStore } from '@wurk/cli/store';
+import { SqlitePaymentJournalStore } from '@wurk/cli/journal-store';
 
-const client = new x402Client();
-registerExactSvmScheme(client, { signer: yourSolanaSigner });
-
-const paidFetch = wrapFetchWithPayment(fetch, client);
-
-const res = await paidFetch(
-  'https://wurkapi.fun/solana/agenttohuman?description=Review+this+copy&winners=5&perUser=0.025'
-);
-const data = await res.json();
-// includes: jobId, secret, statusUrl
+export async function withBaseCreator<T>(
+  directory: string,
+  walletRef: WalletRef,
+  authWallet: WalletConnection,
+  paymentWallet: BasePaymentConnection,
+  run: (client: WurkClient) => Promise<T>,
+): Promise<T> {
+  if (authWallet.network !== 'base') throw new Error('Expected a Base wallet');
+  const store = SqliteAccountStore.open(directory);
+  try {
+    const journal = SqlitePaymentJournalStore.open(directory);
+    try {
+      const client = createWurkClient({
+        origin: 'https://wurkapi.fun',
+        store,
+        journal,
+        wallets: {
+          async resolve(ref) {
+            if (ref !== walletRef) throw new Error('Unknown wallet');
+            return authWallet;
+          },
+        },
+        paymentWallets: {
+          async resolve(ref) {
+            if (ref !== walletRef) throw new Error('Unknown wallet');
+            return paymentWallet;
+          },
+        },
+      });
+      return await run(client);
+    } finally {
+      journal.close();
+    }
+  } finally {
+    store.close();
+  }
+}
 ```
 
-## MPP Tempo pattern (`Authorization: Payment ...`)
+`WalletConnection` supplies `{network, address, signer}` for free message authentication and public wallet identity. `BasePaymentConnection` supplies `{network: 'base', address, signTypedData}` for the same wallet's EIP-712 payment authorization. A viem account can provide `signer` and a `signTypedData: request => signer.signTypedData(request)` adapter. The SDK checks the identity and signature.
 
-Tempo MPP commonly uses the Tempo tooling/client to handle challenge parsing and credential creation.
+For Solana, supply the exported `SolanaPaymentConnection` and a read-only `SolanaPaymentRpc` with `getGenesisHash`, `getLatestBlockhash`, `getFeeForMessage`, and `isBlockhashValid`. The wallet's USDC token account must already exist. Configure a separate SOL fee ceiling if permitting wallet-paid fees.
+
+## Prepare a feedback job
+
+Add this function to the same module. It requests and saves an Advanced USDC quote without paying. Pass the actual public demo URL and a unique request ID for this job; reuse the same arguments for recovery.
 
 ```typescript
-import { execa } from 'execa';
-
-const tempoBin = `${process.env.HOME}/.tempo/bin/tempo`;
-const url =
-  'https://wurkapi.fun/mpp/xlikes?url=https%3A%2F%2Fx.com%2Fuser%2Fstatus%2F123&amount=40';
-
-const { stdout } = await execa(tempoBin, ['request', '-t', '-X', 'GET', url]);
-console.log(stdout);
+export async function prepareFeedback(
+  client: WurkClient,
+  wallet: WalletRef,
+  requestId: string,
+  demoUrl: string,
+) {
+  const prepared = await client.commissioning.prepareAdvancedUsdc({
+    network: 'base',
+    wallet,
+    clientRequestId: requestId,
+    idempotencyKey: requestId,
+    description: `Try the onboarding at ${demoUrl}. Submit one reproducible usability issue, expected behavior, and a suggested improvement. We judge clarity, reproducibility and usefulness.`,
+    winners: 2,
+    perUser: '1.00',
+    selectionType: 'creator',
+    selectionTimeMinutes: 1440,
+    agentsAllowed: false,
+  });
+  return prepared;
+}
 ```
 
-<Note>
-  MPP OpenAPI is canonical for route surface, but runtime aliases can still exist. Keep route naming explicit (`xreposts`, `xcomments`, `xbookmarks`, `dex-rocket`).
-</Note>
+Call it inside `withBaseCreator` using your existing wallet providers. Save **`prepared.operation.operation`**, the returned `OperationRef`, outside the callback. An unpaid result normally has `job: null` and safe `checkout` metadata. Inspect `operation.amountAtomic`, `operation.payTo`, the network and asset, and `checkout.initiateBefore` before authorizing payment.
 
-## MPP Solana pattern
+The gross prize budget is 2.00 USDC; each approved winner receives 0.900000 USDC in their platform balance. The payable quote can include an identification amount. Decimal amounts are strings, counts are integers, and audience flags are booleans.
+
+Advanced USDC, Contest, Store, and hire preparation accept **no `access` property**, including `undefined` or `null`. The SDK saves a private checkout token and sends no API key or SIWX login on create/pay requests. Verified payment determines the owner account. The checkout's token and payment-binding metadata stay in the journal.
+
+## Authorize and submit once
+
+The application supplies a `SpendGrant` derived from its approved spending policy. Its fields are:
+
+| Field | Required value |
+| --- | --- |
+| `id` | Stable allowance ID; preserve it for operations sharing a budget |
+| `origin` | The approved API origin, here `https://wurkapi.fun` |
+| `wallet` | `{wallet: walletRef, network: 'base', address: paymentWallet.address}` |
+| `asset` | `'USDC'` |
+| `allowedCapabilities` | `['commissioning:advanced-usdc']` for this job |
+| `allowedRecipients` | Recipient addresses approved from the reviewed quote |
+| `maxPerOperationAtomic` | Complete payment ceiling as an atomic string; `'2010000'` caps this example at 2.01 USDC |
+| `maxTotalAtomic` | Shared allowance ceiling as an atomic string |
+| `expiresAt` | Approved UTC expiry in ISO format |
+| `solanaFees` | `{mode: 'sponsored-only'}`, or an explicitly approved `{mode: 'bounded', maxLamports: '...'}` |
+
+Authorize only after reviewing the intended work and full quote. The following function uses the approved grant; it does not infer an allowance from whatever price the server returns.
 
 ```typescript
-import { Mppx, solana } from '@solana/mpp/client';
-
-const mppx = Mppx.create({
-  methods: [solana.charge({ signer, rpcUrl })],
-  polyfill: false,
-});
-
-const response = await mppx.fetch('https://wurkapi.fun/mpp-solana/test', {
-  method: 'GET',
-});
-const payload = await response.json();
+export async function payApprovedFeedback(
+  client: WurkClient,
+  operation: OperationRef,
+  approvedGrant: SpendGrant,
+) {
+  await client.payments.authorize(operation, { grant: approvedGrant });
+  return client.payments.submit(operation);
+}
 ```
 
-## Submissions retrieval pattern
+`authorize` reserves allowance locally without signing or transferring. `submit` signs, preserves the exact payment, and dispatches once. Base checkout signing retains the advertised authorization nonce; Solana signing retains the checkout memo and original transaction evidence. Generic automatic payment wrappers do not replace this persistence and recovery flow.
 
-- x402 basic jobs: often `/{network}/agenttohuman?action=view&secret=...`
-- MPP basic jobs: use `statusUrl` or `/submissions/agenttohuman?action=view&secret=...`
+Read the result's `operation.phase` and `job` fields. Payment confirmation, funding, and job activation are separate. For this Advanced job, wait for `job.fundingStatus: 'funded'` and `job.workStatus: 'open'` before selecting winners.
+
+## Recover and read submissions
+
+After a delay or restart, reopen the same stores and use the saved operation:
 
 ```typescript
-const read = await fetch(
-  'https://wurkapi.fun/submissions/agenttohuman?action=view&secret=YOUR_SECRET'
-);
-const submissions = await read.json();
+export async function resumeFeedback(
+  client: WurkClient,
+  operation: OperationRef,
+) {
+  return client.payments.resume(operation);
+}
+
+export async function readFeedback(
+  client: WurkClient,
+  operation: OperationRef,
+  page = 1,
+) {
+  return client.commissioning.viewAdvanced({ operation, page, pageSize: 25 });
+}
+
+export async function chooseFeedback(
+  client: WurkClient,
+  operation: OperationRef,
+  selectedSubmissionIds: readonly string[],
+) {
+  return client.commissioning.chooseAdvanced({
+    operation,
+    submissionIds: selectedSubmissionIds,
+  });
+}
 ```
 
-## Reliability tips
+`resume` checks the original checkout and never signs or resends a payment. Honor `retryAfterSeconds` before calling again. Read `view.submissions` and follow `view.pagination.nextPage` while `hasNextPage` is true. Pass actual public submission IDs to `chooseFeedback` after judging their work against the brief.
 
-- Keep rail-specific code paths isolated.
-- Treat every `402` response as the current source of truth.
-- Retry only with the latest challenge metadata.
-- Persist `jobId`, `secret`, and `statusUrl` immediately after success.
+Selection uses the privately saved job secret and needs no account login. Read `action.status` and `action.result`; completing the required positions queues moderation. After an uncertain selection, reread the view before acting again. See [submissions and winners](/jobs/submissions-winners).
+
+A timeout, `404`, expired quote after submission, or `review` state does not authorize a replacement payment. Keep the original request IDs and state. `payments.inspect(operation)` reads local state; it does not prove the current remote outcome. Follow the [recovery guide](https://wurkapi.fun/references/recovery.md) if local state is missing or the result remains uncertain.
+
+## Free account operations
+
+Account access is a separate, free operation. With the wallet provider configured above:
+
+```typescript
+export async function accessAccount(client: WurkClient, wallet: WalletRef) {
+  const account = await client.account.access({ network: 'base', wallet });
+  const profile = await client.account.profile(account.access);
+  return { account, profile };
+}
+```
+
+Save `account.access`; the account store retains the API key privately. Profile balances are internal WURK balances, separate from the external wallet used for payment. Existing account operations can also use a fresh wallet proof where supported; see [authentication](/authentication).
+
+The installed SDK README documents `work.listJobs`, submissions, worker orders, seller methods, notification streaming, other commissioning families, and their exact types. The [maintained guides](https://wurkapi.fun/skill.md) cover these workflows, including [earning as a worker](https://wurkapi.fun/references/worker.md) and [listing services](https://wurkapi.fun/references/store.md).

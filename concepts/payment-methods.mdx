@@ -1,95 +1,64 @@
 ---
 title: 'Payment Methods'
-description: 'Choose the right payment rail: x402, MPP Tempo, or MPP Solana'
+description: 'Pay with native USDC on Solana or Base through x402'
 ---
 
-## Rails at a glance
+WURK accepts **x402 v2 payments in native USDC on Solana and Base mainnet**. Choose the network of your funded wallet. The [CLI quickstart](/quickstart) uses Solana; the [Node.js SDK](/sdks/node) also supports Base.
 
-<CardGroup cols={3}>
-  <Card title="x402" icon="coins">
-    Endpoint style: `/{network}/*`
-  </Card>
-  <Card title="MPP (Tempo)" icon="diagram-project">
-    Endpoint style: `/mpp/*`
-  </Card>
-  <Card title="MPP (Solana)" icon="wallet">
-    Endpoint style: `/mpp-solana/*`
-  </Card>
-</CardGroup>
+## Payment network and worker reward
 
-## Protocol differences
+| Payment network | Route prefix | Native USDC asset |
+| --- | --- | --- |
+| Solana | `/solana/` | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
+| Base | `/base/` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
 
-| Topic | x402 | MPP |
-|------|------|-----|
-| Challenge header | `Payment-Required` + `accepts[]` | `WWW-Authenticate: Payment ...` |
-| Retry header | `PAYMENT-SIGNATURE` | `Authorization: Payment ...` |
-| Typical success signal | JSON `paid: true` | `Payment-Receipt` header + JSON |
-| Discovery source | `/.well-known/x402` | OpenAPI (`/openapi*.json`) |
+The payment network and worker reward are separate choices. Basic rewards workers in WURK; Advanced and Preselection support WURK or USDC; Contest supports WURK, USDC, or SOL. Store purchases and direct hire reward USDC. A Base payment can fund a worker's Solana USDC platform balance.
 
-## Naming differences to watch
+A gross job budget includes the platform allocation. For example, an Advanced job with two positions at `perUser: "1.00"` has a 2.00 USDC gross reward budget and pays each approved winner 0.900000 USDC internally. The complete payable quote can also include an identification amount. Inspect that quote rather than calculating the payment from rewards alone.
 
-| x402 | MPP |
-|------|-----|
-| `reposts` | `xreposts` |
-| `comments` | `xcomments` |
-| `bookmarks` | `xbookmarks` |
-| `dex` | `dex-rocket` |
+## x402 payment flow
 
-## Amount defaults and requirements
+| Step | Request or response |
+| --- | --- |
+| Request a quote | Send the intended creation request without a payment signature |
+| Inspect requirements | HTTP `402`, nonempty `accepts`, and `PAYMENT-REQUIRED` |
+| Submit the approved payment | Repeat the original request with `PAYMENT-SIGNATURE` |
+| Save the result | Preserve identifiers, private credentials, response, and any `PAYMENT-RESPONSE` receipt |
+| Check completion | Read the original checkout or job status without creating another payment |
 
-- x402 social quick routes often allow omitted `amount` and default to `40`.
-- MPP social routes usually require explicit `amount` (or equivalent winners alias).
-- Many quick social actions are priced per slot (commonly `$0.025`, with some follower/member flows at `$0.04`).
+A `402` with empty `accepts` is a **free authentication challenge**. It does not ask for a transfer. See [authentication](/authentication).
 
-## x402 flow
+Use the exact quoted amount, recipient, asset, network, resource, and metadata. USDC uses six decimal places: `1000000` atomic units equals 1 USDC. Preserve amounts as decimal strings or integers, avoiding floating-point rounding.
 
-1. Call paid `/{network}/...` endpoint without payment.
-2. Receive `402` with requirements.
-3. Sign challenge data and retry with `PAYMENT-SIGNATURE`.
-4. Store returned `jobId` and `secret` when present.
+## Checkout families
 
-## MPP flow
+Advanced with USDC rewards, every Contest, Store purchases, and direct hire use this sequence:
 
-1. Call `/mpp/...` or `/mpp-solana/...` without `Authorization`.
-2. Receive `402` with payment challenge in `WWW-Authenticate`.
-3. Build payment credential from challenge.
-4. Retry with `Authorization: Payment ...`.
-5. Store `Payment-Receipt`.
+1. Save the exact input and a unique `idempotencyKey` of 8–128 letters, digits, or `._:-` characters. Generate and privately persist a 32-byte random base64url token before the first request.
+2. Send `X-Checkout-Token` with the creation request. The unpaid response contains `checkout` and payable requirements. A canonical job or purchase appears after verified payment.
+3. Sign the complete approved requirements and repeat the same method, endpoint, body, key, and token with `PAYMENT-SIGNATURE`.
+4. Follow the returned `checkout.statusCheck` with the saved token and no payment signature. Wait for funding and work activation, separately from payment confirmation.
 
-## Choosing the right rail
+The [WURK SDK and CLI](/sdks/node) preserve the token, exact payment, and operation for you. No account login is accepted on create/pay requests. Verified payment determines the owner account. See [create a job](/api-reference/create-job), [create a Contest](/api-reference/create-contest), and [Store or hire](/api-reference/store-hire).
 
-<Tabs>
-  <Tab title="Choose x402 when">
-    - You already use x402 clients (`@x402/fetch`).
-    - Your workload is mostly on `/{network}` endpoint families.
-    - You want simple challenge -> signature -> retry behavior.
-  </Tab>
-  <Tab title="Choose MPP when">
-    - You use Payment credentials in your agent stack.
-    - You want OpenAPI-driven discovery for `/mpp` rails.
-    - You need both Tempo and Solana MPP variants.
-  </Tab>
-</Tabs>
+Solana checkout payments bind the transfer to the advertised memo. Base checkout payments must use the exact advertised `extra.wurkGuestNonce` in their EIP-3009 authorization. Preserve `extra.wurkGuestToken` on both networks. These are payment-binding fields; they do not ask you to choose a separate account mode. The WURK SDK supports them. A custom signer must retain them too; a generic signer that generates a replacement nonce cannot pay that Base quote correctly.
 
-## Practical rail selection
+Basic, Advanced WURK, and Preselection use a payment-and-job-secret flow. Save their original payment and returned secret/status URL; the checkout `idempotencyKey` contract does not apply to those creation routes. Follow their [job-specific instructions](/concepts/job-types).
 
-| Situation | Recommended choice | Why |
-|-----------|--------------------|-----|
-| First-time WURK integrator | x402 on Solana | Fastest path to first paid success |
-| Existing Payment credential stack | MPP Tempo | Native auth model for MPP clients |
-| Solana MPP-native infra | MPP Solana | Strong alignment with Solana MPP tooling |
+## Quote deadlines and recovery
 
-## Runtime availability
+USDC-reward, Store, and hire checkout quotes last thirty minutes. Contest quotes converting to SOL or WURK rewards last two minutes. Settlement must start with **more than sixty seconds remaining**; obey `payment.initiateBefore` as well as `expiresAt`.
 
-- x402 routes are generally available with the x402 server rail.
-- MPP Tempo routes depend on MPP Tempo enablement.
-- MPP Solana routes depend on MPP Solana enablement.
-- OpenAPI documents can be reachable even when specific runtime rails are disabled.
+| State | What to do |
+| --- | --- |
+| `awaiting_payment` | Inspect the saved quote and its remaining payment window |
+| `processing` or `payment_submitted` | Wait and read the same checkout's status |
+| `payment_review` | Follow recovery instructions and retain the original payment |
+| `payment_confirmed` | Check funding and work state for activation |
+| `expired` | Establish that no payment was submitted or entered settlement before considering a replacement |
 
-## Canonical references
+An HTTP timeout, `202`, review response, or expiry after submission does not authorize another payment. Use the saved operation's recovery path. A receipt confirms a payment step; it does not prove that work is complete. See [job flow](/concepts/job-flow) and [recovery](https://wurkapi.fun/references/recovery.md).
 
-- `https://wurkapi.fun/.well-known/x402`
-- `https://wurkapi.fun/openapi-x402.json`
-- `https://wurkapi.fun/openapi.json`
-- `https://wurkapi.fun/openapi-mpp-solana.json`
-- `https://wurkapi.fun/skill.md`
+## Discover services
+
+Use the [x402 resource list](https://wurkapi.fun/.well-known/x402) and [Solana/Base OpenAPI](https://wurkapi.fun/openapi-x402.json) to find supported operations. The quote for your actual request determines the payable amount. The [endpoint reference](/api-reference/x402-network-endpoints) links service-specific inputs.

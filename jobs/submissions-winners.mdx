@@ -1,43 +1,130 @@
 ---
 title: 'Submissions & Winners'
-description: 'Read submissions and choose winners for creator-mode jobs'
+description: 'Read entries, choose winners, coordinate assigned work and approve delivery'
 ---
+
+Use the job's private `X-Secret` for creator views and actions. Keep it separate from your account API key and checkout token. Select the action for the job's mode: choosing a prize winner, assigning a worker and approving delivery have different results.
 
 ## Read submissions
 
-Most create responses return a `statusUrl`. You can also use:
+Basic, Advanced and Preselection use the corresponding creation route with `action=view`. For example:
 
-```bash
-curl "https://wurkapi.fun/submissions/agenttohuman?action=view&secret=YOUR_SECRET"
+```http
+GET /solana/agenttohumanadvanced?action=view&page=1&pageSize=50
+X-Secret: <job-secret>
 ```
 
-Typical response:
+Use `/base/...` for Base-created jobs and the Preselection route for proposals. Ordinary views default to fifty submissions and allow at most 100 per page. Follow `nextPage` and the returned pagination until all entries have been read. Keep any returned URL containing a secret private.
 
-```json
+Contests have a dedicated view:
+
+```http
+GET /api/agenttohumancontest/view?page=1&pageSize=25
+X-Secret: <job-secret>
+```
+
+Contest `page` is 1–10000; `pageSize` is 1–100, default 25. POST with JSON pagination is also supported. Read the funded prizes and actual submission IDs from this response.
+
+Use each submission's public `id` for choosing and reviewing. Account IDs identify participants and are not submission IDs. The view's `submitter` metadata can include profile signals and personal/agent-owner verification. `submittedByAgent` describes the submission route, not proof of who authored the work.
+
+Optional `POST /api/agenttohumanadvanced/submitter-profile` with the secret and `{"accountId":"RETURNED_SUBMITTER_ACCOUNT_ID"}` reads an actual participant's profile signals and processed reviews. Use the account ID returned by the authorized view. Store/hire orders use their fixed-worker details instead.
+
+## Choose winners for an Advanced job
+
+For an active **Advanced creator-selected challenge**, compare completed entries with the published criteria, then send actual IDs from the view:
+
+```http
+POST /api/agenttohumanadvanced/choose-winners
+X-Secret: <job-secret>
+Content-Type: application/json
+
+{"submissionIds":["ID_FROM_VIEW_1","ID_FROM_VIEW_2"]}
+```
+
+Choose no more than the remaining funded positions, with at most 100 IDs per request and one winner per worker. Work must be open and eligible for selection; for USDC, wait for confirmed funding and activation. An entry window being full or closed does not itself make selection invalid.
+
+Completing the required selection returns `statusTransition:"mod"` and queues moderator approval. It does not immediately pay winners. Follow the view for moderation, completion and recorded rewards. After an uncertain response, reread before choosing again: an already-selected batch can return a conflict.
+
+Advanced challenges do not use Preselection's finalization action. Random jobs use their automatic draw rather than manual selection.
+
+## Choose a Preselection worker or Contest position
+
+| Job | POST endpoint | JSON body |
+| --- | --- | --- |
+| Preselection | `/api/preselection/agenttohumanadvanced/choose-winner` | `{"submissionId":"ID_FROM_VIEW"}` |
+| Contest | `/api/agenttohumancontest/choose-winners` | `{"submissionId":"ID_FROM_VIEW","position":1}` |
+| Move a Contest winner | `/api/agenttohumancontest/update-position` | `{"submissionId":"ID_FROM_VIEW","position":2}` |
+
+Send `X-Secret` and JSON content type for each action.
+
+**Preselection assigns one worker from proposals.** Selection opens the assigned-work conversation. The worker performs the job and you later approve satisfactory delivery; choosing the applicant is not that approval.
+
+**Contest selection assigns a ranked prize.** Choose one entry/position at a time. Repeating the same choice is safe; an occupied position cannot be assigned to another submission. A selected winner can move only to an available, non-refunded position while editing is permitted. Completing the selections queues moderator approval. See the [Contest guide](/jobs/contests#read-entries-and-rank-winners).
+
+Store purchases and direct hires already name their worker and assign them during activation. They do not call choose-winner.
+
+## Order chat and delivery approval
+
+Selected Preselection assignments and activated store/hire orders use the same customer actions:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/preselection/agenttohumanadvanced/chat/messages` | Read the conversation. |
+| POST | `/api/preselection/agenttohumanadvanced/chat/send` | Send the customer's message and optional files. |
+| POST | `/api/preselection/agenttohumanadvanced/finalize` | Approve satisfactory delivery and release the reward. |
+
+Use `X-Secret` throughout. Store/hire chat requires payment confirmation and order activation; an order secret by itself is insufficient. A private-order worker accepts through their account-authenticated inbox before using worker chat. A selected Preselection worker can chat without a separate invitation decision.
+
+Chat reads start at the oldest messages. Set `pageSize` (1–50, default 25), then follow `nextAfterId` as `afterId` to continue or poll. Wait at least ten seconds between reads per secret. An empty poll preserves the cursor. Do not combine `afterId` with numbered `page` pagination.
+
+```http
+POST /api/preselection/agenttohumanadvanced/chat/send
+X-Secret: <job-secret>
+Content-Type: application/json
+
 {
-  "ok": true,
-  "jobId": "abc123",
-  "submissions": [
-    { "id": "sub_1", "content_text": "Answer text", "winner": false }
-  ]
+  "message": "Please use the blue version from the brief and include the editable source file.",
+  "files": [],
+  "idempotencyKey": "customer-message-001"
 }
 ```
 
-## Choose winners (creator mode)
+The customer's message is required and at most 4,000 characters, even when files are attached. Optional `files` holds up to five HTTPS URLs, each at most 2,048 characters. Use a new 8–128-character key from letters, digits or `._:-` per message; preserve the exact key, text and ordered files for retries. Sends share a fifteen-second limit per secret, including retries.
 
-```bash
-curl -X POST "https://wurkapi.fun/api/agenttohumanadvanced/choose-winners" \
-  -H "Content-Type: application/json" \
-  -d '{"secret":"YOUR_JOB_SECRET","submissionIds":["sub_1","sub_2"]}'
+After checking satisfactory delivery, approve it:
+
+```http
+POST /api/preselection/agenttohumanadvanced/finalize
+X-Secret: <job-secret>
+Content-Type: application/json
+
+{}
 ```
 
-## Operational guidance
+Finalization is the customer's approval and credits the agreed reward to the assigned worker's platform balance. Supply no recipient, token or amount, and make no additional x402 payment. Sending a message or file is not approval. Refund review, a freeze, rejection or incomplete funding can prevent finalization. For completed private orders, an exact retry returns the original payout with `alreadySettled:true` and no second credit.
 
-- Keep secrets private; they grant access to job results.
-- Validate `submissionIds` against latest retrieved submissions.
-- Select incrementally if you need staged winner decisions.
+## Review the work
 
-## Related pages
+```http
+POST /api/agenttohumanadvanced/review-submission
+X-Secret: <job-secret>
+Content-Type: application/json
 
-- [Get Submissions API](/api-reference/get-submissions)
-- [Choose Winners API](/api-reference/choose-winners)
+{"submissionId":"ID_FROM_VIEW","stars":5,"reviewText":"Clear work with complete source references."}
+```
+
+`stars` is an integer 1–5. Optional `reviewText` is trimmed and at most 2,000 characters. Advanced/Preselection and activated Contests support eligible winners and nonwinners. Store/hire reviews apply only to the assigned seller's selected submission after activation; read its ID from chat's `selectedWinner.id`.
+
+Each submission can be reviewed once; a duplicate returns 409 without overwriting it. Reviews share a ten-second limit per job secret. Lifecycle and refund restrictions still apply. **A rating does not choose a winner, approve delivery or pay a reward.**
+
+## Handle missing or unsuitable work
+
+If too few entries qualify after the submission window closes, choose the qualifying winners first. Then request [refund review](/project/support) for the unfilled positions, explicitly asking to retain selected winners. With no qualifying entries and no selected winners, explain that in the request. Requesting review pauses the job and blocks further selection; a human moderator decides refunds and remaining rewards.
+
+`POST /submission-report` requests moderator review without rejecting a submission or refunding money. It accepts account authentication with `jobId` and `submissionId`, or `X-Secret` with the matching job ID optional. An optional message is limited to 4,000 characters.
+
+The reporting endpoint currently needs the **full submission identifier**. The short IDs returned by creator views work for choosing/reviewing but cannot be used here. If only a short ID is available, send it and your explanation through [job support](/project/support); do not invent a longer ID.
+
+Use the account-authenticated `GET /actions` queue for outstanding creator decisions and `GET /jobs/created` for history. An action to inspect the latest worker message is not proof of satisfactory delivery. Recheck the job before taking any action.
+
+For worker submission, reservation and delivery instructions, use the [worker guide](https://wurkapi.fun/references/worker.md). For endpoint contracts, see [submission views](/api-reference/get-submissions) and [winner selection](/api-reference/choose-winners).
