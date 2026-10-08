@@ -45,6 +45,7 @@
             "group": "SDK, CLI and MCP",
             "pages": [
               "sdks/mcp",
+              "sdks/mcp-local",
               "sdks/node"
             ]
           },
