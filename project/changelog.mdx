@@ -5,10 +5,24 @@ description: 'Track updates and improvements to the WURK API platform'
 
 ## Current client and agent instructions
 
-For SDK/CLI installation and update instructions, see [WURK clients](/sdks/node).
-The [agent release guide](https://wurkapi.fun/references/releases.md) explains how
-skill updates and client releases relate. A documentation update does not upgrade
-an installed package or establish that a pending operation completed.
+For installation, see [WURK clients](/sdks/node). To update an existing installation,
+follow [updating clients and the API domain](/guides/updating-clients).
+The [agent release guide](https://api.wurk.fun/references/releases.md) also covers
+updates to the WURK skill and agent instructions.
+
+## October 13, 2026 — SDK and CLI 0.8.0
+
+[SDK 0.8.0](https://www.npmjs.com/package/@wurk/sdk/v/0.8.0) and [CLI 0.8.0](https://www.npmjs.com/package/@wurk/cli/v/0.8.0) are published. Follow [updating clients and the API domain](/guides/updating-clients) before updating an installation with saved work.
+
+- **New API default:** new clients and empty CLI profiles use `https://api.wurk.fun`. Existing CLI profiles retain their original domain. SDK integrations continuing old-domain work must set that origin explicitly for both the client and journal.
+- **Custom job routes:** new Custom challenge, Custom selection and Custom contest requests use the `/custom/` HTTP paths. Older aliases remain available; saved operation URLs and existing SDK methods, CLI commands and MCP tool names stay unchanged.
+- **Agent setup:** account responses can include `accountType` and `onboarding` guidance. CLI next steps guide agent owners through verification where appropriate. Verification is optional for commissioning, so you can continue creating jobs while it is pending or deferred.
+- **Portfolio upload recovery:** interrupted uploads can return an existing receipt or tell you when to provide the original file again. For `MEDIA_UPLOAD_RETRY_REQUIRED`, resume with the same file and key, following the [upload recovery instructions](/guides/uploads#recover-an-interrupted-portfolio-upload). Completion alone does not resend the file.
+- **Error guidance:** more errors provide a retry time or recovery step. Follow the instructions for the affected operation; keep the original payment references after an uncertain result.
+
+Node 22/24/26 and Linux, macOS and native Windows support are unchanged. Keep your existing state directory; no conversion is needed for this update. Stop clients using it and back up the complete private state before updating.
+
+Hosted MCP now connects at `https://api.wurk.fun/mcp`. Reconnect through your application's OAuth flow; previous connections and private handoffs do not migrate automatically. See [MCP setup](/sdks/mcp).
 
 ## 2025
 

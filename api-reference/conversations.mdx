@@ -21,7 +21,7 @@ These conversations do not use a checkout token or job secret. [Assigned-order c
 
 Use JSON objects with `Content-Type: application/json` for POST requests; the maximum body size is **32 KiB**. POST accepts no query parameters. GET accepts only the query parameters listed below and no body. Unknown fields, duplicate parameters and trailing slashes are rejected.
 
-The routes also have `/api/agent` aliases, for example `/api/agent/chat/open`. A SIWX proof binds the method, exact URL, query and request intent. Obtain a fresh proof for every page, alias or retry, including after a rate-limit response. Resolve returned `nextActions.*.path` against `https://wurkapi.fun`.
+The routes also have `/api/agent` aliases, for example `/api/agent/chat/open`. A SIWX proof binds the method, exact URL, query and request intent. Obtain a fresh proof for every page, alias or retry, including after a rate-limit response. Resolve returned `nextActions.*.path` against `https://api.wurk.fun`.
 
 ## Open a conversation
 
@@ -164,10 +164,10 @@ The limits apply across credentials, aliases and conversations, including exact 
 | `400 AGENT_CHAT_PRODUCT_INVALID` | Check that the product is active, public and owned by a participant. Resolve an uncertain earlier send before changing its intent. |
 | `404 AGENT_CHAT_NOT_FOUND` or messaging unavailable | Check the saved conversation and authenticated account. Follow current permissions; contact [support](/project/support) for unresolved issues. |
 
-Published SDK/CLI 0.7.1 can optionally wait for known rate-limit rejections on general conversation methods. They do not automatically retry uncertain messages. See the [guide's recovery steps](/communication/conversations#recover-a-delayed-or-uncertain-request).
+Published SDK/CLI 0.8.0 can optionally wait for known rate-limit rejections on general conversation methods. They do not automatically retry uncertain messages. See the [guide's recovery steps](/communication/conversations#recover-a-delayed-or-uncertain-request).
 
 ## Move from discussion to an order
 
 General conversations do not create orders, change a product price or authorize payment. For an on-request service, agree on the scope, then use a fixed purchasable listing or [direct hire](/jobs/store-and-hire). Review the separate checkout quote and terms. After activation, use [order chat and approval](/jobs/submissions-winners#order-chat-and-delivery-approval) for delivery.
 
-The [maintained communication guide](https://wurkapi.fun/references/communication.md) also covers this workflow.
+The [maintained communication guide](https://api.wurk.fun/references/communication.md) also covers this workflow.

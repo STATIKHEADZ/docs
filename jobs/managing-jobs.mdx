@@ -5,7 +5,9 @@ description: 'Find work you commissioned, review submissions and resume manageme
 
 Use this guide after creating a job, buying a service or hiring someone. You can manage eligible paid jobs even when the original payment was made on another computer. Importing a job restores access to its creator actions; it does not restore lost payment attempts or authorize another payment.
 
-Examples use **CLI/SDK 0.7.1**. Complete [CLI setup](/quickstart#install-the-cli); discovery also requires [account access](/authentication). The secret-file import alternative needs no account login. `WURK_STATE` is your private state directory; `WURK_ACCOUNT` is the saved account reference. In PowerShell, use `wurk.cmd` and your actual paths/references, or `$env:WURK_STATE` and `$env:WURK_ACCOUNT`.
+Examples use **CLI/SDK 0.8.0**. Complete [CLI setup](/quickstart#install-the-cli); discovery also requires [account access](/authentication). The secret-file import alternative needs no account login. `WURK_STATE` is your private state directory; `WURK_ACCOUNT` is the saved account reference. In PowerShell, use `wurk.cmd` and your actual paths/references, or `$env:WURK_STATE` and `$env:WURK_ACCOUNT`.
+
+Keep existing state and unfinished work on their original API origin. An upgrade does not move their local references or payment journal; follow [updating clients and API domains](/guides/updating-clients) before starting a separate profile on the new domain.
 
 ## Find work that needs attention
 
@@ -81,7 +83,7 @@ wurk jobs manage view --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_J
 
 Inspect `data.view.mode`, `workStatus`, `paid`, rewards, settings and submissions. Managed views default to 25 entries, allow at most 100 per page, and support pages 1–10000. Read all relevant pages before judging.
 
-Use submission IDs returned by the view. The management modes below select client actions; they are not interchangeable with the website's Challenge/Selection labels.
+Use submission IDs returned by the view. The client reports Custom challenge as `advanced` and Custom selection as `preselection`; select the matching action below.
 
 | `data.view.mode` | Action and JSON for `choice.json` |
 | --- | --- |
@@ -109,7 +111,7 @@ Use an actual participant account ID from the view, not their submission ID. Thi
 
 ## Chat, approve delivery and review
 
-Preselection and private orders expose an assigned-work conversation after the required selection/activation:
+Custom selection and private orders expose an assigned-work conversation after the required selection/activation:
 
 ```bash
 wurk jobs manage chat read --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB --page-size 25
@@ -139,7 +141,7 @@ Once the agreed work is satisfactory, approve it explicitly:
 wurk jobs manage approve --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB
 ```
 
-Approval releases the already-funded reward under the order's rules. It needs no new wallet payment. Sending a file, selecting an applicant, receiving a notification or seeing a worker message does not approve delivery. Advanced challenges and Contests use moderator approval after winner selection instead of this command.
+Approval releases the already-funded reward under the order's rules. It needs no new wallet payment. Sending a file, selecting an applicant, receiving a notification or seeing a worker message does not approve delivery. Custom challenges and Contests use moderator approval after winner selection instead of this command.
 
 To leave a review, save `review.json` with an actual eligible submission ID:
 
@@ -163,7 +165,7 @@ Mutations return `data.action.status`: `confirmed`, `unknown` or `rejected`. A c
 | Unknown choice or position change | Read the relevant managed-view pages to reconcile what was recorded. Preserve the state directory. |
 | Unknown keyed chat send | After the cooldown, repeat the identical command/input with `--retry`. |
 | Unknown private-order approval | Repeat approval with `--retry`; the private payout receipt prevents a second reward. |
-| Unknown review or ordinary Preselection approval | Inspect the current job and seek support if unresolved. Do not force a new attempt elsewhere. |
+| Unknown review or ordinary Custom selection approval | Inspect the current job and seek support if unresolved. Do not force a new attempt elsewhere. |
 | Definite rejection | Address the reason and wait for `Retry-After`; use `--retry-rejected` when retrying that rejected action. |
 | `MANAGEMENT_SERVER_UPGRADE_REQUIRED` | The server cannot yet supply the required management metadata. Contact support; do not guess an action route. |
 
@@ -173,6 +175,8 @@ Without an explicit supported retry, repeating an uncertain mutation returns its
 
 Install the matching SDK and CLI storage adapters as in the [Node.js guide](/sdks/node). This helper uses an existing saved API-key account; it imports and reads without choosing, paying or approving anything:
 
+Pass the API `origin` belonging to that saved directory and account. Use `https://api.wurk.fun` for a new profile; retain `https://wurkapi.fun` when that is the existing profile's origin.
+
 ```typescript
 import { createWurkClient, type AccountAccess } from '@wurk/sdk';
 import { SqliteAccountStore } from '@wurk/cli/store';
@@ -180,6 +184,7 @@ import { SqliteManagementStore } from '@wurk/cli/management-store';
 
 export async function readExistingJob(
   directory: string,
+  origin: string,
   access: AccountAccess,
   jobId: string,
 ) {
@@ -188,7 +193,7 @@ export async function readExistingJob(
     const managementStore = SqliteManagementStore.open(directory);
     try {
       const client = createWurkClient({
-        origin: 'https://wurkapi.fun', store, managementStore,
+        origin, store, managementStore,
       });
       const { managedJob } = await client.management.importJob({ access, jobId });
       return await client.management.view({ managedJob });

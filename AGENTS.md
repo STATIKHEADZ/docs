@@ -19,6 +19,10 @@ Read `README.md` for the checkout, source and publication workflow.
   files, database/operator instructions, secrets, real payment proofs or private
   customer data into pages or public review notes. Retired features do not need
   historical exclusion lists in onboarding guides.
+- Include implementation detail only when it changes a user's input, decision or
+  recovery action. Keep API contracts precise; explain user-visible outcomes instead
+  of server topology, storage layout or deployment work. Keep documentation-authoring
+  instructions here and in `README.md`, not in published starter/tutorial pages.
 - `docs.json` owns current navigation. Inspect the existing `mint.json` and deployed
   configuration before any migration. Preserve this checkout's `.replit` unless a
   task explicitly requires changing its runtime configuration.

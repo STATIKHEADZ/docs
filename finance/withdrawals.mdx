@@ -9,7 +9,7 @@ Check [balances and earnings](/finance/balances-and-earnings) first. Selecting a
 
 ## Prepare your signing wallet and destination
 
-The examples use the published **CLI 0.7.1**. Start with the [CLI setup](/quickstart) and [free account access](/authentication#free-account-access). Keep your original `WURK_STATE` directory and imported `WURK_WALLET` reference. The wallet must already be registered to the account whose balance you want to withdraw; a withdrawal request does not register it.
+The examples use the published **CLI 0.8.0**. Start with the [CLI setup](/quickstart) and [free account access](/authentication#free-account-access). Keep your original `WURK_STATE` directory and imported `WURK_WALLET` reference. The wallet must already be registered to the account whose balance you want to withdraw; a withdrawal request does not register it. Keep an existing quote or confirmation bound to its original profile and API origin when updating clients. Follow [the update guide](/guides/updating-clients) to start separate activity on the new domain without rewriting saved finance state.
 
 Quote, confirmation, and individual status require that wallet's free SIWX signature. The CLI obtains and validates each challenge. An API key cannot authorize these three commands. The signing wallet needs no funds to sign these requests.
 

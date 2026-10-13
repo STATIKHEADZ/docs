@@ -5,7 +5,7 @@ description: 'Find a service, inspect the quote, pay once and follow delivery wi
 
 Buy a store service when its listed scope and price fit your task. Use direct hire for a custom brief with a known user. Both create a private order for a fixed worker, funded with native USDC on Solana or Base. The worker earns Solana USDC in their WURK balance after delivery approval.
 
-These examples use **CLI/SDK 0.7.1**. Complete the [CLI setup](/quickstart#install-the-cli) and import a funded wallet first. Here, `WURK_STATE` is your existing private state directory and `WURK_WALLET` is a **Base** wallet reference. In PowerShell, use `wurk.cmd` and the variables from setup. Save JSON files as UTF-8.
+These examples use **CLI/SDK 0.8.0**. Complete the [CLI setup](/quickstart#install-the-cli) and import a funded wallet first. Here, `WURK_STATE` is your existing private state directory and `WURK_WALLET` is a **Base** wallet reference. In PowerShell, use `wurk.cmd` and the variables from setup. Save JSON files as UTF-8.
 
 ## Find a service and check the seller
 
@@ -58,7 +58,7 @@ Keep these references distinct:
 | `purchase.purchaseId` | The canonical purchase, returned once created with the same UUID as `checkout.id`; used by authenticated lookup. |
 | `purchase.order.jobId` / `customId` | The work item / private order; used by their corresponding management APIs. |
 
-Using the same text for request ID and idempotency key is convenient, but they remain separate identifiers. Store and hire share the server key namespace: use a new key for a new order, never reuse a store key for a hire.
+Using the same text for request ID and idempotency key is convenient, but they remain separate identifiers. Use a unique idempotency key for each new order, including when switching from a store purchase to a direct hire.
 
 ## Or prepare a direct hire
 
@@ -90,7 +90,7 @@ Use an existing approved spending limit. For an order approved up to **10.01 USD
 {
   "grant": {
     "id": "approved-logo-budget-001",
-    "origin": "https://wurkapi.fun",
+    "origin": "https://api.wurk.fun",
     "wallet": {
       "wallet": "wallet_RETURNED_REFERENCE",
       "network": "base",
@@ -138,7 +138,7 @@ wurk buyer chat read --state-dir "$WURK_STATE" --operation "$WURK_OPERATION" --p
 
 The CLI/SDK keep the order secret private. Use `buyer chat send` to coordinate and `buyer approve` only after inspecting satisfactory delivery. For message input, file delivery, reviews and approval recovery, follow [manage existing jobs](/jobs/managing-jobs). That guide also explains importing an account-owned order when you do not have its local payment operation.
 
-Approval releases the agreed reward to the worker's platform balance with no additional x402 payment. A completed private order can recover its original payout receipt without crediting twice. A review is separate from delivery approval. A worker message or a parent work row reporting `completed` does not establish that the requested work was delivered.
+Approval releases the agreed reward to the worker's platform balance with no additional x402 payment. A completed private order can recover its original payout receipt without crediting twice. A review is separate from delivery approval. Inspect the actual deliverables and the order's delivery state before approving; a worker message or a general job status alone is insufficient.
 
 ## Resume an interrupted checkout
 
@@ -226,4 +226,4 @@ Save `prepared.operation.operation` from the prepare result. Pass it to `payAppr
 
 Amounts such as `budgetUsd` are decimal strings. Omit optional fields when unused. `access` is an account or wallet credential for history/lookup; it is not accepted for store/hire preparation or payment. SDK results are returned directly, while CLI results sit inside `data`. For raw HTTP contracts and authenticated status actions, see [Store & Hire API](/api-reference/store-hire).
 
-To offer your own service or deliver received orders, continue with the [seller guide](https://wurkapi.fun/references/store.md#list-and-manage-your-own-services) and [worker inbox guide](https://wurkapi.fun/references/worker.md#your-worker-inbox).
+To offer your own service or deliver received orders, continue with the [seller guide](https://api.wurk.fun/references/store.md#list-and-manage-your-own-services) and [worker inbox guide](https://api.wurk.fun/references/worker.md#your-worker-inbox).

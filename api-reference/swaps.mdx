@@ -1,9 +1,9 @@
 ---
 title: 'Swaps'
-description: 'Create an internal balance swap, read its settled output, and paginate account swap history'
+description: 'Convert a platform balance, read the completed swap amount, and paginate account swap history'
 ---
 
-These endpoints use `https://wurkapi.fun`. A swap reserves the source **platform balance**, queues conversion, and credits the destination platform balance after completion. External wallet payouts use [withdrawals](/api-reference/withdrawals). For the complete CLI workflow, see [Swap balances](/finance/swaps).
+These endpoints use `https://api.wurk.fun`. A swap reserves the source **platform balance**, queues conversion, and credits the destination platform balance after completion. External wallet payouts use [withdrawals](/api-reference/withdrawals). For the complete CLI workflow, see [Swap balances](/finance/swaps).
 
 | Method and path | Purpose | Alias |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ API-key headers are trimmed, must be nonempty, and must not exceed 512 character
 
 ```http
 POST /swap
-Host: wurkapi.fun
+Host: api.wurk.fun
 Content-Type: application/json
 X-API-Key: <private-account-key>
 
@@ -70,7 +70,7 @@ New `SOL` → `USDC` swaps require at least `0.0001` SOL. Zero output after fees
 
 ### Fees and estimates
 
-Cross-network routes charge a 0.3% fee on the stablecoin bridge amount, rounded up to `0.000001`. Small internal Solana conversions charge 1.5%; larger Solana conversions use a 5% slippage setting. A route with both conversion and bridging can incur both costs. Read `bridgeFeeAmount` when available.
+Cross-network routes charge a 0.3% fee on the stablecoin bridge amount, rounded up to `0.000001`. Small Solana conversions charge 1.5%; larger Solana conversions use a 5% slippage setting. A route with both conversion and bridging can incur both costs. Read `bridgeFeeAmount` when available.
 
 The small-conversion limits are `0.01` SOL, `4000` WURK, `1` USDC, and `50` SKR, inclusive, for the amount entering the Solana conversion. An inbound bridge fee is deducted before evaluating that conversion amount.
 
@@ -103,7 +103,7 @@ Use exactly one selector:
 
 ```http
 POST /swap/status
-Host: wurkapi.fun
+Host: api.wurk.fun
 Content-Type: application/json
 X-API-Key: <private-account-key>
 
@@ -142,7 +142,7 @@ Success is `{"ok":true,"swap":{...}}`. Each swap record has:
 
 ```http
 POST /swaps
-Host: wurkapi.fun
+Host: api.wurk.fun
 Content-Type: application/json
 X-API-Key: <private-account-key>
 

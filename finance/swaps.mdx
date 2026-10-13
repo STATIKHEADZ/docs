@@ -5,7 +5,7 @@ description: 'Convert available WURK account balances, follow settlement, and re
 
 A swap reserves an amount of your **internal WURK account balance** and queues its conversion into another supported balance. It does not spend funds from your external signing wallet. Once the swap completes, its output becomes available in your WURK account; [withdraw separately](/finance/withdrawals) to send funds to a wallet.
 
-The examples use **`@wurk/cli` 0.7.1**. Complete the [CLI setup](/quickstart) and [free account access](/authentication#free-account-access) first. Keep the same `WURK_STATE` directory and saved account reference throughout this workflow.
+The examples use **`@wurk/cli` 0.8.0**. Complete the [CLI setup](/quickstart) and [free account access](/authentication#free-account-access) first. Keep the same `WURK_STATE` directory and saved account reference throughout this workflow. An update does not move saved finance state to another API origin: recover an existing swap with its original profile, origin and request key. Use [a separate profile for new activity on the new domain](/guides/updating-clients).
 
 ## Choose authentication
 
@@ -123,7 +123,7 @@ For pagination, save `{"limit":10,"offset":0}` in `swap-history.json` and pass `
 
 ## Use the Node.js SDK
 
-In **`@wurk/sdk` 0.7.1**, the methods are `client.swaps.create`, `client.swaps.status`, and `client.swaps.list`. Configure a durable `financeStore` before creating a swap; the matching CLI package exports `SqliteFinanceStore` from `@wurk/cli/finance-store`. Preserve that store across restarts alongside your account storage. See [SDK configuration](/sdks/node).
+In **`@wurk/sdk` 0.8.0**, the methods are `client.swaps.create`, `client.swaps.status`, and `client.swaps.list`. Configure a durable `financeStore` before creating a swap; the matching CLI package exports `SqliteFinanceStore` from `@wurk/cli/finance-store`. Preserve that store across restarts alongside your account storage. See [SDK configuration](/sdks/node).
 
 This helper accepts an already configured client and account or wallet access. It reads the existing request without creating another swap:
 

@@ -5,12 +5,14 @@ description: 'Use wallet authentication, account keys, checkout tokens, and job 
 
 WURK separates **free account authentication**, **x402 payment**, and **access to a particular job**. Creating a paid job does not require an account login. Finding eligible jobs and submitting work use free account authentication and need no funded wallet.
 
+New integrations use `https://api.wurk.fun`. During the transition, existing API clients can keep using `https://wurkapi.fun`. Each wallet proof is bound to the exact origin and path that issued its challenge; changing either requires a fresh challenge. Keep unfinished payments and stored client state on their original origin; follow [updating clients and API domains](/guides/updating-clients). Hosted MCP has its own [OAuth connection](/sdks/mcp) on the new domain.
+
 ## Choose the credential for your operation
 
 | Operation | Credential |
 | --- | --- |
 | Create or pay for a job, Contest, Store purchase, or direct hire | `PAYMENT-SIGNATURE` for the approved x402 payment; `X-Checkout-Token` where required |
-| Read an Advanced USDC, Contest, Store, or hire checkout | Its saved `X-Checkout-Token`, or the endpoint's supported account/wallet authentication |
+| Read a Custom challenge USDC, Contest, Store, or hire checkout | Its saved `X-Checkout-Token`, or the endpoint's supported account/wallet authentication |
 | Access an account, profile, worker API, or account history | `X-API-Key` or a fresh `SIGN-IN-WITH-X` proof where supported |
 | Rotate an account API key, or request a withdrawal quote, confirmation, or individual status | Fresh `SIGN-IN-WITH-X` from the account's registered wallet |
 | Read submissions or perform creator actions | The job's private `X-Secret`, where supported |
@@ -48,10 +50,10 @@ For a direct HTTP client, the preferred endpoints accept GET or POST:
 Use POST with no query or body to inspect the challenge:
 
 ```bash
-curl -i -X POST 'https://wurkapi.fun/solana/siwx/account-create'
+curl -i -X POST 'https://api.wurk.fun/solana/siwx/account-create'
 ```
 
-Solana authentication uses Ed25519/SIWS on `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`; Base uses EOA EIP-191 on `eip155:8453`. The [account reference](https://wurkapi.fun/references/account.md#account-access) includes the direct signing flow. The [Node.js SDK](/sdks/node) handles challenge validation and private API-key storage.
+Solana authentication uses Ed25519/SIWS on `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`; Base uses EOA EIP-191 on `eip155:8453`. The [account reference](https://api.wurk.fun/references/account.md#account-access) includes the direct signing flow. The [Node.js SDK](/sdks/node) handles challenge validation and private API-key storage.
 
 Accessing the same wallet again retrieves the active key without rotating it. If a key is blocked, inspect the error and the account's key-management options. Key rotation is an explicit separate action that invalidates the previous key.
 
@@ -61,7 +63,7 @@ With a saved account key, send `X-API-Key` only to an endpoint that accepts it:
 
 ```http
 GET /profile
-Host: wurkapi.fun
+Host: api.wurk.fun
 X-API-Key: <private-account-key>
 ```
 
@@ -78,7 +80,7 @@ Use the [private profile and verification guide](/account/profile-and-verificati
 
 ## Rotate and recover an API key
 
-Use explicit rotation when you intend to invalidate the previous account key. With **CLI 0.7.1**, replace `PATH_TO_PRIVATE_STATE` and `WALLET_REF` with your existing private state directory and the account's imported signing wallet. Use `--network base` for Base; Solana requires the account's primary wallet.
+Use explicit rotation when you intend to invalidate the previous account key. With **CLI 0.8.0**, replace `PATH_TO_PRIVATE_STATE` and `WALLET_REF` with your existing private state directory and the account's imported signing wallet. Use `--network base` for Base; Solana requires the account's primary wallet.
 
 You can inspect the free challenge without signing or changing the key:
 
@@ -110,21 +112,21 @@ Explicit rotation can restore API access after self-service key deletion. It can
 
 ## Payment ownership and checkout access
 
-Advanced USDC, every Contest, Store purchases, and direct hire use a private checkout token and an `idempotencyKey`. The [CLI](/quickstart) and [SDK](/sdks/node) save the token before requesting the quote. Direct clients should generate and persist a random 32-byte base64url token and send it as `X-Checkout-Token` from the first request.
+Custom challenge USDC, every Contest, Store purchases, and direct hire use a private checkout token and an `idempotencyKey`. The [CLI](/quickstart) and [SDK](/sdks/node) save the token before requesting the quote. Direct clients should generate and persist a random 32-byte base64url token and send it as `X-Checkout-Token` from the first request.
 
-After verified payment is reserved, WURK reuses the payer wallet's eligible account or creates one and links the job to it. This does not issue an API key or browser session. Funding confirmation and activation are separate states. You can use free account access afterward if you want a saved API key.
+Paid jobs belong to the payer wallet's WURK account, which is created if needed. Payment does not issue an API key or sign you into the website. Check the returned funding and job or order status before treating the work as active; see [job flow](/concepts/job-flow). Use free account access afterward if you want a saved API key.
 
-The token opens only its checkout. For status, follow that checkout's `statusCheck` with the token and **without a payment signature**. Account/wallet status and recovery use their separately documented authentication. If the token is lost after payment reservation, use the original payer wallet and saved identifiers for recovery; see the [recovery guide](https://wurkapi.fun/references/recovery.md#recover-the-existing-operation).
+The token opens only its checkout. For status, follow that checkout's `statusCheck` with the token and **without a payment signature**. Account/wallet status and recovery use their separately documented authentication. If the token is lost after payment reservation, use the original payer wallet and saved identifiers for recovery; see the [recovery guide](https://api.wurk.fun/references/recovery.md#recover-the-existing-operation).
 
-Basic, Advanced WURK, and Preselection use their payment-and-job-secret workflow. Their recovery contract differs from checkout idempotency; follow the relevant [job guide](/concepts/job-types).
+Basic, Custom challenge WURK, and Custom selection use their payment-and-job-secret workflow. Their recovery contract differs from checkout idempotency; follow the relevant [job guide](/concepts/job-types).
 
 ## Job secrets
 
 A job secret authorizes actions for that job. Keep it private, including URLs that contain it. Direct clients can use `X-Secret` on supported creator routes; the SDK and CLI retain it privately behind the saved operation reference.
 
 ```http
-GET /solana/agenttohumanadvanced?action=view&page=1&pageSize=25
-Host: wurkapi.fun
+GET /solana/custom/challenge?action=view&page=1&pageSize=25
+Host: api.wurk.fun
 X-Secret: <private-job-secret>
 ```
 

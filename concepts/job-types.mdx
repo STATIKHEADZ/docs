@@ -8,9 +8,9 @@ Choose the job type by how you want to select and pay workers. All creation rout
 | Type | Best for | Selection and rewards | Guide |
 | --- | --- | --- | --- |
 | Basic | Short questions and straightforward feedback | Random winners; equal WURK rewards | [Human feedback](/jobs/agent-help) |
-| Advanced | Completed entries judged against a brief, or a configurable random draw | Creator or random selection; equal WURK or USDC rewards | [Custom jobs](/jobs/custom-jobs) |
-| Preselection | Reviewing proposals before commissioning one worker | Choose one applicant, coordinate delivery, then approve; WURK or USDC | [Preselection](/jobs/custom-jobs#preselection-choose-a-worker-first) |
-| Contest | Ranking several completed entries | Creator assigns prize positions; WURK, USDC or SOL | [Contests](/jobs/contests) |
+| Custom challenge | Completed entries judged against a brief, or a configurable random draw | Creator or random selection; equal WURK or USDC rewards | [Custom jobs](/jobs/custom-jobs) |
+| Custom selection | Reviewing proposals before commissioning one worker | Choose one applicant, coordinate delivery, then approve; WURK or USDC | [Custom selection](/jobs/custom-jobs#custom-selection-choose-a-worker-first) |
+| Custom contest | Ranking several completed entries | Creator assigns prize positions; WURK, USDC or SOL | [Contests](/jobs/contests) |
 | Store purchase | Buying an existing service on its listed terms | Fixed seller; USDC | [Store and hire](/jobs/store-and-hire) |
 | Direct hire | Commissioning a known user by nickname | Fixed worker and custom brief; USDC | [Store and hire](/jobs/store-and-hire#or-prepare-a-direct-hire) |
 
@@ -23,13 +23,30 @@ Replace `{network}` with `solana` or `base`. Prefer POST JSON for briefs; keep q
 | Type | POST endpoint |
 | --- | --- |
 | Basic | `/{network}/agenttohuman` |
-| Advanced | `/{network}/agenttohumanadvanced` |
-| Preselection | `/{network}/preselection/agenttohumanadvanced` |
-| Contest | `/{network}/agenttohumancontest` |
+| Custom challenge | `/{network}/custom/challenge` |
+| Custom selection | `/{network}/custom/selection` |
+| Contest | `/{network}/custom/contest` |
 | Store purchase | `/store/purchase` with `network` in the body |
 | Direct hire | `/hire` with `network` in the body |
 
-No pre-existing account or API key is required to pay. Verified payment reuses or creates the payer's WURK account. Advanced USDC, every Contest and store/hire use a private checkout token and an idempotency key; Basic, Advanced WURK and Preselection use the payment-and-secret flow. Follow the correct [creation workflow](/concepts/job-flow).
+No pre-existing account or API key is required to pay. Verified payment reuses or creates the payer's WURK account. Custom challenge USDC, every Contest and store/hire use a private checkout token and an idempotency key; Basic, Custom challenge WURK and Custom selection use the payment-and-secret flow. Follow the correct [creation workflow](/concepts/job-flow).
+
+### Compatibility with existing integrations
+
+Custom challenge and Custom selection were previously called Advanced and Preselection. The Custom paths are preferred for new HTTP integrations. Existing routes remain supported without redirects:
+
+| Preferred path | Compatible legacy path |
+| --- | --- |
+| `/{network}/custom/challenge` | `/{network}/agenttohumanadvanced` |
+| `/{network}/custom/selection` | `/{network}/preselection/agenttohumanadvanced` |
+| `/{network}/custom/contest` | `/{network}/agenttohumancontest` |
+| `/api/custom/challenge/…` | `/api/agenttohumanadvanced/…` |
+| `/api/custom/selection/…` | `/api/preselection/agenttohumanadvanced/…` |
+| `/api/custom/contest/…` | `/api/agenttohumancontest/…` |
+
+Use the corresponding documented action path for views, winner selection, reviews, order chat and delivery approval; the `…` above is a placeholder for that action. Basic stays at `/{network}/agenttohuman`. SDK methods, CLI commands and MCP tools retain their `advanced`, `preselection` and `contest` names; changing the HTTP route does not rename those client interfaces.
+
+Follow the URLs returned for an existing operation. Legacy requests retain legacy follow-up URLs; new Custom requests receive Custom follow-up URLs. Keep saved payment requests and signed requirements unchanged. See [updating clients and API domains](/guides/updating-clients) before changing a profile's origin.
 
 ## Job mode and selection type
 
@@ -42,7 +59,7 @@ Read `job.mode` and `job.selectionType` together when discovering work or review
 | `contest` / `creator` | Completed contest entries | Assign ranked positions; completed selection queues moderator approval. |
 | Public `selection` / `creator` | Proposals | Choose one worker, coordinate in order chat, then approve delivery. |
 
-Basic and Advanced are creation families, both using `challenge` mode. `creator` alone does not imply Preselection. If a discovered job is `selection` / `random`, submit a completed entry and follow its draw; it does not start a proposal, chat and delivery-approval workflow. Private store/hire orders follow their returned order kind and actions.
+Basic and Custom challenge are creation families, both using `challenge` mode. `creator` alone does not imply Custom selection. If a discovered job is `selection` / `random`, submit a completed entry and follow its draw; it does not start a proposal, chat and delivery-approval workflow. Private store/hire orders follow their returned order kind and actions.
 
 ## Winners and entry limits
 
@@ -51,11 +68,11 @@ Basic and Advanced are creation families, both using `challenge` mode. `creator`
 | Creation family | Entry limit |
 | --- | --- |
 | Basic | `ceil(winners × 1.2)` |
-| Advanced | The same default; omit `maxEntries` to use it. `0` or `"unlimited"` is available with at least $5 gross total. Arbitrary positive caps are not accepted. |
-| Preselection | Unlimited applications for one paid assignment. |
+| Custom challenge | The same default; omit `maxEntries` to use it. `0` or `"unlimited"` is available with at least $5 gross total. Arbitrary positive caps are not accepted. |
+| Custom selection | Unlimited applications for one paid assignment. |
 | Contest | Unlimited entries; the number of ranked prizes is fixed by `winners`. |
 
-For example, five Basic or default Advanced winners allow six entries; two winners allow three. `maxEntries:0` means unlimited, not zero entries. Existing jobs from other creation paths can have different caps.
+For example, five Basic or default Custom challenge winners allow six entries; two winners allow three. `maxEntries:0` means unlimited, not zero entries. Existing jobs from other creation paths can have different caps.
 
 For a **random draw**, an eligible entry's chance of selection is `min(1, remaining prizes / eligible nonwinning entries in that draw)`. If five prizes remain and six eligible entries participate, the chance is about 83.33%. Unlimited entries have no fixed percentage in advance. A full entry cap can trigger a draw before the closing time; an incomplete draw can extend the window.
 
@@ -63,8 +80,8 @@ For **creator selection**, the ratio of prizes to entries is not a probability: 
 
 ## Budget and reward asset
 
-Basic, Advanced and Preselection use gross USD `perUser` per winning position. Contests and direct hire use a gross USD `budgetUsd`. Store listing `priceUsd` is the seller's net price.
+Basic, Custom challenge and Custom selection use gross USD `perUser` per winning position. Contests and direct hire use a gross USD `budgetUsd`. Store listing `priceUsd` is the seller's net price.
 
-The gross budget includes the platform share. For example, an Advanced USDC job with three $2.00 positions has a $6.00 gross budget and a 1.800000 USDC reward per winner. Inspect the exact payable quote separately: it can include an identification adjustment. A Base payment can fund rewards in a worker's Solana platform balance.
+The gross budget includes the platform share. For example, a Custom challenge with USDC rewards and three $2.00 positions has a $6.00 gross budget and a 1.800000 USDC reward per winner. Inspect the exact payable quote separately: it can include an identification adjustment. A Base payment can fund rewards in a worker's Solana platform balance.
 
 Continue with [job creation and payment states](/concepts/job-flow) or [reading submissions and selecting winners](/jobs/submissions-winners).

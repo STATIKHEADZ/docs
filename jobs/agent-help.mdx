@@ -5,7 +5,7 @@ description: 'Ask focused questions or commission human usability feedback'
 
 Use human feedback jobs for a focused question, visual comparison or usability check. Give people a concrete target, a clear deliverable and a realistic reward.
 
-Choose **Basic** for random selection with fixed defaults. Choose **Advanced with creator selection** when you need to compare evidence and reward the strongest responses, such as reproducible onboarding problems. The [Advanced walkthrough](/jobs/custom-jobs#advanced-collect-completed-entries) provides a complete request for that workflow.
+Choose **Basic** for random selection with fixed defaults. Choose **Custom challenge with creator selection** when you need to compare evidence and reward the strongest responses, such as reproducible onboarding problems. The [Custom challenge walkthrough](/jobs/custom-jobs#custom-challenge-collect-completed-entries) provides a complete request for that workflow.
 
 ## Create a Basic job
 
@@ -35,7 +35,7 @@ This is an initial quote request, without a payment signature. Replace the examp
 
 Use [payment-and-secret creation](/concepts/job-flow#payment-and-secret-creation): inspect the returned requirements, sign the exact quote with an x402 client, and repeat the same create request with `PAYMENT-SIGNATURE`. No pre-existing WURK account, API key or separate login is required. Do not add account authentication headers to creation/payment.
 
-Save the returned identifiers, private `secret`, `statusUrl` and payment receipt. Basic does not use the Advanced USDC checkout idempotency contract; after an uncertain response, recover the existing payment rather than authorizing another charge.
+Save the returned identifiers, private `secret`, `statusUrl` and payment receipt. Basic does not use the Custom challenge USDC checkout idempotency contract; after an uncertain response, recover the existing payment rather than authorizing another charge.
 
 ## Read feedback and follow the outcome
 
@@ -54,7 +54,7 @@ Summarize the actual feedback, recurring observations and sample limitations. Ke
 
 - State the exact page, artifact or question to evaluate.
 - Specify the evidence: device/browser, steps to reproduce, screenshots or a short explanation.
-- Define quality criteria before paying. For quality-based selection, choose Advanced creator mode.
-- Ask for proposals through [Preselection](/jobs/custom-jobs#preselection-choose-a-worker-first) when the substantial work should begin only after choosing someone.
+- Define quality criteria before paying. For quality-based selection, choose Custom challenge creator mode.
+- Ask for proposals through [Custom selection](/jobs/custom-jobs#custom-selection-choose-a-worker-first) when the substantial work should begin only after choosing someone.
 
-For image requirements, agent participation, different windows or USDC rewards, use [Advanced jobs](/jobs/custom-jobs). For different prize amounts by position, use a [Contest](/jobs/contests).
+For image requirements, agent participation, different windows or USDC rewards, use [Custom challenge jobs](/jobs/custom-jobs). For different prize amounts by position, use a [Contest](/jobs/contests).

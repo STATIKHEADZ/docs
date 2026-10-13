@@ -3,13 +3,15 @@ title: 'Quickstart'
 description: 'Create a feedback job, review submissions, and choose winners with the WURK CLI'
 ---
 
-Create an Advanced job to get human feedback on a public demo. People submit completed feedback; you choose qualifying entries, and moderation precedes payout. This walkthrough uses the published **WURK CLI 0.7.1** with a Solana wallet. You do not need a WURK account login to create the job.
+Create a Custom challenge job to get human feedback on a public demo. People submit completed feedback; you choose qualifying entries, and moderation precedes payout. This walkthrough uses the published **WURK CLI 0.8.0** with a Solana wallet. Its commands retain the `advanced` name. You do not need a WURK account login to create the job.
 
 Using an MCP application? Follow [Connect with MCP](/sdks/mcp) to connect your wallet and prepare a first quote, or use [Local MCP](/sdks/mcp-local) with your CLI wallet.
 
 ## Install the CLI
 
 Use Node `>=22.22.0 <23`, `>=24.12.0 <25`, or `>=26.0.0 <27`. Install the CLI in a dedicated directory; it includes the matching SDK.
+
+These commands initialize **new state** at `https://api.wurk.fun`. If you already use WURK, follow [updating clients and API origins](/guides/updating-clients) first. Keep existing work on its original origin; choose a separate state directory for new-domain activity.
 
 <Tabs>
   <Tab title="Linux / macOS (Bash)">
@@ -18,11 +20,11 @@ Use Node `>=22.22.0 <23`, `>=24.12.0 <25`, or `>=26.0.0 <27`. Install the CLI in
     mkdir -p "$HOME/wurk-agent"
     cd "$HOME/wurk-agent"
     npm init -y
-    npm install --save-exact --ignore-scripts @wurk/cli@0.7.1
+    npm install --save-exact --ignore-scripts @wurk/cli@0.8.0
     export PATH="$PWD/node_modules/.bin:$PATH"
     WURK_STATE="$HOME/.local/share/wurk-agent"
     wurk --version
-    wurk config init --state-dir "$WURK_STATE" --origin https://wurkapi.fun
+    wurk config init --state-dir "$WURK_STATE" --origin https://api.wurk.fun
     ```
   </Tab>
   <Tab title="Windows (PowerShell)">
@@ -31,12 +33,12 @@ Use Node `>=22.22.0 <23`, `>=24.12.0 <25`, or `>=26.0.0 <27`. Install the CLI in
     New-Item -ItemType Directory -Force -Path $WURK_PROJECT | Out-Null
     Set-Location $WURK_PROJECT
     npm.cmd init -y
-    npm.cmd install --save-exact --ignore-scripts @wurk/cli@0.7.1
+    npm.cmd install --save-exact --ignore-scripts @wurk/cli@0.8.0
     $env:PATH = (Join-Path $PWD 'node_modules\.bin') + [IO.Path]::PathSeparator + $env:PATH
     $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
     $WURK_STATE = Join-Path $env:LOCALAPPDATA 'WURK\agent'
     wurk.cmd --version
-    wurk.cmd config init --state-dir $WURK_STATE --origin https://wurkapi.fun
+    wurk.cmd config init --state-dir $WURK_STATE --origin https://api.wurk.fun
     ```
 
     Use local NTFS storage outside OneDrive, network shares, and junctions. Let `config init` create the final state directory; keep its full paths within 240 characters. In later commands, run `wurk.cmd` instead of `wurk`.
@@ -129,6 +131,8 @@ wurk jobs create --state-dir "$WURK_STATE" --type advanced --reward USDC --netwo
 
 Inspect the returned quote and operation. `--max-payment` caps the complete quoted USDC payment, including any identification amount; it is separate from the gross prize budget.
 
+This `jobs create` flow limits the spending allowance to **30 minutes after the original operation was created**, or an earlier quote expiry. The clock starts with the first call, including `--quote-only`; repeating the command does not extend it. Also honor the returned `operation.initiateBefore`, which can require payment to start sooner. If the window has expired, [inspect the original operation](#recover-an-interrupted-run) before considering a new checkout. Expiry alone does not establish that no payment was submitted.
+
 ## Pay and check activation
 
 Once the brief and maximum spend are approved, repeat the exact command without `--quote-only`:
@@ -188,10 +192,30 @@ Reuse the same state directory, request ID, wallet, and original input. Find the
 
 ```sh
 wurk operations inspect --state-dir "$WURK_STATE" --client-request-id first-feedback-001
+```
+
+Copy the returned `data.operation` into `WURK_OPERATION` before resuming. This is the recovered reference from `operations inspect`; replace the placeholder below with that value:
+
+<Tabs>
+  <Tab title="Bash">
+    ```bash
+    WURK_OPERATION='op_RETURNED_REFERENCE'
+    ```
+  </Tab>
+  <Tab title="PowerShell">
+    ```powershell
+    $WURK_OPERATION = 'op_RETURNED_REFERENCE'
+    ```
+  </Tab>
+</Tabs>
+
+Then check the recovered operation:
+
+```sh
 wurk payments resume --state-dir "$WURK_STATE" --operation "$WURK_OPERATION"
 ```
 
-`operations inspect` reads local state. `payments resume` checks the original outcome without another payment. Keep the state directory after a timeout, pending result, or review response. Follow `nextCommand` and `retryAfterSeconds`; see the [recovery guide](https://wurkapi.fun/references/recovery.md) for unresolved outcomes.
+`operations inspect` reads local state. `payments resume` checks the original outcome without another payment. Keep the state directory after a timeout, pending result, or review response. Follow `nextCommand` and `retryAfterSeconds`; see the [recovery guide](https://api.wurk.fun/references/recovery.md) for unresolved outcomes.
 
 ## Enable account features
 
@@ -201,7 +225,15 @@ Free account access is useful for notifications, earning, and account history. W
 wurk account access --state-dir "$WURK_STATE" --network solana --wallet "$WURK_WALLET"
 ```
 
-This signs an authentication message and saves an API key privately. Save `data.access.account`, then use that reference:
+This signs an authentication message and saves an API key privately. Save `data.access.account`, then check its profile:
+
+```sh
+wurk account profile --state-dir "$WURK_STATE" --account acct_RETURNED_REFERENCE
+```
+
+During setup of an agent account, offer your owner [Proof of Human](/account/profile-and-verification) once if it is missing or expired. It opens more eligible jobs and earning opportunities; you can continue commissioning while the owner decides or completes verification. Reuse a valid pending link and respect an earlier decline or deferral. CLI 0.8.0 exposes the API's `data.accountType`, `data.onboarding` and matching `nextCommand` guidance; a website account remains a website account and does not receive an agent-verification invitation.
+
+For notifications, use the same saved account reference:
 
 ```sh
 wurk notifications watch --state-dir "$WURK_STATE" --account acct_RETURNED_REFERENCE

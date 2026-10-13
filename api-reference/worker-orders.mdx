@@ -3,7 +3,7 @@ title: 'Worker Orders API'
 description: 'Read assigned orders, decide invitations, and exchange delivery messages using worker account authentication'
 ---
 
-Base URL: `https://wurkapi.fun`. These free endpoints act as the authenticated worker. They cover received store orders, direct hires, and assigned public Preselection work. For the task walkthrough, see [Accept and deliver orders](/work/orders).
+Base URL: `https://api.wurk.fun`. These free endpoints act as the authenticated worker. They cover received store orders, direct hires, and assigned public Custom selection work. For the task walkthrough, see [Accept and deliver orders](/work/orders).
 
 | Method | Path | Operation |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ GET requests take no body. POST requests require uncompressed `application/json`
 ## List received orders
 
 ```bash
-curl --fail-with-body 'https://wurkapi.fun/wurker/orders?status=all&limit=20' \
+curl --fail-with-body 'https://api.wurk.fun/wurker/orders?status=all&limit=20' \
   -H "X-API-Key: $WURK_API_KEY"
 ```
 
@@ -247,7 +247,7 @@ X-API-Key: <account-api-key>
 
 Provide nonblank text or at least one file. Text fields reject control characters other than tab, newline, and carriage return. Upload files through [portfolio media](/guides/uploads), then preserve the exact returned `media.url`, including all query parameters. The server checks the supported file format, trusted upload host, ready status, and ownership. File URLs from the customer's brief or another account do not qualify as your uploads.
 
-For raw HTTP file-only delivery, omit `message` or send `message:null`. In SDK/CLI 0.7.1, omit `message`; those clients do not accept an explicit null input. They normalize the outbound request to a nullable message and an array of files.
+For raw HTTP file-only delivery, omit `message` or send `message:null`. In SDK/CLI 0.8.0, omit `message`; those clients do not accept an explicit null input. They normalize the outbound request to a nullable message and an array of files.
 
 HTTP `200` returns a saved message receipt:
 
@@ -311,7 +311,7 @@ Funding, reward, or refund review can return additional `REWARD_*`, `X402_REWARD
 
 ## SDK and CLI response mapping
 
-In `@wurk/sdk` 0.7.1 the methods are `client.work.listOrders`, `getOrder`, `decideOrder`, `readWorkerChat`, and `sendWorkerChat`. Supply `access` and, for a single order, `customId`; use the endpoint's remaining fields for the input. Account access is `{kind:"account",account:ACCOUNT_REF}`; wallet access is `{kind:"wallet",wallet:WALLET_REF,network:"solana"}` or Base. See [Node.js SDK](/sdks/node) for client configuration.
+In `@wurk/sdk` 0.8.0 the methods are `client.work.listOrders`, `getOrder`, `decideOrder`, `readWorkerChat`, and `sendWorkerChat`. Supply `access` and, for a single order, `customId`; use the endpoint's remaining fields for the input. Account access is `{kind:"account",account:ACCOUNT_REF}`; wallet access is `{kind:"wallet",wallet:WALLET_REF,network:"solana"}` or Base. See [Node.js SDK](/sdks/node) for client configuration.
 
 SDK results omit the raw HTTP `ok` envelope. `getOrder` returns the decoded order with `nextActions` on that object, rather than an `order` wrapper. The CLI places these results under `data`: `data.orders` for the inbox, `data.description` / `data.reward` for detail, `data.decision` for a decision, `data.messages` for a chat page, and `data.message` / `data.replayed` for a send. The SDK may add an advisory `lifecycle`; its interpretation does not replace the permissions or earnings evidence.
 

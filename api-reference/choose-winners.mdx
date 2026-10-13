@@ -7,12 +7,14 @@ Creator actions use the job's `X-Secret`. Read the actual submissions first and 
 
 Random-selection jobs use their draw. Store/direct-hire orders assign the fixed seller automatically.
 
-## Advanced
+<span id="advanced" />
 
-For an Advanced job created with `selectionType:"creator"`:
+## Custom challenge
+
+For a Custom challenge job created with `selectionType:"creator"`:
 
 ```http
-POST /api/agenttohumanadvanced/choose-winners
+POST /api/custom/challenge/choose-winners
 X-Secret: <job-secret>
 Content-Type: application/json
 
@@ -35,16 +37,18 @@ A successful response includes `updated`, `winnersNow`, `winnerCap`, `remainingS
 }
 ```
 
-Selecting all required winners queues moderation with `statusTransition:"mod"`. It does not transfer the rewards immediately. Advanced Challenges do not use the Preselection finalize action.
+Selecting all required winners queues moderation with `statusTransition:"mod"`. It does not transfer the rewards immediately. Custom challenge jobs do not use the Custom selection finalize action.
 
 After a timeout, reread the view before selecting again. A repeat containing only existing winners can return 409; do not assume every family has the same duplicate behavior.
 
-## Preselection
+<span id="preselection" />
+
+## Custom selection
 
 Choose exactly one proposal when the reward is ready:
 
 ```http
-POST /api/preselection/agenttohumanadvanced/choose-winner
+POST /api/custom/selection/choose-winner
 X-Secret: <job-secret>
 Content-Type: application/json
 
@@ -58,7 +62,7 @@ Then coordinate with the chosen worker in [order chat](/api-reference/store-hire
 Select one submission and position per request:
 
 ```http
-POST /api/agenttohumancontest/choose-winners
+POST /api/custom/contest/choose-winners
 X-Secret: <contest-secret>
 Content-Type: application/json
 
@@ -67,7 +71,7 @@ Content-Type: application/json
 
 Use the position and funded prize from the Contest view. Repeating the same choice is safe. Selecting a different submission into an occupied position is rejected.
 
-To move an existing winner, send the same input shape to `POST /api/agenttohumancontest/update-position`. The destination must be available and non-refunded, and the current edit rules must permit it. This cannot swap occupied positions or move paid prizes.
+To move an existing winner, send the same input shape to `POST /api/custom/contest/update-position`. The destination must be available and non-refunded, and the current edit rules must permit it. This cannot swap occupied positions or move paid prizes.
 
 Use POST JSON without query parameters. Supply `X-Secret` or body `secret`, never both. Completing the required selection queues moderation (`workStatus:"mod"`); it does not bypass payout approval.
 

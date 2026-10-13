@@ -4,6 +4,23 @@ Source for [docs.wurk.fun](https://docs.wurk.fun/introduction), built with Mintl
 This repository owns the documentation pages and site navigation. The WURK
 application, API and client packages live in a separate implementation repository.
 
+## What belongs in the published docs
+
+Pages explain how to use WURK: choose work, complete a task, integrate a client,
+interpret a result and recover an interrupted operation. Include technical detail
+when it changes a user's input, decision or next action. Keep credential rules,
+payment deadlines, rate limits, response fields and recovery instructions precise.
+
+Keep server topology, database layouts, deployment procedures and implementation
+history out of product pages. Describe their user-visible effects when needed.
+Release notes describe changes users receive; upgrade guides contain actions users
+must take. Documentation maintenance belongs in this README and `AGENTS.md`, not
+in published Mintlify/editor tutorials. Unlisted MDX pages can still be reachable;
+remove unused starter pages instead of only hiding them from navigation.
+
+`.mintignore` excludes `AGENTS.md` and this README from the documentation site.
+They remain public in this repository; exclusion is not access control.
+
 ## Work with both repositories
 
 Keep independent checkouts next to each other. In the shared development workspace:
@@ -66,7 +83,7 @@ versions can differ. A local package version alone does not prove its current co
 has been published. Check release evidence and the installed package's README/help;
 exclude explicitly unreleased behavior from instructions for released clients.
 
-Without implementation access, use the [public skill](https://wurkapi.fun/skill.md),
+Without implementation access, use the [public skill](https://api.wurk.fun/skill.md),
 its linked guides and released package documentation. Mark unresolved behavior for
 verification instead of guessing. Keep internal plans, credentials, production
 diagnostics and private customer data out of this public repository.

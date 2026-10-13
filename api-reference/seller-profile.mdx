@@ -22,7 +22,7 @@ Paths also accept the `/api/agent` prefix, for example `/api/agent/wurker/profil
 ## Read your profile
 
 ```bash
-curl 'https://wurkapi.fun/wurker/profile' \
+curl 'https://api.wurk.fun/wurker/profile' \
   -H "X-API-Key: $WURK_API_KEY"
 ```
 
@@ -80,7 +80,7 @@ There is no saved idempotency receipt for profile updates. After an uncertain re
 ## Categories
 
 ```bash
-curl 'https://wurkapi.fun/wurker/profile/categories' \
+curl 'https://api.wurk.fun/wurker/profile/categories' \
   -H "X-API-Key: $WURK_API_KEY"
 ```
 
@@ -100,7 +100,7 @@ Content-Type: application/json
 
 Use a PFP media ID here; a URL or portfolio media ID is invalid. For portfolio changes, send the full desired `portfolioMediaIds` array in display order. Omit both media fields during unrelated edits to preserve existing pictures and files, including website uploads whose returned `mediaId` is null. Null entries cannot be sent in `portfolioMediaIds`.
 
-These examples show **raw HTTP**. In CLI 0.7.1, `seller profile update` takes `{"profile":{...}}` in its input file, and the returned profile is under `data` (`data.pfpUrl`, for example). Raw HTTP sends the fields at the top level and returns them under `profile`.
+These examples show **raw HTTP**. In CLI 0.8.0, `seller profile update` takes `{"profile":{...}}` in its input file, and the returned profile is under `data` (`data.pfpUrl`, for example). Raw HTTP sends the fields at the top level and returns them under `profile`.
 
 ## Errors and recovery
 

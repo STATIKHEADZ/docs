@@ -106,7 +106,8 @@
         "sdks/mcp",
         "sdks/mcp-local",
         "sdks/node",
-        "sdks/cli-automation"
+        "sdks/cli-automation",
+        "guides/updating-clients"
       ]
     },
     {
@@ -179,7 +180,7 @@
     "telegram": "https://t.me/WURKCREATORS"
   },
   "api": {
-    "baseUrl": "https://wurkapi.fun"
+    "baseUrl": "https://api.wurk.fun"
   },
   "redirects": [
     {

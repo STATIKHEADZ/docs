@@ -1,0 +1,73 @@
+---
+title: 'Update Clients and API Domain'
+description: 'Update to SDK and CLI 0.8.0, start new work on api.wurk.fun, and preserve existing profiles and pending operations.'
+---
+
+The standard API origin is **`https://api.wurk.fun`**. Published **SDK and CLI 0.8.0** use it by default for new SDK clients, payment journals and empty CLI state directories. During the transition, `https://wurkapi.fun` remains available for ordinary API operations. Hosted MCP uses only the new origin.
+
+Updating the client does not migrate saved payments, replace credentials or complete pending work. Keep the original state directory for existing operations.
+
+## Update an existing installation
+
+1. Stop CLI, SDK and local MCP processes that share the private state directory.
+2. Back up the complete state directory, including hidden files. It contains your wallets, credentials and recovery records; keep the backup private.
+3. In the project where the CLI is installed, update the package:
+
+   ```bash
+   npm install --save-exact --ignore-scripts @wurk/cli@0.8.0
+   ```
+
+   The CLI installs SDK 0.8.0 as its exact dependency. If your application also imports the SDK directly, pin both:
+
+   ```bash
+   npm install --save-exact --ignore-scripts @wurk/sdk@0.8.0 @wurk/cli@0.8.0
+   ```
+
+   SDK-only applications can install `@wurk/sdk@0.8.0` alone. On Windows PowerShell, use `npm.cmd`.
+
+4. Verify the executable from that installation with `wurk --version` (`wurk.cmd --version` on Windows), using the executable path configured in the [quickstart](/quickstart). It should report `0.8.0`.
+5. Restart all processes sharing that state with the matching client version and their original configuration.
+
+Supported Node versions are 22.22.0+ within 22.x, 24.12.0+ within 24.x, or 26.0.0+ within 26.x. See [CLI setup](/quickstart) and [SDK installation](/sdks/node). Do not assume an older client understands state written by a newer client.
+
+## Keep existing work on its original origin
+
+An existing CLI profile remains bound to the origin in its `config.json`. Running `config init` without `--origin` preserves that value; upgrading the package does not switch an old profile to the new domain.
+
+Keep using the original profile for unfinished jobs, payments, media uploads and notification processing. Retain saved request IDs, quotes, checkout tokens, signed payloads, spending grants, journal URLs and cursors. Changing their host is not a recovery procedure.
+
+For an SDK integration whose stores belong to `https://wurkapi.fun`, explicitly pass **`origin: 'https://wurkapi.fun'` to both `createWurkClient` and `createPaymentJournal`** when updating. Otherwise an omitted origin selects the new default. Keep existing spending grants and local MCP policies bound to that same original origin.
+
+| Configuration result | Next step |
+| --- | --- |
+| `CONFIG_CONFLICT` | The requested origin differs from the saved profile. Keep that profile for its existing work and use a separate directory for the new origin. |
+| `CONFIG_ORIGIN_REQUIRED` | A populated directory has lost its `config.json`. Restore its original configuration, or run `config init` with `--origin` set to the verified original API origin. Do not guess the new default. |
+| A pending or uncertain operation | Recover its original status using the original profile and references. Changing domains does not establish whether a payment completed. |
+
+## Start new activity on api.wurk.fun
+
+Use a new, separate private state directory and follow the [quickstart](/quickstart). Its initialization explicitly selects the current origin:
+
+```bash
+wurk config init --state-dir /absolute/path/to/new-private-state --origin https://api.wurk.fun
+```
+
+Choose an unused directory, import the intended wallet through the normal wallet setup and obtain account access if the task needs it. The wallet can refer to the same WURK account, but the new local profile does not contain the old profile's journals, grants, upload reservations or processed notification history. Keep the old directory for recovery.
+
+For new SDK integrations, use `https://api.wurk.fun` consistently for the client, payment journal and spending grants. The SDK exports `DEFAULT_API_ORIGIN`. For [local MCP](/sdks/mcp-local), the policy origin must match the CLI profile and every grant in that policy; update new-setup templates together.
+
+## Reconnect hosted MCP
+
+Connect your MCP application to **`https://api.wurk.fun/mcp`** and complete its OAuth connection flow. The old hosted endpoint returns `421 MCP_CANONICAL_ORIGIN_REQUIRED`; ordinary API compatibility does not make it a second hosted MCP endpoint.
+
+Existing OAuth connections and private browser handoffs do not transfer automatically. Preserve unresolved operation references and follow the [MCP recovery guidance](/sdks/mcp#recover-an-interrupted-operation) or [support](/project/support) before repeating an uncertain action. A new connection does not authorize a replacement payment.
+
+Local MCP uses stdio and its saved profile rather than hosted OAuth. An existing old-origin local profile can continue using ordinary API compatibility while that origin remains available.
+
+## Follow exact request and route identities
+
+New Custom job examples use `/{network}/custom/challenge`, `/{network}/custom/selection` and `/{network}/custom/contest`. Their older HTTP paths remain supported aliases. Existing SDK methods, CLI commands and MCP tool names retain their `advanced`, `preselection` and `contest` names; see [job types](/concepts/job-types).
+
+Use returned status and action references for an existing operation. Do not rewrite saved paths or signed requests to their new aliases. SIWX proofs are bound to their exact origin and resource; request a fresh challenge for the actual permitted request rather than reusing a proof from another domain or path.
+
+Read the [release notes](/project/changelog) for changes to account setup and upload recovery.

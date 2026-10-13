@@ -3,9 +3,9 @@ title: 'Earnings'
 description: 'Read account earnings totals and paginated job, referral, tip and vault reports'
 ---
 
-`POST https://wurkapi.fun/earnings` reads the authenticated account's recorded income. It is free and does not move funds. Use `GET /profile` for current [platform balances](/finance/balances-and-earnings).
+`POST https://api.wurk.fun/earnings` reads the authenticated account's recorded income. It is free and does not move funds. Use `GET /profile` for current [platform balances](/finance/balances-and-earnings).
 
-The HTTP overview includes **jobs, referrals, tips and completed vault distributions**. Published **`@wurk/sdk` and `@wurk/cli` 0.7.1** return an overview limited to jobs, tips and vault, recomputing the totals without referrals. Their history arrays use `items`, and job/vault entries use `reward`; this reference describes HTTP `rows` and `rewardEarning`. See the [client examples](/finance/balances-and-earnings#read-an-earnings-report).
+The HTTP overview includes **jobs, referrals, tips and completed vault distributions**. Published **`@wurk/sdk` and `@wurk/cli` 0.8.0** return an overview limited to jobs, tips and vault, recomputing the totals without referrals. Their history arrays use `items`, and job/vault entries use `reward`; this reference describes HTTP `rows` and `rewardEarning`. See the [client examples](/finance/balances-and-earnings#read-an-earnings-report).
 
 ## Authentication and request format
 
@@ -13,7 +13,7 @@ Send exactly one credential: `X-API-Key` or a fresh `SIGN-IN-WITH-X` proof from 
 
 ```http
 POST /earnings
-Host: wurkapi.fun
+Host: api.wurk.fun
 X-API-Key: <private-account-key>
 Content-Type: application/json
 
@@ -73,7 +73,7 @@ The example is one category, not a complete response. Each amount is an exact st
 
 HTTP `totalByAsset` sums all four categories by asset. Vault distributions are already included in this total and also shown under `vault`; adding them again double counts income. A category with unavailable evidence has `earningsStatus: "unavailable"`, `byAsset: null` and `count: null`. If any category is unavailable, the corresponding combined total is `null` and its `earningsStatus` is `unavailable`. Available category subtotals remain usable.
 
-The 0.7.1 SDK/CLI also recompute availability from their three included categories. An unavailable referral category does not make their combined total unavailable.
+The 0.8.0 SDK/CLI also recompute availability from their three included categories. An unavailable referral category does not make their combined total unavailable.
 
 `accounting` reports:
 

@@ -9,7 +9,7 @@ Start with a nickname shared by the worker, shown in a public profile URL, or re
 
 ## Read the profile
 
-These examples use **CLI 0.7.1**. Complete [CLI setup](/quickstart) and [free account access](/authentication#free-account-access), retaining your private `WURK_STATE` directory and the returned account reference as `WURK_ACCOUNT`. Replace `ExampleDesigner` with the actual nickname.
+These examples use **CLI 0.8.0**. Complete [CLI setup](/quickstart) and [free account access](/authentication#free-account-access), retaining your private `WURK_STATE` directory and the returned account reference as `WURK_ACCOUNT`. Replace `ExampleDesigner` with the actual nickname.
 
 ```sh
 wurk users get --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --nickname ExampleDesigner
@@ -22,7 +22,7 @@ Inspect `data.user`. Nicknames are case-insensitive and contain 3–32 ASCII let
 For direct HTTP, use your private account key:
 
 ```bash
-curl --fail-with-body 'https://wurkapi.fun/user/ExampleDesigner' \
+curl --fail-with-body 'https://api.wurk.fun/user/ExampleDesigner' \
   -H "X-API-Key: $WURK_API_KEY"
 ```
 
@@ -72,7 +72,7 @@ Every continuation checks whether the profile is still public and available. Col
 
 ## Use the SDK
 
-With **SDK 0.7.1**, reuse your [configured client and account access](/sdks/node#free-account-operations):
+With **SDK 0.8.0**, reuse your [configured client and account access](/sdks/node#free-account-operations):
 
 ```typescript
 import type { AuthenticatedAccess, WurkClient } from '@wurk/sdk';

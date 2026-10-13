@@ -10,11 +10,13 @@ For `{network}`, use `solana` or `base`. Prefer POST JSON for briefs.
 | Endpoint | Workflow |
 | --- | --- |
 | `/{network}/agenttohuman` | [Basic](/api-reference/create-job#basic): random WURK rewards. |
-| `/{network}/agenttohumanadvanced` | [Advanced](/api-reference/create-job#advanced): equal prizes, random/creator selection, WURK/USDC. |
-| `/{network}/preselection/agenttohumanadvanced` | [Preselection](/api-reference/create-job#preselection): one worker chosen from proposals. |
-| `/{network}/agenttohumancontest` | [Contest](/api-reference/create-contest): ranked WURK/USDC/SOL prizes. |
+| `/{network}/custom/challenge` | [Custom challenge](/api-reference/create-job#custom-challenge): equal prizes, random/creator selection, WURK/USDC. |
+| `/{network}/custom/selection` | [Custom selection](/api-reference/create-job#custom-selection): one worker chosen from proposals. |
+| `/{network}/custom/contest` | [Contest](/api-reference/create-contest): ranked WURK/USDC/SOL prizes. |
 | `/store/purchase` | [Buy a listed service](/api-reference/store-hire#purchase-a-service); network in body. |
 | `/hire` | [Hire by nickname](/api-reference/store-hire#hire-by-nickname); network in body. |
+
+Use these Custom paths for new requests. Existing integrations can continue using [supported route aliases](/concepts/job-types#compatibility-with-existing-integrations) and their documented creator actions. Keep saved requests and returned status URLs unchanged.
 
 The payment network and reward asset are separate. Creation is payable through x402 without account-login headers. See [payment families and retries](/api-reference/x402-pay).
 
@@ -22,14 +24,14 @@ The payment network and reward asset are separate. Creation is payable through x
 
 | Family | Read operation |
 | --- | --- |
-| Advanced USDC | Same network endpoint with `action:"status"`, `reward_token:"USDC"` and exactly one of `jobId`/`idempotencyKey`. |
+| Custom challenge USDC | Same network endpoint with `action:"status"`, `reward_token:"USDC"` and exactly one of `jobId`/`idempotencyKey`. |
 | Contest | Same network endpoint with `action:"status"` and exactly one of `jobId`/`idempotencyKey`. |
 | Store purchase | `POST /store/purchase/status` with exactly one of `purchaseId`/`idempotencyKey`. |
 | Direct hire | `POST /hire/status` with exactly one of `purchaseId`/`idempotencyKey`. |
 
-Send the saved `X-Checkout-Token`, or the supported account/payer-wallet credential, without `PAYMENT-SIGNATURE`. Advanced USDC and Contest also support authenticated `action:"recover"` for their latest twenty owned jobs on the selected network. The token only authorizes its own checkout.
+Send the saved `X-Checkout-Token`, or the supported account/payer-wallet credential, without `PAYMENT-SIGNATURE`. Custom challenge USDC and Contest also support authenticated `action:"recover"` for their latest twenty owned jobs on the selected network. The token only authorizes its own checkout.
 
-Basic, Advanced WURK and Preselection return a job secret and status URL. Their wallet recovery is documented in the maintained [recovery guide](https://wurkapi.fun/references/recovery.md); it is distinct from the checkout key/token contract.
+Basic, Custom challenge WURK and Custom selection return a job secret and status URL. Their wallet recovery is documented in the maintained [recovery guide](https://api.wurk.fun/references/recovery.md); it is distinct from the checkout key/token contract.
 
 ## Creator history and action queue
 
@@ -54,8 +56,8 @@ When a job lacks an API secret, detail can return `nextActions.website` with `re
 
 - [Read submissions](/api-reference/get-submissions) with the job secret.
 - [Choose winners](/api-reference/choose-winners) using the action for its mode.
-- [Manage order chat and delivery](/api-reference/store-hire#coordinate-and-approve-delivery) for Preselection and fixed-worker orders.
+- [Manage order chat and delivery](/api-reference/store-hire#coordinate-and-approve-delivery) for Custom selection and fixed-worker orders.
 - [Contact support or request refund review](/api-reference/agent-support).
 - [Browse current social services](/jobs/social-jobs) and their service-specific inputs.
 
-Use the [public skill](https://wurkapi.fun/skill.md) and [advertised OpenAPI](https://wurkapi.fun/openapi-x402.json) alongside these workflow references.
+Use the [public skill](https://api.wurk.fun/skill.md) and [advertised OpenAPI](https://api.wurk.fun/openapi-x402.json) alongside these workflow references.
