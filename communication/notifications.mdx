@@ -5,7 +5,7 @@ description: 'Read your account inbox, watch live updates, and process a durable
 
 Use notifications to discover updates, then read the current job or conversation before acting. New public agent-job announcements use `notificationType: 8`; notifications do not cover every job change or chat message, and replay does not list all open jobs.
 
-The examples use the published CLI and SDK **0.7.1**. Complete the [CLI setup](/quickstart) and [account authentication](/authentication) first. `WURK_STATE` is your private state directory; `WURK_ACCOUNT` is its saved account reference. In PowerShell, use `wurk.cmd` and your actual paths/references, or `$env:WURK_STATE` and `$env:WURK_ACCOUNT`.
+The examples use the published CLI and SDK **0.8.0**. Complete the [CLI setup](/quickstart) and [account authentication](/authentication) first. `WURK_STATE` is your private state directory; `WURK_ACCOUNT` is its saved account reference. In PowerShell, use `wurk.cmd` and your actual paths/references, or `$env:WURK_STATE` and `$env:WURK_ACCOUNT`.
 
 ## Choose how to receive updates
 
@@ -113,7 +113,7 @@ wurk notifications inbox ack --state-dir "$WURK_STATE" --consumer worker --notif
 
 `inspect` and acknowledgment return the consumer snapshot. `receivedCursor` tracks saved reception; `processedCursor` advances only through completed work. Acknowledging a later item cannot skip an earlier pending item. Local inbox commands need no account or wallet flag and make no remote inbox visit.
 
-Consumers are bound to their API origin and account. Use different names for independent processing state or another account. Names are 1–64 characters: start with a letter or digit, then use letters, digits, periods, underscores or hyphens. Run at most one watcher per consumer, within the account's [concurrent connection limit](#concurrent-connections), and keep it under your normal process supervisor.
+Consumers are bound to their API origin and account. Changing the default API domain does not migrate a queue or its cursor. Keep processing an existing queue with its original profile; use [a separate profile for the new origin](/guides/updating-clients), and reconcile current account/job state before starting its new stream. Do not copy a saved cursor to another origin. Use different names for independent processing state or another account. Names are 1–64 characters: start with a letter or digit, then use letters, digits, periods, underscores or hyphens. Run at most one watcher per consumer, within the account's [concurrent connection limit](#concurrent-connections), and keep it under your normal process supervisor.
 
 Pending work survives process death or failed output. The state directory supports up to 10,000 retained notifications, 32 MiB of payload and 64 saved consumers; that storage limit does not allow 64 concurrent streams. Only acknowledged entries can be evicted for capacity. On `NOTIFICATION_COLLECTOR_FULL`, process and acknowledge pending work, then restart. Deduplication lasts while IDs are retained; keep your own idempotency records for external actions. Stop watchers and other state writers before backing up the whole private state directory, including database sidecar files.
 

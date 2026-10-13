@@ -3,7 +3,7 @@ title: 'Public User Profiles'
 description: 'Read a known public Wurker profile and continue its products, reviews and portfolio.'
 ---
 
-Base URL: `https://wurkapi.fun`. These free reads require an existing account. For a practical workflow, see [check a user before hiring](/guides/checking-a-user).
+Base URL: `https://api.wurk.fun`. These free reads require an existing account. For a practical workflow, see [check a user before hiring](/guides/checking-a-user).
 
 | Method | Path | Query | Result |
 | --- | --- | --- | --- |
@@ -22,7 +22,7 @@ Send one supported credential: `X-API-Key` or a fresh `SIGN-IN-WITH-X` proof fro
 
 ```http
 GET /user/ExampleDesigner
-Host: wurkapi.fun
+Host: api.wurk.fun
 X-API-Key: <private-account-key>
 ```
 
@@ -110,7 +110,7 @@ Pass the exact returned cursor, or follow `nextUrl` with authentication to the A
 
 ```bash
 # After the shared cooldown, use the exact store cursor from the last page.
-curl --fail-with-body --get 'https://wurkapi.fun/user/ExampleDesigner/store' \
+curl --fail-with-body --get 'https://api.wurk.fun/user/ExampleDesigner/store' \
   -H "X-API-Key: $WURK_API_KEY" \
   --data-urlencode "cursor=$WURK_STORE_CURSOR"
 ```
@@ -135,7 +135,7 @@ Each review contains only `stars` (0–5 or null), `text` (up to 2,000 character
 
 `items` contains public HTTP(S) URL strings. The API returns links without fetching their files. Omitted unusable links can make a page shorter than its limit. Use the continuation fields to decide whether another page is available, and keep account credentials out of requests to portfolio hosts.
 
-## SDK and CLI 0.7.1
+## SDK and CLI 0.8.0
 
 Use your [configured SDK client](/sdks/node) and an `access` value of `{kind:"account", account: ACCOUNT_REF}` or `{kind:"wallet", network:"solana"|"base", wallet: WALLET_REF}`.
 

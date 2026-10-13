@@ -74,7 +74,8 @@
               "sdks/mcp",
               "sdks/mcp-local",
               "sdks/node",
-              "sdks/cli-automation"
+              "sdks/cli-automation",
+              "guides/updating-clients"
             ]
           },
           {
@@ -156,7 +157,7 @@
   },
   "api": {
     "mdx": {
-      "server": "https://wurkapi.fun"
+      "server": "https://api.wurk.fun"
     }
   },
   "appearance": {

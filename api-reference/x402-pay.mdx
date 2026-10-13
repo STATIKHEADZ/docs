@@ -13,6 +13,8 @@ Before signing, verify the intended task and spending limit against the exact `r
 
 Privately save the original request, full challenge and signed payment **before submitting**. Save the response and any `PAYMENT-RESPONSE` receipt afterward. A payment response can precede work activation.
 
+Keep that request's original API origin and path during a domain or route transition. Do not replace the host or Custom/legacy path inside a saved quote or signed payment. Use the [client update guide](/guides/updating-clients) to start new-domain activity separately from unfinished operations.
+
 ## Checkout families
 
 This contract applies to Advanced with `reward_token:"USDC"`, all Contests, store purchases and direct hires.
@@ -27,7 +29,7 @@ This contract applies to Advanced with `reward_token:"USDC"`, all Contests, stor
 The verified payment reuses or creates the payer's WURK account. It does not issue an API key or browser session. The checkout token authorizes only that checkout; it cannot read account history or send account support messages.
 
 <Note>
-  A Base signer must preserve `extra.wurkGuestNonce`. The stock `@x402/evm` 2.28.0 signer generates its own nonce and needs an adapter for these checkouts. Follow the maintained [payment-client example](https://wurkapi.fun/references/payments.md#checkout-without-registration).
+  A Base signer must preserve `extra.wurkGuestNonce`. The stock `@x402/evm` 2.28.0 signer generates its own nonce and needs an adapter for these checkouts. Follow the maintained [payment-client example](https://api.wurk.fun/references/payments.md#checkout-without-registration).
 </Note>
 
 ## Payment-and-secret families
@@ -36,7 +38,7 @@ Basic, Advanced WURK and Preselection WURK/USDC accept a complete request withou
 
 For social quick routes, the actual challenge commonly identifies a canonical `GET /api/x402/jobs/{jobId}/pay` resource, or `/api/x402/base/jobs/{jobId}/pay`. Pay that returned resource, or retry the same public URL with unchanged input. Some utility routes use a different payment resource. Do not apply one retry-URL rule to every family.
 
-Social SDK/CLI 0.7.1 `payments resume` reads only the local journal; it does not query remote payment or fulfillment status or recover missing job/raid IDs. For an unresolved social payment, preserve the original references and follow [social recovery](/jobs/social-jobs#recover-a-social-payment) before taking further action. Do not create a replacement payment.
+Social SDK/CLI 0.8.0 `payments resume` reads only the local journal; it does not query remote payment or fulfillment status or recover missing job/raid IDs. For an unresolved social payment, preserve the original references and follow [social recovery](/jobs/social-jobs#recover-a-social-payment) before taking further action. Do not create a replacement payment.
 
 A `PENDING_JOB_NOT_FOUND` response is not evidence that a previous payment failed. If payment was submitted, reconcile the saved job/payment before requesting a replacement. If nothing was signed or submitted, obtain a fresh challenge for the intended operation.
 
@@ -56,4 +58,4 @@ After a timeout, 202 or uncertain error, read status before any payment retry. R
 
 Advanced USDC and Contest share an idempotency namespace; store and hire share another. Changing family, network or intent under an existing key conflicts. Keep a separate key and token for each new purchase.
 
-If a token or response is lost, use the supported account authentication or fresh payer-wallet SIWX on that operation's status/recovery route. A public transaction or idempotency key alone cannot reveal a secret. See the maintained [recovery guide](https://wurkapi.fun/references/recovery.md).
+If a token or response is lost, use the supported account authentication or fresh payer-wallet SIWX on that operation's status/recovery route. A public transaction or idempotency key alone cannot reveal a secret. See the maintained [recovery guide](https://api.wurk.fun/references/recovery.md).

@@ -8,9 +8,9 @@ Choose the job type by how you want to select and pay workers. All creation rout
 | Type | Best for | Selection and rewards | Guide |
 | --- | --- | --- | --- |
 | Basic | Short questions and straightforward feedback | Random winners; equal WURK rewards | [Human feedback](/jobs/agent-help) |
-| Advanced | Completed entries judged against a brief, or a configurable random draw | Creator or random selection; equal WURK or USDC rewards | [Custom jobs](/jobs/custom-jobs) |
-| Preselection | Reviewing proposals before commissioning one worker | Choose one applicant, coordinate delivery, then approve; WURK or USDC | [Preselection](/jobs/custom-jobs#preselection-choose-a-worker-first) |
-| Contest | Ranking several completed entries | Creator assigns prize positions; WURK, USDC or SOL | [Contests](/jobs/contests) |
+| Custom challenge (Advanced) | Completed entries judged against a brief, or a configurable random draw | Creator or random selection; equal WURK or USDC rewards | [Custom jobs](/jobs/custom-jobs) |
+| Custom selection (Preselection) | Reviewing proposals before commissioning one worker | Choose one applicant, coordinate delivery, then approve; WURK or USDC | [Preselection](/jobs/custom-jobs#preselection-choose-a-worker-first) |
+| Custom contest | Ranking several completed entries | Creator assigns prize positions; WURK, USDC or SOL | [Contests](/jobs/contests) |
 | Store purchase | Buying an existing service on its listed terms | Fixed seller; USDC | [Store and hire](/jobs/store-and-hire) |
 | Direct hire | Commissioning a known user by nickname | Fixed worker and custom brief; USDC | [Store and hire](/jobs/store-and-hire#or-prepare-a-direct-hire) |
 
@@ -23,13 +23,30 @@ Replace `{network}` with `solana` or `base`. Prefer POST JSON for briefs; keep q
 | Type | POST endpoint |
 | --- | --- |
 | Basic | `/{network}/agenttohuman` |
-| Advanced | `/{network}/agenttohumanadvanced` |
-| Preselection | `/{network}/preselection/agenttohumanadvanced` |
-| Contest | `/{network}/agenttohumancontest` |
+| Advanced | `/{network}/custom/challenge` |
+| Preselection | `/{network}/custom/selection` |
+| Contest | `/{network}/custom/contest` |
 | Store purchase | `/store/purchase` with `network` in the body |
 | Direct hire | `/hire` with `network` in the body |
 
 No pre-existing account or API key is required to pay. Verified payment reuses or creates the payer's WURK account. Advanced USDC, every Contest and store/hire use a private checkout token and an idempotency key; Basic, Advanced WURK and Preselection use the payment-and-secret flow. Follow the correct [creation workflow](/concepts/job-flow).
+
+### Compatibility with existing integrations
+
+The Custom paths are preferred for new HTTP integrations. Existing routes remain supported on the same handlers, without redirects:
+
+| Preferred path | Compatible legacy path |
+| --- | --- |
+| `/{network}/custom/challenge` | `/{network}/agenttohumanadvanced` |
+| `/{network}/custom/selection` | `/{network}/preselection/agenttohumanadvanced` |
+| `/{network}/custom/contest` | `/{network}/agenttohumancontest` |
+| `/api/custom/challenge/…` | `/api/agenttohumanadvanced/…` |
+| `/api/custom/selection/…` | `/api/preselection/agenttohumanadvanced/…` |
+| `/api/custom/contest/…` | `/api/agenttohumancontest/…` |
+
+The action mappings cover the documented views, winner selection, reviews and order chat/finalization. They are aliases for those operations, not wildcard routes. Basic stays at `/{network}/agenttohuman`. SDK methods, CLI commands and MCP tools retain their `advanced`, `preselection` and `contest` names; changing the HTTP route does not rename those client interfaces.
+
+Follow the URLs returned for an existing operation. Legacy requests retain legacy follow-up URLs; new Custom requests receive Custom follow-up URLs. Keep saved payment requests and signed requirements unchanged. See [updating clients and API domains](/guides/updating-clients) before changing a profile's origin.
 
 ## Job mode and selection type
 

@@ -27,7 +27,7 @@ GET requests have no body. Only the collection GET accepts query parameters. Mut
 ## List and read your products
 
 ```bash
-curl 'https://wurkapi.fun/wurker/store/products?page=1&status=all' \
+curl 'https://api.wurk.fun/wurker/store/products?page=1&status=all' \
   -H "X-API-Key: $WURK_API_KEY"
 ```
 
@@ -38,7 +38,7 @@ curl 'https://wurkapi.fun/wurker/store/products?page=1&status=all' \
 
 HTTP 200 returns `ok:true`, `products`, `page`, `status`, `total`, `totalPages`, `hasMore`, `nextPage`, `publicProfile` and `profileSetupUrl`. Products appear by latest update first. Follow a non-null `nextPage` with the same status filter. At page 1000 there is no further page, even if `hasMore` remains true. `totalPages` is at least 1, including an empty collection.
 
-Read current detail with `GET /wurker/store/products/{id}`. It returns `{"ok":true,"product":{...},"profileSetupUrl":"https://wurkapi.fun/wurker/profile"}`. A missing product or a product owned by another account returns the same 404 response.
+Read current detail with `GET /wurker/store/products/{id}`. It returns `{"ok":true,"product":{...},"profileSetupUrl":"https://api.wurk.fun/wurker/profile"}`. A missing product or a product owned by another account returns the same 404 response.
 
 List and detail reads share **one request per account every ten seconds**, across pages, aliases and supported credentials. Honor `Retry-After` before the next read.
 
@@ -115,7 +115,7 @@ Content-Type: application/json
 
 Replacement preserves the listing's active state. Product edits do not change the agreed terms of existing purchases. Avoid copying the entire GET response into PUT: response-only fields such as `id`, `active`, `visible` and timestamps are rejected.
 
-These examples show **raw HTTP** with fields at the top level. CLI 0.7.1 `seller products create` and `seller products replace` input files instead use `{"product":{...},"idempotencyKey":"..."}`. Their response is under `data`, such as `data.product.id`. See the [selling walkthrough](/guides/selling-services) for complete commands.
+These examples show **raw HTTP** with fields at the top level. CLI 0.8.0 `seller products create` and `seller products replace` input files instead use `{"product":{...},"idempotencyKey":"..."}`. Their response is under `data`, such as `data.product.id`. See the [selling walkthrough](/guides/selling-services) for complete commands.
 
 ## Activate or deactivate
 

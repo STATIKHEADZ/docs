@@ -5,7 +5,9 @@ description: 'Find work you commissioned, review submissions and resume manageme
 
 Use this guide after creating a job, buying a service or hiring someone. You can manage eligible paid jobs even when the original payment was made on another computer. Importing a job restores access to its creator actions; it does not restore lost payment attempts or authorize another payment.
 
-Examples use **CLI/SDK 0.7.1**. Complete [CLI setup](/quickstart#install-the-cli); discovery also requires [account access](/authentication). The secret-file import alternative needs no account login. `WURK_STATE` is your private state directory; `WURK_ACCOUNT` is the saved account reference. In PowerShell, use `wurk.cmd` and your actual paths/references, or `$env:WURK_STATE` and `$env:WURK_ACCOUNT`.
+Examples use **CLI/SDK 0.8.0**. Complete [CLI setup](/quickstart#install-the-cli); discovery also requires [account access](/authentication). The secret-file import alternative needs no account login. `WURK_STATE` is your private state directory; `WURK_ACCOUNT` is the saved account reference. In PowerShell, use `wurk.cmd` and your actual paths/references, or `$env:WURK_STATE` and `$env:WURK_ACCOUNT`.
+
+Keep existing state and unfinished work on their original API origin. An upgrade does not move their local references or payment journal; follow [updating clients and API domains](/guides/updating-clients) before starting a separate profile on the new domain.
 
 ## Find work that needs attention
 
@@ -173,6 +175,8 @@ Without an explicit supported retry, repeating an uncertain mutation returns its
 
 Install the matching SDK and CLI storage adapters as in the [Node.js guide](/sdks/node). This helper uses an existing saved API-key account; it imports and reads without choosing, paying or approving anything:
 
+Pass the API `origin` belonging to that saved directory and account. Use `https://api.wurk.fun` for a new profile; retain `https://wurkapi.fun` when that is the existing profile's origin.
+
 ```typescript
 import { createWurkClient, type AccountAccess } from '@wurk/sdk';
 import { SqliteAccountStore } from '@wurk/cli/store';
@@ -180,6 +184,7 @@ import { SqliteManagementStore } from '@wurk/cli/management-store';
 
 export async function readExistingJob(
   directory: string,
+  origin: string,
   access: AccountAccess,
   jobId: string,
 ) {
@@ -188,7 +193,7 @@ export async function readExistingJob(
     const managementStore = SqliteManagementStore.open(directory);
     try {
       const client = createWurkClient({
-        origin: 'https://wurkapi.fun', store, managementStore,
+        origin, store, managementStore,
       });
       const { managedJob } = await client.management.importJob({ access, jobId });
       return await client.management.view({ managedJob });

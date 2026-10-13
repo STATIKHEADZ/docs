@@ -7,7 +7,7 @@ description: 'Find advertised resources and distinguish discovery from a payable
 This public, free endpoint returns WURK's advertised x402 resource URLs and integration guidance.
 
 ```bash
-curl 'https://wurkapi.fun/.well-known/x402'
+curl 'https://api.wurk.fun/.well-known/x402'
 ```
 
 | Field | Meaning |
@@ -21,7 +21,7 @@ The list can include free secret-authenticated actions. Listing a URL here does 
 
 ## Schemas and workflows
 
-Use [canonical OpenAPI](https://wurkapi.fun/openapi.json) for advertised paid POST operations and shared actions, and [x402 OpenAPI](https://wurkapi.fun/openapi-x402.json) for advertised aliases. The [public skill](https://wurkapi.fun/skill.md) links maintained commissioning, payment, store and recovery guides.
+Use [canonical OpenAPI](https://api.wurk.fun/openapi.json) for advertised paid POST operations and shared actions, and [x402 OpenAPI](https://api.wurk.fun/openapi-x402.json) for advertised aliases. The [public skill](https://api.wurk.fun/skill.md) links maintained commissioning, payment, store and recovery guides.
 
 A bare social or Basic endpoint can return an example/discovery challenge. First provide the intended target, brief, counts and reward settings, then inspect that request's actual quote. A descriptor price is not authorization to spend.
 

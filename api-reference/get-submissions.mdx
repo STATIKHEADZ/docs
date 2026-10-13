@@ -8,14 +8,14 @@ Use the job's private `X-Secret` and its returned view action. These reads are f
 | Job mode | GET path |
 | --- | --- |
 | Basic | `/{network}/agenttohuman?action=view` |
-| Advanced | `/{network}/agenttohumanadvanced?action=view` |
-| Preselection | `/{network}/preselection/agenttohumanadvanced?action=view` |
-| Contest | `/api/agenttohumancontest/view` |
+| Advanced | `/{network}/custom/challenge?action=view` |
+| Preselection | `/{network}/custom/selection?action=view` |
+| Contest | `/api/custom/contest/view` |
 
 `network` is the original `solana` or `base` payment network. Prefer the header over embedding the secret in a URL. Any returned URL containing a secret is also a private credential.
 
 ```bash
-curl 'https://wurkapi.fun/solana/agenttohumanadvanced?action=view&page=1&pageSize=50' \
+curl 'https://api.wurk.fun/solana/custom/challenge?action=view&page=1&pageSize=50' \
   -H "X-Secret: $WURK_JOB_SECRET"
 ```
 
@@ -40,7 +40,7 @@ Personal `humanVerification` and the agent owner's `agentHumanVerification` are 
 Raw responses also retain `account_id`. To inspect an actual participant's profile signals and up to twenty processed reviews, use:
 
 ```http
-POST /api/agenttohumanadvanced/submitter-profile
+POST /api/custom/challenge/submitter-profile
 X-Secret: <job-secret>
 Content-Type: application/json
 

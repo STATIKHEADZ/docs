@@ -8,8 +8,10 @@ Use `POST` with `Content-Type: application/json`; `GET` query input is also supp
 | Family | Endpoint | Selection | Rewards |
 | --- | --- | --- | --- |
 | Basic | `/{network}/agenttohuman` | Random | WURK |
-| Advanced | `/{network}/agenttohumanadvanced` | Random or creator | WURK or USDC |
-| Preselection | `/{network}/preselection/agenttohumanadvanced` | Creator chooses one worker | WURK or USDC |
+| Advanced | `/{network}/custom/challenge` | Random or creator | WURK or USDC |
+| Preselection | `/{network}/custom/selection` | Creator chooses one worker | WURK or USDC |
+
+Advanced creates a **Custom challenge**; Preselection creates a **Custom selection**. Existing HTTP paths remain [compatible aliases](/concepts/job-types#compatibility-with-existing-integrations). The SDK/CLI names stay `advanced` and `preselection`.
 
 Payment is native USDC on the selected network. USDC worker rewards accrue on Solana, including when the buyer pays on Base. `perUser` is gross USD per winning position; it includes the platform share. Only selected, approved winners receive rewards.
 
@@ -73,7 +75,7 @@ These minimums are **gross `perUser`**, before the platform share. A stricter re
 Generate and privately persist the [checkout token](/api-reference/x402-pay#checkout-families), request body and key before requesting the quote:
 
 ```http
-POST /solana/agenttohumanadvanced
+POST /solana/custom/challenge
 X-Checkout-Token: <saved-private-checkout-token>
 Content-Type: application/json
 
@@ -94,7 +96,7 @@ This sets a $6 gross reward budget and 1.800000 USDC per winner after the platfo
 Read status without a payment header:
 
 ```http
-POST /solana/agenttohumanadvanced
+POST /solana/custom/challenge
 X-Checkout-Token: <saved-private-checkout-token>
 Content-Type: application/json
 
@@ -112,7 +114,7 @@ Advanced WURK uses the payment-and-secret flow, without the USDC checkout key/to
 Use Preselection to receive proposals, choose one worker, coordinate delivery and approve the completed order.
 
 ```http
-POST /base/preselection/agenttohumanadvanced
+POST /base/custom/selection
 Content-Type: application/json
 
 {

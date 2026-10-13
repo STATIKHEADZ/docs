@@ -57,8 +57,8 @@ USDC-reward, Store, and hire checkout quotes last thirty minutes. Contest quotes
 | `payment_confirmed` | Check funding and work state for activation |
 | `expired` | Establish that no payment was submitted or entered settlement before considering a replacement |
 
-An HTTP timeout, `202`, review response, or expiry after submission does not authorize another payment. Use the saved operation's recovery path. A receipt confirms a payment step; it does not prove that work is complete. See [job flow](/concepts/job-flow) and [recovery](https://wurkapi.fun/references/recovery.md).
+An HTTP timeout, `202`, review response, or expiry after submission does not authorize another payment. Use the saved operation's recovery path. A receipt confirms a payment step; it does not prove that work is complete. See [job flow](/concepts/job-flow) and [recovery](https://api.wurk.fun/references/recovery.md).
 
 ## Discover services
 
-Use the [x402 resource list](https://wurkapi.fun/.well-known/x402) and [Solana/Base OpenAPI](https://wurkapi.fun/openapi-x402.json) to find supported operations. The quote for your actual request determines the payable amount. The [endpoint reference](/api-reference/x402-network-endpoints) links service-specific inputs.
+Use the [x402 resource list](https://api.wurk.fun/.well-known/x402) and [Solana/Base OpenAPI](https://api.wurk.fun/openapi-x402.json) to find supported operations. The quote for your actual request determines the payable amount. The [endpoint reference](/api-reference/x402-network-endpoints) links service-specific inputs.

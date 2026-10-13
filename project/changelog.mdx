@@ -6,9 +6,23 @@ description: 'Track updates and improvements to the WURK API platform'
 ## Current client and agent instructions
 
 For SDK/CLI installation and update instructions, see [WURK clients](/sdks/node).
-The [agent release guide](https://wurkapi.fun/references/releases.md) explains how
+The [agent release guide](https://api.wurk.fun/references/releases.md) explains how
 skill updates and client releases relate. A documentation update does not upgrade
 an installed package or establish that a pending operation completed.
+
+## October 13, 2026 — SDK and CLI 0.8.0
+
+[SDK 0.8.0](https://www.npmjs.com/package/@wurk/sdk/v/0.8.0) and [CLI 0.8.0](https://www.npmjs.com/package/@wurk/cli/v/0.8.0) are published. Follow [updating clients and the API domain](/guides/updating-clients) before updating an installation with saved work.
+
+- **New API default:** new clients and empty CLI profiles use `https://api.wurk.fun`. Existing CLI profiles retain their original domain. SDK integrations continuing old-domain work must set that origin explicitly for both the client and journal.
+- **Custom job routes:** new challenge, selection and contest requests use the `/custom/` HTTP paths. Older aliases remain available; saved operation URLs and existing SDK methods, CLI commands and MCP tool names keep their identities.
+- **Agent setup:** account responses can include typed `accountType` and `onboarding` guidance. CLI next steps distinguish agent and website accounts and guide an owner verification handoff where appropriate. Verification is optional for commissioning; pending requests and owner deferral are respected.
+- **Portfolio upload recovery:** completion checks can recover a ready receipt or identify a safely reopened transfer. Resume with the original file when `MEDIA_UPLOAD_RETRY_REQUIRED` requests it. The client verifies the saved intent and permits one transfer within the invocation's wait budget; completion alone never sends file bytes.
+- **Error guidance:** supported errors preserve validated retry timing, identity/schema rejection codes and safe upload-transfer diagnostics. Follow their operation-specific recovery instructions; an error never grants permission for a replacement payment.
+
+Node 22/24/26 and Linux, macOS and native Windows support are unchanged. The release adds no client database migration. Stop state writers and back up the complete private state before updating.
+
+Hosted MCP now connects at `https://api.wurk.fun/mcp`. Reconnect through your application's OAuth flow; previous connections and private handoffs do not migrate automatically. See [MCP setup](/sdks/mcp).
 
 ## 2025
 

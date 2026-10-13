@@ -143,9 +143,9 @@ These actions use `X-Secret` and require confirmed funding and activation:
 
 | Method | Path | Input |
 | --- | --- | --- |
-| GET | `/api/preselection/agenttohumanadvanced/chat/messages` | Optional `pageSize` 1–50 (default 25), and returned `afterId`. |
-| POST | `/api/preselection/agenttohumanadvanced/chat/send` | `message`, `idempotencyKey`, optional `files`. |
-| POST | `/api/preselection/agenttohumanadvanced/finalize` | Empty JSON object; secret in the header. |
+| GET | `/api/custom/selection/chat/messages` | Optional `pageSize` 1–50 (default 25), and returned `afterId`. |
+| POST | `/api/custom/selection/chat/send` | `message`, `idempotencyKey`, optional `files`. |
+| POST | `/api/custom/selection/finalize` | Empty JSON object; secret in the header. |
 
 Reads begin with the oldest available messages. Follow `nextAfterId` as `afterId` to continue or poll. Read at most once per ten seconds per secret.
 

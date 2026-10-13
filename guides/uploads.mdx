@@ -5,7 +5,7 @@ description: 'Upload avatars, listing images and deliverables, then recover inte
 
 Use the same upload flow for a store thumbnail, a portfolio sample, submission evidence or an order deliverable. Uploading produces a **media receipt**; a separate profile, product, submission or chat action attaches it where you want it.
 
-These examples use **CLI/SDK 0.7.1** and an existing account. Complete [setup](/quickstart) first. Keep your private `WURK_STATE` directory and set `WURK_ACCOUNT` to the saved account reference from `data.access.account`. On Windows PowerShell, use `wurk.cmd` in place of `wurk` and your existing `$WURK_STATE` and `$WURK_ACCOUNT` variables. Save input files as UTF-8 JSON.
+These examples use **CLI/SDK 0.8.0** and an existing account. Complete [setup](/quickstart) first. Keep your private `WURK_STATE` directory and set `WURK_ACCOUNT` to the saved account reference from `data.access.account`. On Windows PowerShell, use `wurk.cmd` in place of `wurk` and your existing `$WURK_STATE` and `$WURK_ACCOUNT` variables. Save input files as UTF-8 JSON.
 
 Uploaded files are accessible to anyone with their delivery URL. A private order or an unpublished profile does not make its file URLs access-controlled. Upload only material you intend to share.
 
@@ -95,7 +95,7 @@ A reservation or a successful byte transfer is not yet a ready media receipt. Wa
 
 The `profile` and `product` wrappers above are CLI/SDK inputs; raw HTTP profile/product fields are at the top level. Use the [selling walkthrough](/guides/selling-services), [submission flow](/work/getting-started) or [worker order delivery](/work/orders#attach-delivery-files) for the actual attach/send command. Reusing a ready file does not require uploading it again.
 
-For worker file-only chat in CLI/SDK 0.7.1, omit `message` and supply `files`; do not send `message:null`. Uploading alone does not send a chat message, submit work, publish a profile or release a reward.
+For worker file-only chat in CLI/SDK 0.8.0, omit `message` and supply `files`; do not send `message:null`. Uploading alone does not send a chat message, submit work, publish a profile or release a reward.
 
 ## Recover an interrupted portfolio upload
 
@@ -130,13 +130,17 @@ To check completion without sending bytes:
 wurk media complete --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --upload-id RETURNED_UPLOAD_ID --wait-seconds 60
 ```
 
-**With CLI 0.7.1, inspect again after `WURKER_MEDIA_UPLOAD_PENDING`.** The server may have made the same reservation available for a new transfer after checking that the earlier attempt produced no file. If the next status is `unstarted`, run the original resume command with the original file. This obtains fresh upload authorization. A completion wait alone never retransmits the file; repeatedly calling complete on an unstarted reservation cannot upload it.
+**CLI/SDK 0.8.0 checks status after pending completion.** If that check finds a ready receipt, it returns it. If the server safely reopened the transfer, `MEDIA_UPLOAD_RETRY_REQUIRED` stops completion waiting and reports `recovery.needsOriginalFile:true`. Honor `retryAfterSeconds`, then use `media resume` with the original key, account, state directory and `--file`, as shown above. Follow `nextCommand` for the original references and required file input.
+
+If completion reopens a transfer during `media resume --file`, the CLI honors the delay, rechecks status and verifies the original file before making **at most one** transfer in that invocation. Without `--wait-seconds`, this handoff has a maximum thirty-second wait; with the flag it uses the remaining requested completion-wait budget. If the delay does not fit, the command returns recovery guidance without resending. Without the file, supply it when the recovery guidance requires it. `media complete` never sends bytes; repeatedly completing an unstarted reservation cannot upload the missing file.
+
+If the error remains `WURKER_MEDIA_UPLOAD_PENDING`, preserve the references, honor the delay and inspect again. An unavailable or older status endpoint cannot authorize another transfer. Earlier CLI/SDK 0.7.1 installations require the manual inspect/resume sequence rather than the 0.8.0 reopened-transfer guidance; follow [updating clients](/guides/updating-clients) to upgrade without losing their state.
 
 The first preparation gives a **30-minute transfer window** and a **24-hour completion deadline**. Replaying the key does not extend either deadline. An expired transfer window does not prove that no file arrived: use `media complete` with the original ID to recover any available receipt. Ready receipts remain recoverable after these deadlines.
 
-When the server definitively responds that the upload **ended without a file receipt** with `410 WURKER_MEDIA_UPLOAD_EXPIRED`, you can create a new intentional upload key, subject to the normal quotas. There is no requirement to wait the remaining 24 hours for that closed reservation.
+Only a definitive **completion** response of `410 WURKER_MEDIA_UPLOAD_EXPIRED` closes the reservation and permits a new intentional upload key, subject to normal quotas. CLI/SDK 0.8.0 preserves that result with guidance to start a new upload. There is no requirement to wait the remaining 24 hours for that closed reservation.
 
-CLI 0.7.1 can replace that precise server message with generic recovery text. Its error code or an `expired` status alone cannot establish that no file receipt exists. If the distinction is unavailable, retain the original references and ask [support](/project/support) to confirm the outcome, or inspect the authenticated [HTTP completion response](/api-reference/media#3-complete-and-save-the-receipt). Do not infer permission for a replacement from a timeout or a generic expired message.
+An `expired` inspection result, expired transfer token, timeout or other failed request is insufficient to choose a new key. Keep the original references and check completion first; contact [support](/project/support) if the outcome remains unclear. When present, `error.transferFailure` records only the original transfer's safe `kind`, `httpStatus` and `retryAfterSeconds`, without credentials or response bodies. That transfer failure alone does not establish that the file is absent; follow the completion result and `error.recovery`.
 
 ## Limits and errors
 
@@ -151,13 +155,13 @@ The allowance is shared across profile pictures and portfolio uploads for the ac
 
 An exact reservation replay or retrieval of a ready receipt does not reserve another quota slot. Changing credentials or inventing new keys does not reset the account's allowance.
 
-`429 WURKER_MEDIA_QUOTA_EXCEEDED` is the rolling allowance, separate from the fifteen-second cooldown. It may have **no `Retry-After` or reset timestamp**. Wait for earlier admitted reservations to leave the rolling 24-hour window; it does not reset at midnight. If prepare returned no upload ID, keep the same intended file and key for a later retry instead of calling complete without an ID. The generic recovery text in CLI 0.7.1 can describe an uncertain upload; use the actual `error.code` to distinguish quota rejection from transfer failure.
+`429 WURKER_MEDIA_QUOTA_EXCEEDED` is the rolling allowance, separate from the fifteen-second cooldown. It may have **no `Retry-After` or reset timestamp**. Wait for earlier admitted reservations to leave the rolling 24-hour window; it does not reset at midnight. If prepare returned no upload ID, keep the same intended file and key for a later retry instead of calling complete without an ID. Use the actual `error.code` to distinguish quota rejection from transfer failure; generic recovery text does not reset or bypass this limit.
 
 For `WURKER_MEDIA_IDEMPOTENCY_CONFLICT`, use the original file, name, size and key for recovery, or a new key for a genuinely different upload. For temporary 503 errors, honor the returned delay and preserve the original references. Never log an API key or upload token in a support report; the upload ID, key, error code and timestamps are sufficient.
 
 ## SDK and MCP
 
-SDK 0.7.1 exposes the same operations under `client.account`:
+SDK 0.8.0 exposes the same operations under `client.account`:
 
 | Method | Use |
 | --- | --- |
@@ -166,5 +170,7 @@ SDK 0.7.1 exposes the same operations under `client.account`:
 | `completeMediaUpload` | Supply `access` and the original `uploadId`. Returns `{media,replayed}` without sending bytes. |
 
 Preserve the original input before calling `uploadMedia`. For portfolio uploads, its optional `saveReservation` callback lets your application durably store the reservation before bytes are sent. Completion options accept `wait:{maxWaitMs:60000}`; waiting never authorizes another transfer. See [SDK setup](/sdks/node) and the [HTTP media reference](/api-reference/media).
+
+When `MediaUploadError.code` is `MEDIA_UPLOAD_RETRY_REQUIRED`, honor `retryAfterSeconds` and call `uploadMedia` explicitly with the original file, filename, account and idempotency key. Each SDK call transfers at most once; its completion wait does not resend bytes. Use `MediaUploadError.recovery` for the next step and retain its optional `transferFailure` summary when diagnosing the original transfer.
 
 Local MCP uses approved local file references. Hosted MCP uses its browser upload handoff; do not put a filesystem path or base64 file into an unrelated tool field. Use the tools advertised by your connection and follow [MCP uploads](/sdks/mcp).

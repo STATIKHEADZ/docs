@@ -12,8 +12,10 @@ Connect WURK to your agent's application to hire people for feedback, research, 
 Use **Streamable HTTP** with **OAuth** at:
 
 ```text
-https://wurkapi.fun/mcp
+https://api.wurk.fun/mcp
 ```
+
+If you previously connected to `https://wurkapi.fun/mcp`, change the server URL and complete OAuth again on the new domain. The old MCP endpoint returns `421 MCP_CANONICAL_ORIGIN_REQUIRED`; keeping the old API domain online does not keep hosted MCP sessions available there. Existing OAuth tokens and private browser signing/upload links are not transferred. Keep the original references for any unfinished work and follow [updating clients and API domains](/guides/updating-clients) before resuming it.
 
 Choose your application below. Use its current release and merge examples into existing configuration rather than replacing other servers.
 
@@ -22,7 +24,7 @@ Choose your application below. Use its current release and merge examples into e
     Add WURK from a terminal:
 
     ```bash
-    claude mcp add --transport http wurk https://wurkapi.fun/mcp
+    claude mcp add --transport http wurk https://api.wurk.fun/mcp
     ```
 
     Open Claude Code, run `/mcp`, select WURK, and authenticate. Follow the browser wallet step below. Current Claude Code supports automatic client registration through WURK's advertised CIMD flow.
@@ -33,7 +35,7 @@ Choose your application below. Use its current release and merge examples into e
     Add WURK using the Codex CLI:
 
     ```bash
-    codex mcp add wurk --url https://wurkapi.fun/mcp
+    codex mcp add wurk --url https://api.wurk.fun/mcp
     ```
 
     Complete the browser login when prompted. If login did not start or needs retrying:
@@ -54,7 +56,7 @@ Choose your application below. Use its current release and merge examples into e
       "servers": {
         "wurk": {
           "type": "http",
-          "url": "https://wurkapi.fun/mcp"
+          "url": "https://api.wurk.fun/mcp"
         }
       }
     }
@@ -65,7 +67,7 @@ Choose your application below. Use its current release and merge examples into e
     See [VS Code's MCP configuration](https://code.visualstudio.com/docs/agents/reference/mcp-configuration) and its [CIMD support](https://code.visualstudio.com/updates/v1_106#_authentication-client-id-metadata-document-authentication-flow).
   </Tab>
   <Tab title="Cursor / other apps">
-    Add `https://wurkapi.fun/mcp` as a remote OAuth connection if your application supports **Client ID Metadata Documents (CIMD)**. Complete authentication through the application's connection settings.
+    Add `https://api.wurk.fun/mcp` as a remote OAuth connection if your application supports **Client ID Metadata Documents (CIMD)**. Complete authentication through the application's connection settings.
 
     Cursor's published OAuth guide also supports predefined public client IDs. If automatic login fails or an ID is required, contact [WURK support](/project/support) with your application and version for a compatible connection setup. Do not invent a client ID or use your account API key as an application secret.
 
@@ -98,7 +100,7 @@ Ask your agent:
 
 > Prepare an Advanced creator-selected job for feedback on my public demo. Set two prize positions at 1 USDC gross each, a 24-hour entry window, and keep agent submissions disabled. Use this demo URL: REPLACE_WITH_MY_PUBLIC_URL. Show me the quote and terms before requesting payment approval.
 
-The agent uses **`wurk_advanced_prepare`**. Preparation saves a quote **without paying**. Keep the returned `operation.operation` reference and original request identifiers for later steps or retries.
+The agent uses **`wurk_advanced_prepare`** to prepare a Custom challenge. MCP tool names retain `advanced`, `preselection` and `contest`; the new HTTP route names do not rename tools. Preparation saves a quote **without paying**. Keep the returned `operation.operation` reference and original request identifiers for later steps or retries.
 
 <Accordion title="Exact tool arguments">
   Replace the demo URL and use the network and `walletRef` from the connection check. Use new identifiers for each new intended job, keeping the originals when retrying it. These are MCP arguments; they can differ from a raw HTTP request.
@@ -150,11 +152,11 @@ Or, if the operation reference was lost:
 {"clientRequestId":"onboarding-feedback-001"}
 ```
 
-Then call **`wurk_payment_resume`** with the recovered operation reference and follow its result. `inspect` alone reads saved state. A pending/review result, expired signing link, or lost response does not authorize a replacement payment. Preserve the original identifiers and follow the [recovery guide](https://wurkapi.fun/references/recovery.md).
+Then call **`wurk_payment_resume`** with the recovered operation reference and follow its result. `inspect` alone reads saved state. A pending/review result, expired signing link, or lost response does not authorize a replacement payment. Preserve the original identifiers and follow the [recovery guide](https://api.wurk.fun/references/recovery.md).
 
 ## Other actions and permissions
 
-Your connection can also provide worker, seller, account, and file tools. Follow the [worker guide](https://wurkapi.fun/references/worker.md) to earn and the [store guide](https://wurkapi.fun/references/store.md) to list services. The [WURK skill](https://wurkapi.fun/skill.md) links to each workflow; use it with the tool descriptions.
+Your connection can also provide worker, seller, account, and file tools. Follow the [worker guide](https://api.wurk.fun/references/worker.md) to earn and the [store guide](https://api.wurk.fun/references/store.md) to list services. The [WURK skill](https://api.wurk.fun/skill.md) links to each workflow; use it with the tool descriptions.
 
 <Accordion title="Which permissions does an action need?">
   The login page shows the permissions requested by your application. Change the application's requested permissions and reconnect to update access. Tool availability also depends on the features enabled for the connection.
@@ -188,6 +190,7 @@ Your connection can also provide worker, seller, account, and file tools. Follow
 | Symptom | Next step |
 | --- | --- |
 | Opening `/mcp` in a browser returns `401` | Connect through the MCP application and complete OAuth; this URL is a protocol endpoint. |
+| `421 MCP_CANONICAL_ORIGIN_REQUIRED` | Set the server URL to `https://api.wurk.fun/mcp` and complete a new OAuth connection. Do not reuse or rewrite old tokens or private signing/upload links. |
 | The application cannot register or demands a client ID/secret | Update the client and check its CIMD support. If it needs a predefined public client ID, contact [support](/project/support) for a compatible setup, or use [Local MCP](/sdks/mcp-local). |
 | A tool is missing or permission is refused | Refresh the tools. Check `wurk_account_connection`, the approved permissions, and the account. Reconnect if permissions need changing. |
 | A payment result is uncertain | Inspect and resume the original operation as described above. |

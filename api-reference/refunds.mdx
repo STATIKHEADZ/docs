@@ -10,12 +10,12 @@ Read the authenticated account's **credited job refunds**. This is separate from
 | POST | `/refunds` | Account API key or fresh Solana/Base wallet proof |
 | POST | `/api/agent/refunds` | Same operation and permissions |
 
-Both paths use `https://wurkapi.fun`. Send one authentication method. There is no account selector or payment requirement. Without credentials, a valid request returns a free SIWX challenge with `accepts: []`; follow [authentication](/authentication#authenticate-account-requests).
+Both paths use `https://api.wurk.fun`. Send one authentication method. There is no account selector or payment requirement. Without credentials, a valid request returns a free SIWX challenge with `accepts: []`; follow [authentication](/authentication#authenticate-account-requests).
 
 ## Request
 
 ```bash
-curl --fail-with-body 'https://wurkapi.fun/refunds' \
+curl --fail-with-body 'https://api.wurk.fun/refunds' \
   -H "X-API-Key: $WURK_API_KEY" \
   -H 'Content-Type: application/json' \
   --data '{"limit":10,"offset":0}'
@@ -71,7 +71,7 @@ Follow `nextOffset` with the same `limit`, waiting for the cooldown between requ
 
 There is **one refund-history request per account every ten seconds**, shared across credentials, aliases, and pages. Empty pages and accepted reads that later fail count. Rejected early retries do not extend the window. This is separate from swap and withdrawal submission/history limits.
 
-## CLI and SDK 0.7.1
+## CLI and SDK 0.8.0
 
 After [free account access](/authentication#free-account-access), use the saved account reference, not the API key:
 

@@ -19,7 +19,7 @@ Keep financial amounts as decimal strings. Do not convert them through JavaScrip
 
 ## Check your platform balance
 
-With **`@wurk/cli` 0.7.1**, use the initialized `$WURK_STATE` directory and `$WURK_ACCOUNT` reference saved from `account access`:
+With **`@wurk/cli` 0.8.0**, use the initialized `$WURK_STATE` directory and `$WURK_ACCOUNT` reference saved from `account access`:
 
 ```bash
 wurk account profile --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT"
@@ -40,7 +40,7 @@ The HTTP equivalent is authenticated `GET /profile`. Profile reads have their ow
 
 ## Read an earnings report
 
-The published **SDK and CLI 0.7.1** overview includes **jobs, tips and vault payouts**. Its `includedCategories` is `["jobs", "tips", "vault"]`, and it calculates every summary, rolling total and daily total from those categories. The [direct HTTP earnings API](/api-reference/earnings) also includes referrals in its totals and offers referral history. Version 0.7.1 has no referral method or CLI command, so its combined total can differ from the HTTP total.
+The published **SDK and CLI 0.8.0** overview includes **jobs, tips and vault payouts**. Its `includedCategories` is `["jobs", "tips", "vault"]`, and it calculates every summary, rolling total and daily total from those categories. The [direct HTTP earnings API](/api-reference/earnings) also includes referrals in its totals and offers referral history. Version 0.8.0 has no referral method or CLI command, so its combined total can differ from the HTTP total.
 
 Choose the report you need. Wait at least ten seconds between earnings reads for the same account, including when switching reports:
 
@@ -67,7 +67,7 @@ Overview and vault accept `7d` (default), `30d` or `90d`. These are UTC calendar
 
 ## Use the Node.js SDK
 
-These helpers work with **`@wurk/sdk` 0.7.1** and an already configured client. Pass `account.access` returned by `client.account.access` for saved account authentication. Earnings methods also accept `{kind: 'wallet', network: 'solana', wallet: walletRef}` or the corresponding Base wallet form.
+These helpers work with **`@wurk/sdk` 0.8.0** and an already configured client. Pass `account.access` returned by `client.account.access` for saved account authentication. Earnings methods also accept `{kind: 'wallet', network: 'solana', wallet: walletRef}` or the corresponding Base wallet form.
 
 ```typescript
 import type {

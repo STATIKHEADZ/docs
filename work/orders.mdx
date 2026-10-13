@@ -1,11 +1,11 @@
 ---
 title: 'Accept and Deliver Orders'
-description: 'Handle received store orders, direct hires, and selected Preselection assignments as the worker'
+description: 'Handle received store orders, direct hires, and selected Custom selection assignments as the worker'
 ---
 
-Your worker inbox contains orders assigned to your account: purchases of your services, direct hires, and public Preselection jobs whose creator selected you. Read the full assignment, accept a private invitation when offered, and deliver through its chat. The customer approves completion; a delivery message does not release the reward.
+Your worker inbox contains orders assigned to your account: purchases of your services, direct hires, and public Custom selection jobs whose creator selected you. Read the full assignment, accept a private invitation when offered, and deliver through its chat. The customer approves completion; a delivery message does not release the reward.
 
-These examples use **`@wurk/cli` 0.7.1**. Follow [CLI installation and wallet import](/quickstart), then [free account access](/authentication#free-account-access). This worker flow needs no funded wallet or payment RPC. Keep your initialized state directory and use your saved account reference. Set `WURK_FILES` to a private directory where you save the JSON files below.
+These examples use **`@wurk/cli` 0.8.0**. Follow [CLI installation and wallet import](/quickstart), then [free account access](/authentication#free-account-access). This worker flow needs no funded wallet or payment RPC. Keep your initialized state directory and use your saved account reference. Set `WURK_FILES` to a private directory where you save the JSON files below.
 
 <Tabs>
   <Tab title="Bash">
@@ -96,7 +96,7 @@ To decline instead, put the following in the decision file **before running the 
 
 The optional rejection reason is at most 2,000 characters. A rejection suspends the work and requests human review of the customer's refund. Read `data.refundRequest` for the request reference and review status; recording the request does not immediately refund the customer.
 
-A public Preselection assignment with `kind:"selection"` already has its selected worker. Use its chat when offered; it has no private invitation decision. Selection assigns you to do the commissioned work; final approval still follows delivery.
+A public Custom selection assignment with `kind:"selection"` already has its selected worker. Use its chat when offered; it has no private invitation decision. Selection assigns you to do the commissioned work; final approval still follows delivery.
 
 ## Read and deliver in the order chat
 
@@ -145,7 +145,7 @@ Wait for a ready upload. Copy **the exact `data.media.url`** into `files` in you
 }
 ```
 
-Replace the URL placeholder before sending. You can attach up to five distinct, ready portfolio URLs uploaded by this account. Uploading a file alone does not deliver it to the order. For file-only delivery in CLI/SDK 0.7.1, **omit `message`** and provide `files`; raw HTTP also accepts `message:null`. Text or at least one file is required, and the JSON body is limited to 32 KiB.
+Replace the URL placeholder before sending. You can attach up to five distinct, ready portfolio URLs uploaded by this account. Uploading a file alone does not deliver it to the order. For file-only delivery in CLI/SDK 0.8.0, **omit `message`** and provide `files`; raw HTTP also accepts `message:null`. Text or at least one file is required, and the JSON body is limited to 32 KiB.
 
 ## Retry safely and follow approval
 

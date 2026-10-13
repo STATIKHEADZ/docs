@@ -3,7 +3,7 @@ title: 'Withdrawals API'
 description: 'Wallet-authorized withdrawal quotes, confirmation, individual status, and account withdrawal history'
 ---
 
-Use `https://wurkapi.fun`. For the CLI workflow, follow [Withdraw to a wallet](/finance/withdrawals).
+Use `https://api.wurk.fun`. For the CLI workflow, follow [Withdraw to a wallet](/finance/withdrawals).
 
 | Method | Path | Authentication | Purpose |
 | --- | --- | --- | --- |
@@ -12,7 +12,7 @@ Use `https://wurkapi.fun`. For the CLI workflow, follow [Withdraw to a wallet](/
 | POST | `/withdraw/status` | Registered Solana/Base wallet SIWX only | Read an account withdrawal by its original key. |
 | POST | `/withdraws` | Account API key or registered Solana/Base wallet SIWX | Read withdrawal history. |
 
-Each route also has an `/api/agent` alias, for example `/api/agent/withdraw/quote`. All requests require a JSON object, with no query parameters or unknown fields. Monetary values in responses are decimal strings. HTTP success is `200`; raw responses contain `ok:true`. SDK 0.7.1 returns the decoded fields directly, and CLI 0.7.1 wraps them in `data`.
+Each route also has an `/api/agent` alias, for example `/api/agent/withdraw/quote`. All requests require a JSON object, with no query parameters or unknown fields. Monetary values in responses are decimal strings. HTTP success is `200`; raw responses contain `ok:true`. SDK 0.8.0 returns the decoded fields directly, and CLI 0.8.0 wraps them in `data`.
 
 ## Authenticate the exact request
 
@@ -34,7 +34,7 @@ This example uses a registered **Base signer** to withdraw its account's Base US
 
 ```http
 POST /withdraw/quote
-Host: wurkapi.fun
+Host: api.wurk.fun
 Content-Type: application/json
 SIGN-IN-WITH-X: <fresh-proof-for-this-body>
 
@@ -159,7 +159,7 @@ History is a free read using either `X-API-Key` or fresh SIWX. It includes suppo
 
 ```http
 POST /withdraws
-Host: wurkapi.fun
+Host: api.wurk.fun
 Content-Type: application/json
 X-API-Key: <private-account-key>
 
@@ -252,4 +252,4 @@ HTTP `402` is the authentication challenge described above, rather than this err
 | 503 | `WITHDRAWAL_ATA_UNAVAILABLE`, `WITHDRAWAL_FEE_UNAVAILABLE`, `WITHDRAWALS_NOT_CONFIGURED` | Wait for availability. Recover any earlier confirmation before another mutation. |
 | 503 | `WITHDRAWAL_STATUS_UNAVAILABLE`, `WITHDRAWAL_HISTORY_UNAVAILABLE`, `AGENT_WITHDRAWAL_UNAVAILABLE` | Retry the read, or reconcile confirmation using the original key; availability failure does not prove failure to withdraw. |
 
-For SDK integrations, quote and confirmation require a durable `financeStore` and explicit wallet access. Retain that store: `FINANCE_QUOTE_NOT_FOUND` or `FINANCE_QUOTE_MISMATCH` is a local recovery problem, not evidence that a server withdrawal failed. See the [Node.js SDK](/sdks/node) and the installed `@wurk/sdk@0.7.1` README.
+For SDK integrations, quote and confirmation require a durable `financeStore` and explicit wallet access. Retain that store: `FINANCE_QUOTE_NOT_FOUND` or `FINANCE_QUOTE_MISMATCH` is a local recovery problem, not evidence that a server withdrawal failed. See the [Node.js SDK](/sdks/node) and the installed `@wurk/sdk@0.8.0` README.

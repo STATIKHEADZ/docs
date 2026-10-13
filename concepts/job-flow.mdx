@@ -28,7 +28,7 @@ flowchart TD
 
 Choose a [job type](/concepts/job-types), describe the deliverable and evidence required, and publish the criteria you will use to judge it. Set the audience, reward asset and gross budget deliberately. A selection window is a submission period, not a response-count or completion guarantee.
 
-Use `https://wurkapi.fun` as the API origin. Creation accepts x402 payment, without an API key or separate login. Do not attach `X-API-Key`, `SIGN-IN-WITH-X`, `Authorization` or `X-WURK-Auth` to create/pay requests: they return `400 X402_PAYMENT_AUTH_FORBIDDEN`. Account authentication remains available for its documented read and management operations.
+Use `https://api.wurk.fun` as the API origin. Creation accepts x402 payment, without an API key or separate login. Do not attach `X-API-Key`, `SIGN-IN-WITH-X`, `Authorization` or `X-WURK-Auth` to create/pay requests: they return `400 X402_PAYMENT_AUTH_FORBIDDEN`. Account authentication remains available for its documented read and management operations.
 
 ## Checkout with an idempotency key
 
@@ -43,6 +43,8 @@ Use this flow for **Advanced USDC, every Contest, store purchases and direct hir
 Verified payment binds ownership to the paying wallet, reusing or creating its WURK account. This does not issue an API key, browser session or public profile. The token accesses only its checkout; use account authentication or a fresh payer-wallet SIWX proof for supported account-wide history and recovery.
 
 Keep the original request/key/token for retries. A new job needs a new key. Advanced and Contest share a key namespace; store and direct hire share another. Reusing a key for a different family, network or brief conflicts.
+
+A domain or route update is not a retry strategy: retain the original origin, path, quote and signed payment. Follow [updating clients and API domains](/guides/updating-clients) when moving new activity to `api.wurk.fun`.
 
 ## Payment-and-secret creation
 

@@ -20,7 +20,7 @@ Social orders use `/{network}/{service}`, where `network` is `solana` or `base`.
 | X raid packages | `xraid`, `xraid/small`, `xraid/medium`, `xraid/large`, `xraid/mega` | Post `url`; dynamic `xraid` also takes `size`. |
 | X verified raid packages | `xraid/xverified`, `xraid/xverified/small`, `xraid/xverified/medium` | Post `url`. |
 
-The unified `vote` endpoint accepts `voteType:"coingecko_vote"` or `"coinmarketcap_vote"`, `url` and `amount`. Consult [advertised x402 OpenAPI](https://wurkapi.fun/openapi-x402.json) for service-specific schemas and aliases.
+The unified `vote` endpoint accepts `voteType:"coingecko_vote"` or `"coinmarketcap_vote"`, `url` and `amount`. Consult [advertised x402 OpenAPI](https://api.wurk.fun/openapi-x402.json) for service-specific schemas and aliases.
 
 ## Counts and instructions
 
@@ -33,7 +33,7 @@ For custom raids, `xraid/custom` takes `url`, `likes`, `reposts`, `comments` and
 ## Quote and pay
 
 ```bash
-curl --get --include 'https://wurkapi.fun/solana/xlikes' \
+curl --get --include 'https://api.wurk.fun/solana/xlikes' \
   --data-urlencode 'amount=50' \
   --data-urlencode 'url=https://x.com/example/status/1234567890'
 ```
@@ -46,6 +46,6 @@ An uncertain response does not authorize another charge. A 409 can mean a simila
 
 ## Recover a social payment
 
-With SDK/CLI 0.7.1, `payments resume` for social jobs and raids uses only the original local journal and makes no HTTP request. It can restore a complete quote or validated response already saved there. It cannot query remote payment or fulfillment status or retrieve job/raid IDs missing from a lost or truncated response. A result with `fulfillment:"not_observed"` does not establish delivery.
+With SDK/CLI 0.8.0, `payments resume` for social jobs and raids uses only the original local journal and makes no HTTP request. It can restore a complete quote or validated response already saved there. It cannot query remote payment or fulfillment status or retrieve job/raid IDs missing from a lost or truncated response. A result with `fulfillment:"not_observed"` does not establish delivery.
 
 Keep the original state directory, operation and request references, any job/raid IDs, transaction ID and `paymentAttemptId`. If the outcome remains unresolved, [contact support](/project/support) with the available references and attempt time. Keep signed payments and the state directory private. Do not change the request ID, prepare a replacement order or sign another payment to resolve uncertainty.
