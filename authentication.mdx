@@ -114,7 +114,7 @@ Explicit rotation can restore API access after self-service key deletion. It can
 
 Custom challenge USDC, every Contest, Store purchases, and direct hire use a private checkout token and an `idempotencyKey`. The [CLI](/quickstart) and [SDK](/sdks/node) save the token before requesting the quote. Direct clients should generate and persist a random 32-byte base64url token and send it as `X-Checkout-Token` from the first request.
 
-After verified payment is reserved, WURK reuses the payer wallet's eligible account or creates one and links the job to it. This does not issue an API key or browser session. Funding confirmation and activation are separate states. You can use free account access afterward if you want a saved API key.
+Paid jobs belong to the payer wallet's WURK account, which is created if needed. Payment does not issue an API key or sign you into the website. Check the returned funding and job or order status before treating the work as active; see [job flow](/concepts/job-flow). Use free account access afterward if you want a saved API key.
 
 The token opens only its checkout. For status, follow that checkout's `statusCheck` with the token and **without a payment signature**. Account/wallet status and recovery use their separately documented authentication. If the token is lost after payment reservation, use the original payer wallet and saved identifiers for recovery; see the [recovery guide](https://api.wurk.fun/references/recovery.md#recover-the-existing-operation).
 

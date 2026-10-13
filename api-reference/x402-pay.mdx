@@ -21,7 +21,7 @@ This contract applies to Custom challenge with `reward_token:"USDC"`, all Contes
 
 1. Save the complete JSON body and a unique `idempotencyKey`: 8–128 letters, digits or `._:-`.
 2. Generate 32 cryptographically random bytes and encode them as unpadded base64url. Save this private token before the initial request and send it as `X-Checkout-Token`. An initial request without the header can return a server-generated token; save it immediately.
-3. Inspect the 402's payment requirements and `checkout`. The checkout includes `id`, `token`, payment deadlines and a `statusCheck` descriptor. An unpaid checkout has no canonical funded job yet.
+3. Inspect the 402's payment requirements and `checkout`. The checkout includes `id`, `token`, payment deadlines and a `statusCheck` descriptor. A quote does not establish that a job is funded or active.
 4. Sign the full returned requirement, including `extra.wurkGuestToken`. Preserve the Solana memo. On Base, use the exact advertised `extra.wurkGuestNonce` for the EIP-3009 signature.
 5. Repeat the **original endpoint, HTTP method and body/key**, retaining `X-Checkout-Token` and adding `PAYMENT-SIGNATURE`. The quote's `resource.url` can include a checkout identifier; it binds the signature and is not an instruction to replace the saved creation body.
 6. Follow `checkout.statusCheck` with the saved token and **no payment header**. After verified payment reservation the response includes the linked `job` or `purchase`; follow its funding and work state.

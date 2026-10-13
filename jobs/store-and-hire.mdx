@@ -58,7 +58,7 @@ Keep these references distinct:
 | `purchase.purchaseId` | The canonical purchase, returned once created with the same UUID as `checkout.id`; used by authenticated lookup. |
 | `purchase.order.jobId` / `customId` | The work item / private order; used by their corresponding management APIs. |
 
-Using the same text for request ID and idempotency key is convenient, but they remain separate identifiers. Store and hire share the server key namespace: use a new key for a new order, never reuse a store key for a hire.
+Using the same text for request ID and idempotency key is convenient, but they remain separate identifiers. Use a unique idempotency key for each new order, including when switching from a store purchase to a direct hire.
 
 ## Or prepare a direct hire
 
@@ -138,7 +138,7 @@ wurk buyer chat read --state-dir "$WURK_STATE" --operation "$WURK_OPERATION" --p
 
 The CLI/SDK keep the order secret private. Use `buyer chat send` to coordinate and `buyer approve` only after inspecting satisfactory delivery. For message input, file delivery, reviews and approval recovery, follow [manage existing jobs](/jobs/managing-jobs). That guide also explains importing an account-owned order when you do not have its local payment operation.
 
-Approval releases the agreed reward to the worker's platform balance with no additional x402 payment. A completed private order can recover its original payout receipt without crediting twice. A review is separate from delivery approval. A worker message or a parent work row reporting `completed` does not establish that the requested work was delivered.
+Approval releases the agreed reward to the worker's platform balance with no additional x402 payment. A completed private order can recover its original payout receipt without crediting twice. A review is separate from delivery approval. Inspect the actual deliverables and the order's delivery state before approving; a worker message or a general job status alone is insufficient.
 
 ## Resume an interrupted checkout
 

@@ -32,7 +32,7 @@ Every order command also supports the account's imported, registered signing wal
 wurk work orders list --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --status all --limit 20
 ```
 
-Read `data.orders`, then copy the chosen order's **`customId`**. Use that ID for every command on this page. `jobId` is the parent work identifier; a purchase UUID, submission ID, product ID, or account reference cannot replace `customId`.
+Read `data.orders`, then copy the chosen order's **`customId`**. Use that ID for every command on this page. `jobId` identifies the general job; a purchase UUID, submission ID, product ID, or account reference cannot replace `customId`.
 
 The inbox includes these states:
 
@@ -67,7 +67,7 @@ The CLI places the detail directly under `data`. Review:
 | `chatAvailable`, `canSend`, `canDecide` | Whether you can read chat, send a message, or decide an invitation now. |
 | `nextActions` | The currently offered detail, message, send, and decision routes. Reading a hint does not execute it. |
 
-The detail's `status` is the underlying work state, such as `pending`; the inbox's `status` is its worker-facing classification, such as `invited` or `accepted`. Check the permission fields and returned actions before acting. A paused order can allow reading chat while preventing new messages.
+Detail `status` describes job progress, such as `pending`; inbox `status` describes your assignment, such as `invited` or `accepted`. Check the permission fields and returned actions before acting. A paused order can allow reading chat while preventing new messages.
 
 For a known reward, `reward.basis` is `worker_net`: use `reward.amount`, `assetId`, and `network`, preserving amounts as decimal strings. `grossAmount` describes the gross allocation. `reward.status:"confirmed"` confirms the agreed terms; it does not prove approval, a balance credit, or a wallet transfer. If the reward is `unavailable`, its null amount is unknown. Resolve missing or unclear terms before accepting.
 

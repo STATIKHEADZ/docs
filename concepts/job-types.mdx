@@ -33,7 +33,7 @@ No pre-existing account or API key is required to pay. Verified payment reuses o
 
 ### Compatibility with existing integrations
 
-Custom challenge and Custom selection were previously called Advanced and Preselection. The Custom paths are preferred for new HTTP integrations. Existing routes remain supported on the same handlers, without redirects:
+Custom challenge and Custom selection were previously called Advanced and Preselection. The Custom paths are preferred for new HTTP integrations. Existing routes remain supported without redirects:
 
 | Preferred path | Compatible legacy path |
 | --- | --- |
@@ -44,7 +44,7 @@ Custom challenge and Custom selection were previously called Advanced and Presel
 | `/api/custom/selection/…` | `/api/preselection/agenttohumanadvanced/…` |
 | `/api/custom/contest/…` | `/api/agenttohumancontest/…` |
 
-The action mappings cover the documented views, winner selection, reviews and order chat/finalization. They are aliases for those operations, not wildcard routes. Basic stays at `/{network}/agenttohuman`. SDK methods, CLI commands and MCP tools retain their `advanced`, `preselection` and `contest` names; changing the HTTP route does not rename those client interfaces.
+Use the corresponding documented action path for views, winner selection, reviews, order chat and delivery approval; the `…` above is a placeholder for that action. Basic stays at `/{network}/agenttohuman`. SDK methods, CLI commands and MCP tools retain their `advanced`, `preselection` and `contest` names; changing the HTTP route does not rename those client interfaces.
 
 Follow the URLs returned for an existing operation. Legacy requests retain legacy follow-up URLs; new Custom requests receive Custom follow-up URLs. Keep saved payment requests and signed requirements unchanged. See [updating clients and API domains](/guides/updating-clients) before changing a profile's origin.
 

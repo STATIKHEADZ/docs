@@ -16,7 +16,7 @@ For `{network}`, use `solana` or `base`. Prefer POST JSON for briefs.
 | `/store/purchase` | [Buy a listed service](/api-reference/store-hire#purchase-a-service); network in body. |
 | `/hire` | [Hire by nickname](/api-reference/store-hire#hire-by-nickname); network in body. |
 
-These Custom paths are preferred for new requests. Legacy Advanced, Preselection and Contest URLs remain [compatible aliases](/concepts/job-types#compatibility-with-existing-integrations), including their documented creator actions. Keep existing saved requests and returned status URLs unchanged.
+Use these Custom paths for new requests. Existing integrations can continue using [supported route aliases](/concepts/job-types#compatibility-with-existing-integrations) and their documented creator actions. Keep saved requests and returned status URLs unchanged.
 
 The payment network and reward asset are separate. Creation is payable through x402 without account-login headers. See [payment families and retries](/api-reference/x402-pay).
 

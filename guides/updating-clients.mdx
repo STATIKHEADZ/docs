@@ -5,12 +5,12 @@ description: 'Update to SDK and CLI 0.8.0, start new work on api.wurk.fun, and p
 
 The standard API origin is **`https://api.wurk.fun`**. Published **SDK and CLI 0.8.0** use it by default for new SDK clients, payment journals and empty CLI state directories. During the transition, `https://wurkapi.fun` remains available for ordinary API operations. Hosted MCP uses only the new origin.
 
-Updating an npm package, changing a connection and downloading documentation are separate actions. An update does not migrate saved payments, replace credentials or complete pending work.
+Updating the client does not migrate saved payments, replace credentials or complete pending work. Keep the original state directory for existing operations.
 
 ## Update an existing installation
 
 1. Stop CLI, SDK and local MCP processes that share the private state directory.
-2. Back up the complete directory, including configuration, wallets, databases, SQLite sidecar files, media intents and notification state. Keep the backup private.
+2. Back up the complete state directory, including hidden files. It contains your wallets, credentials and recovery records; keep the backup private.
 3. In the project where the CLI is installed, update the package:
 
    ```bash
@@ -28,7 +28,7 @@ Updating an npm package, changing a connection and downloading documentation are
 4. Verify the executable from that installation with `wurk --version` (`wurk.cmd --version` on Windows), using the executable path configured in the [quickstart](/quickstart). It should report `0.8.0`.
 5. Restart all processes sharing that state with the matching client version and their original configuration.
 
-Node and platform requirements are unchanged: Node 22.22.0+ within 22.x, 24.12.0+ within 24.x, or 26.0.0+ within 26.x. See [CLI setup](/quickstart) and [SDK installation](/sdks/node). This release adds no database migration. Do not assume an older client understands state written by a newer client.
+Supported Node versions are 22.22.0+ within 22.x, 24.12.0+ within 24.x, or 26.0.0+ within 26.x. See [CLI setup](/quickstart) and [SDK installation](/sdks/node). Do not assume an older client understands state written by a newer client.
 
 ## Keep existing work on its original origin
 
@@ -70,4 +70,4 @@ New Custom job examples use `/{network}/custom/challenge`, `/{network}/custom/se
 
 Use returned status and action references for an existing operation. Do not rewrite saved paths or signed requests to their new aliases. SIWX proofs are bound to their exact origin and resource; request a fresh challenge for the actual permitted request rather than reusing a proof from another domain or path.
 
-Read the [release notes](/project/changelog) for the new onboarding and upload-recovery behavior. The [API skill metadata](https://api.wurk.fun/skill.json) reports the documentation version currently served by the API; it has its own version, separate from npm packages and this documentation site.
+Read the [release notes](/project/changelog) for changes to account setup and upload recovery.

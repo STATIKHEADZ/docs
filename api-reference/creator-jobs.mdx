@@ -68,7 +68,7 @@ The raw HTTP result is `{ "ok": true, "job": { ... } }`. The job has the history
 
 When a paid custom job has no API job secret, `nextActions.website` supplies `type:"open_website"`, `reason:"job_secret_unavailable"`, a URL and `requiresOwnerSession:true`. Use the owning account's website session, or ask the owner to handle that step. Do not send an API key or wallet proof to the website to manufacture a browser login.
 
-The SDK intentionally removes secret-bearing fields from `client.work.getCreated` and returns a safe `management` hint instead. Consequently, CLI `jobs get` exposes **`data.jobId` and `data.management`**, not `data.job.secret`. Explicit `jobs import` stores the secret privately. Import and managed-job commands are client capabilities using existing APIs; there is no separate public `/management` endpoint.
+SDK `client.work.getCreated` returns the job with a `management` hint and no secret. CLI `jobs get` exposes **`data.jobId` and `data.management`**. Use `jobs import` to save creator access privately, then follow [managed-job commands](/jobs/managing-jobs) to continue the work.
 
 ## GET /actions
 

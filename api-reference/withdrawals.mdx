@@ -103,7 +103,7 @@ A matching reusable quote must have more than five seconds remaining. At most te
 
 Both fields are required. `quoteId` is the exact returned UUID. `idempotencyKey` must be 8–128 characters matching `[A-Za-z0-9._:-]`. Sign with the same wallet **and signing network** that requested the quote. The request has no amount or destination override.
 
-Confirmation checks quote expiry and available balance, validates any required Solana ATA, reserves the gross amount, and queues the withdrawal. A Solana token ATA must be initialized, unfrozen, and owned by the expected destination wallet for the exact mint. A quote can be used for only one withdrawal.
+Confirm before the quote expires and with enough available balance to cover its gross amount. Confirmation reserves that amount and starts the withdrawal. For a Solana token, the destination ATA must be initialized, unfrozen, and owned by the expected destination wallet for the exact mint. A quote can be used for only one withdrawal.
 
 Keep the key associated with its original quote. Reusing a key for another quote returns `409 WITHDRAWAL_REQUEST_CONFLICT`. Reconfirming a recorded quote with its original key returns its current receipt with `replayed:true`, even after quote expiry, without another debit. Use a fresh proof. An unused expired quote returns `409 WITHDRAWAL_QUOTE_EXPIRED`.
 

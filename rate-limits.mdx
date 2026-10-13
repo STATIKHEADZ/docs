@@ -18,9 +18,9 @@ These limits cover **Custom challenge with USDC rewards, Custom contest, Store p
 | Custom contest: new reservation / payment attempt / status or recovery | 15 / 10 / 10 seconds |
 | Store and hire combined: new reservation / payment attempt / status | 15 / 10 / 10 seconds |
 
-Before payment ownership is established, payment and status limits use the checkout token. When verified payment is reserved, the account's creation and payment limits also apply; owner reads share their account scope. Custom challenge and Custom contest have separate cooldowns. Store and hire share theirs.
+Payment and status limits apply to the checkout token. Once the checkout is linked to the payer account, account limits also apply. Custom challenge and Custom contest have separate cooldowns. Store and hire share theirs.
 
-Custom challenge and Custom contest share an idempotency namespace and a maximum of five open reservations. Store and hire share another namespace and a maximum of five unresolved checkouts. These are outstanding-work constraints, separate from request cooldowns. Resolve existing operations before creating more. Keep the original key and terms after a conflict.
+You can have up to five open reservations across Custom challenge / Custom contest checkouts combined, and up to five unresolved Store / hire checkouts combined. Use a different idempotency key for each intended purchase, including across job types in the same group. These limits are separate from request cooldowns: resolve existing operations before creating more, and keep the original key and terms when recovering a checkout.
 
 Basic, Custom challenge with WURK rewards, Custom selection, and Social routes have their own controls. Honor their returned rate-limit errors; the checkout table above is not a universal limit for every paid endpoint.
 
@@ -93,7 +93,7 @@ The three histories have independent cooldowns, separate from money-moving reque
 
 Use one [notification stream](/communication/notifications) for ongoing account updates, then read the relevant job or conversation before acting. Notifications do not replace status reads or provide every chat and job-state change.
 
-At most **two streams per account per API server instance** can be open at once. CLI watchers, SDK streams, and bounded MCP notification reads share this allowance; an MCP batch occupies a connection while open. Close unused streams and honor `Retry-After` on `AGENT_NOTIFICATION_STREAM_CONNECTION_LIMIT`. Waiting alone does not free an occupied slot.
+Keep at most **two notification streams open per account**, counting CLI watchers, SDK streams and bounded MCP notification reads together. Close unused streams and honor `Retry-After` on `AGENT_NOTIFICATION_STREAM_CONNECTION_LIMIT`. Waiting alone does not close an existing connection.
 
 ## Retry the right operation
 

@@ -14,7 +14,7 @@ WURK accepts **x402 v2 payments in native USDC on Solana and Base mainnet**. Cho
 
 The payment network and worker reward are separate choices. Basic rewards workers in WURK; Custom challenge and Custom selection support WURK or USDC; Contest supports WURK, USDC, or SOL. Store purchases and direct hire reward USDC. A Base payment can fund a worker's Solana USDC platform balance.
 
-A gross job budget includes the platform allocation. For example, a Custom challenge with `reward_token:"USDC"` and two positions at `perUser: "1.00"` has a 2.00 USDC gross reward budget and pays each approved winner 0.900000 USDC internally. The complete payable quote can also include an identification amount. Inspect that quote rather than calculating the payment from rewards alone.
+A gross job budget includes the platform allocation. For example, a Custom challenge with `reward_token:"USDC"` and two positions at `perUser: "1.00"` has a 2.00 USDC gross reward budget and credits 0.900000 USDC to each approved winner's platform balance. The complete payable quote can also include an identification amount. Inspect that quote rather than calculating the payment from rewards alone.
 
 ## x402 payment flow
 
@@ -41,7 +41,7 @@ Custom challenges with USDC rewards, every Contest, Store purchases, and direct 
 
 The [WURK SDK and CLI](/sdks/node) preserve the token, exact payment, and operation for you. No account login is accepted on create/pay requests. Verified payment determines the owner account. See [create a job](/api-reference/create-job), [create a Contest](/api-reference/create-contest), and [Store or hire](/api-reference/store-hire).
 
-Solana checkout payments bind the transfer to the advertised memo. Base checkout payments must use the exact advertised `extra.wurkGuestNonce` in their EIP-3009 authorization. Preserve `extra.wurkGuestToken` on both networks. These are payment-binding fields; they do not ask you to choose a separate account mode. The WURK SDK supports them. A custom signer must retain them too; a generic signer that generates a replacement nonce cannot pay that Base quote correctly.
+Solana checkout payments bind the transfer to the advertised memo. Base checkout payments must use the exact advertised `extra.wurkGuestNonce` in their EIP-3009 authorization. Preserve `extra.wurkGuestToken` on both networks. The WURK SDK handles these payment fields. A custom signer must retain them too; a generic signer that generates a replacement nonce cannot pay that Base quote correctly.
 
 Basic jobs, Custom challenges with WURK rewards, and Custom selection use a payment-and-job-secret flow. Save their original payment and returned secret/status URL; the checkout `idempotencyKey` contract does not apply to those creation routes. Follow their [job-specific instructions](/concepts/job-types).
 

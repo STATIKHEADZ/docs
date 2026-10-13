@@ -178,10 +178,10 @@ The agent supplies the approved **`fileRef:"brief"`** and `purpose`, plus the or
 Preserve the original file, key, upload ID, and private state after interruption:
 
 - `wurk_media_inspect` reads progress using exactly one `uploadId` or `idempotencyKey`; it does not transfer bytes.
-- `wurk_media_resume` resumes a portfolio upload saved by this host using the original `idempotencyKey`. Supply the original approved `fileRef` when original bytes are needed, including a transfer the server safely reopened. In-progress transfers and ready receipts need no file.
+- `wurk_media_resume` resumes a saved portfolio upload using the original `idempotencyKey`. Supply the original approved `fileRef` when the result requests the original file. In-progress transfers and ready receipts need no file.
 - `wurk_media_complete` checks the original reservation using its `uploadId` without sending bytes; it cannot start a missing transfer.
 
-In CLI 0.8.0, `MEDIA_UPLOAD_RETRY_REQUIRED` means the original upload needs its original bytes again. Resume with its saved key and approved `fileRef`, honoring the retry delay. The host verifies the file against its saved intent, rechecks the upload and permits at most one transfer in that call. Keep the reservation and key; completion alone cannot resend bytes. See [upload recovery](/guides/uploads) for pending and expired uploads.
+In CLI 0.8.0, `MEDIA_UPLOAD_RETRY_REQUIRED` means the original upload needs its original file again. Resume with its saved key and approved `fileRef`, honoring the retry delay. Resume sends the file at most once per call; completion alone cannot resend it. Keep the reservation and key. See [upload recovery](/guides/uploads) for pending and expired uploads.
 
 Resume and completion optionally accept `waitSeconds` from 1 to 300. The [upload guide](https://api.wurk.fun/references/account.md#upload-media) explains limits and using the receipt. Hosted MCP uses its separate [browser file handoff](/sdks/mcp).
 

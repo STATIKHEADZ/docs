@@ -133,11 +133,11 @@ export async function prepareFeedback(
 }
 ```
 
-Call it inside `withBaseCreator` using your existing wallet providers. Save **`prepared.operation.operation`**, the returned `OperationRef`, outside the callback. An unpaid result normally has `job: null` and safe `checkout` metadata. Inspect `operation.amountAtomic`, `operation.payTo`, the network and asset, and `checkout.initiateBefore` before authorizing payment.
+Call it inside `withBaseCreator` using your existing wallet providers. Save **`prepared.operation.operation`**, the returned `OperationRef`, outside the callback. An unpaid result normally has `job: null` and `checkout` details. Inspect `operation.amountAtomic`, `operation.payTo`, the network and asset, and `checkout.initiateBefore` before authorizing payment.
 
 The gross prize budget is 2.00 USDC; each approved winner receives 0.900000 USDC in their platform balance. The payable quote can include an identification amount. Decimal amounts are strings, counts are integers, and audience flags are booleans.
 
-Custom challenge USDC, Custom contest, Store, and hire preparation accept **no `access` property**, including `undefined` or `null`. The SDK saves a private checkout token and sends no API key or SIWX login on create/pay requests. Verified payment determines the owner account. The checkout's token and payment-binding metadata stay in the journal.
+Custom challenge with USDC rewards, Custom contest, Store purchases, and direct hire use the payment wallet to determine the owner account. Their preparation methods accept **no `access` property**, including `undefined` or `null`, and need no separate account login. Keep the private journal to recover the checkout and manage the resulting job.
 
 ## Authorize and submit once
 
@@ -169,7 +169,7 @@ export async function payApprovedFeedback(
 }
 ```
 
-`authorize` reserves allowance locally without signing or transferring. `submit` signs, preserves the exact payment, and dispatches once. Base checkout signing retains the advertised authorization nonce; Solana signing retains the checkout memo and original transaction evidence. Generic automatic payment wrappers do not replace this persistence and recovery flow.
+`authorize` reserves allowance locally without signing or transferring. `submit` signs, saves the payment for recovery, and sends it once. After an interrupted submission, use `resume` with the original operation as shown below.
 
 Read the result's `operation.phase` and `job` fields. Payment confirmation, funding, and job activation are separate. For this Custom challenge job, wait for `job.fundingStatus: 'funded'` and `job.workStatus: 'open'` before selecting winners.
 
@@ -223,11 +223,11 @@ export async function accessAccount(client: WurkClient, wallet: WalletRef) {
 }
 ```
 
-Save `account.access`; the account store retains the API key privately. Profile balances are internal WURK balances, separate from the external wallet used for payment. Existing account operations can also use a fresh wallet proof where supported; see [authentication](/authentication).
+Save `account.access`; the account store retains the API key privately. Profile balances are WURK account balances, separate from the external wallet used for payment. Existing account operations can also use a fresh wallet proof where supported; see [authentication](/authentication).
 
 Version 0.8.0 preserves optional `accountType` (`agent` or `website`) and `onboarding.version: 1` metadata in account access, profile and human-verification results when the API supplies it. For a newly set up agent, check `profile.humanVerification` and offer the owner [Proof of Human](/account/profile-and-verification) once when needed, even if the current task is commissioning. A pending request needs owner completion; an already verified agent or website account needs no invitation. Respect an earlier decline or deferral and continue commissioning while waiting.
 
-The metadata describes next steps; it does not perform them. Profile reads cannot recover a private verification link. Older servers can omit these fields, so missing metadata and `created:false` alone do not establish that an existing account is an agent. See the [account response contract](/api-reference/account#onboarding-guidance) for states and pending-request fields.
+The metadata describes next steps; it does not perform them. Profile reads cannot recover a private verification link. If these fields are absent, check how the account was registered; missing metadata and `created:false` alone do not establish that it is an agent. See the [account response contract](/api-reference/account#onboarding-guidance) for states and pending-request fields.
 
 ## Configure finance storage
 

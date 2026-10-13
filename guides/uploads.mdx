@@ -134,13 +134,13 @@ wurk media complete --state-dir "$WURK_STATE" --account "$WURK_ACCOUNT" --upload
 
 If completion reopens a transfer during `media resume --file`, the CLI honors the delay, rechecks status and verifies the original file before making **at most one** transfer in that invocation. Without `--wait-seconds`, this handoff has a maximum thirty-second wait; with the flag it uses the remaining requested completion-wait budget. If the delay does not fit, the command returns recovery guidance without resending. Without the file, supply it when the recovery guidance requires it. `media complete` never sends bytes; repeatedly completing an unstarted reservation cannot upload the missing file.
 
-If the error remains `WURKER_MEDIA_UPLOAD_PENDING`, preserve the references, honor the delay and inspect again. An unavailable or older status endpoint cannot authorize another transfer. Earlier CLI/SDK 0.7.1 installations require the manual inspect/resume sequence rather than the 0.8.0 reopened-transfer guidance; follow [updating clients](/guides/updating-clients) to upgrade without losing their state.
+If the error remains `WURKER_MEDIA_UPLOAD_PENDING`, preserve the references, honor the delay and inspect again. If status is unavailable, keep the original upload and contact [support](/project/support); do not assume another transfer is safe. These recovery commands use CLI/SDK 0.8.0; follow [updating clients](/guides/updating-clients) if you use an older release.
 
 The first preparation gives a **30-minute transfer window** and a **24-hour completion deadline**. Replaying the key does not extend either deadline. An expired transfer window does not prove that no file arrived: use `media complete` with the original ID to recover any available receipt. Ready receipts remain recoverable after these deadlines.
 
 Only a definitive **completion** response of `410 WURKER_MEDIA_UPLOAD_EXPIRED` closes the reservation and permits a new intentional upload key, subject to normal quotas. CLI/SDK 0.8.0 preserves that result with guidance to start a new upload. There is no requirement to wait the remaining 24 hours for that closed reservation.
 
-An `expired` inspection result, expired transfer token, timeout or other failed request is insufficient to choose a new key. Keep the original references and check completion first; contact [support](/project/support) if the outcome remains unclear. When present, `error.transferFailure` records only the original transfer's safe `kind`, `httpStatus` and `retryAfterSeconds`, without credentials or response bodies. That transfer failure alone does not establish that the file is absent; follow the completion result and `error.recovery`.
+An `expired` inspection result, expired transfer token, timeout or other failed request is insufficient to choose a new key. Keep the original references and check completion first; contact [support](/project/support) if the outcome remains unclear. When present, `error.transferFailure` summarizes the original transfer error. Keep it for support, but follow the completion result and `error.recovery` to decide what to do next; a transfer error alone does not prove the file is absent.
 
 ## Limits and errors
 
@@ -148,7 +148,7 @@ The allowance is shared across profile pictures and portfolio uploads for the ac
 
 | Limit | Behavior |
 | --- | --- |
-| One new reservation per **15 seconds** | Wait for `Retry-After` on `WURKER_MEDIA_RATE_LIMITED`. Twelve seconds between files is too short. |
+| One new reservation per **15 seconds** | Wait for `Retry-After` on `WURKER_MEDIA_RATE_LIMITED`. |
 | **250 admitted reservations** per rolling 24 hours | Failed admitted attempts count too. |
 | **500 MiB of original file bytes** per rolling 24 hours | Reserved file sizes count, including failed admitted attempts. A 500 MiB file needs the full remaining byte allowance. |
 | Completion checks | Honor the returned delay; normal checks have a ten-second interval. |

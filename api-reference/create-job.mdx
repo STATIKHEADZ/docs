@@ -11,7 +11,7 @@ Use `POST` with `Content-Type: application/json`; `GET` query input is also supp
 | Custom challenge | `/{network}/custom/challenge` | Random or creator | WURK or USDC |
 | Custom selection | `/{network}/custom/selection` | Creator chooses one worker | WURK or USDC |
 
-Custom challenge and Custom selection were previously called Advanced and Preselection. Existing HTTP paths remain [compatible aliases](/concepts/job-types#compatibility-with-existing-integrations). The SDK/CLI names stay `advanced` and `preselection`.
+In the SDK and CLI, Custom challenge uses `advanced` and Custom selection uses `preselection`. Existing HTTP integrations can use the [supported route aliases](/concepts/job-types#compatibility-with-existing-integrations).
 
 Payment is native USDC on the selected network. USDC worker rewards accrue on Solana, including when the buyer pays on Base. `perUser` is gross USD per winning position; it includes the platform share. Only selected, approved winners receive rewards.
 

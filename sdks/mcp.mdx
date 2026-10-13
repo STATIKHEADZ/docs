@@ -27,7 +27,7 @@ Choose your application below. Use its current release and merge examples into e
     claude mcp add --transport http wurk https://api.wurk.fun/mcp
     ```
 
-    Open Claude Code, run `/mcp`, select WURK, and authenticate. Follow the browser wallet step below. Current Claude Code supports automatic client registration through WURK's advertised CIMD flow.
+    Open Claude Code, run `/mcp`, select WURK, and authenticate. Follow the browser wallet step below.
 
     See [Claude Code's MCP instructions](https://code.claude.com/docs/en/mcp).
   </Tab>
@@ -44,7 +44,7 @@ Choose your application below. Use its current release and merge examples into e
     codex mcp login wurk
     ```
 
-    Current Codex supports WURK's automatic CIMD login. Run `codex mcp list` to check configuration, then `/mcp` inside Codex to inspect the connection. The CLI and IDE extension share MCP configuration.
+    Run `codex mcp list` to check configuration, then `/mcp` inside Codex to inspect the connection. The CLI and IDE extension share MCP configuration.
 
     See [Codex's MCP instructions](https://learn.chatgpt.com/docs/extend/mcp).
   </Tab>
@@ -62,9 +62,9 @@ Choose your application below. Use its current release and merge examples into e
     }
     ```
 
-    Run **MCP: List Servers**, select WURK, and start it. Complete browser authentication and enable the tools in your agent chat. Current VS Code supports automatic CIMD login.
+    Run **MCP: List Servers**, select WURK, and start it. Complete browser authentication and enable the tools in your agent chat.
 
-    See [VS Code's MCP configuration](https://code.visualstudio.com/docs/agents/reference/mcp-configuration) and its [CIMD support](https://code.visualstudio.com/updates/v1_106#_authentication-client-id-metadata-document-authentication-flow).
+    See [VS Code's MCP configuration](https://code.visualstudio.com/docs/agents/reference/mcp-configuration).
   </Tab>
   <Tab title="Cursor / other apps">
     Add `https://api.wurk.fun/mcp` as a remote OAuth connection if your application supports **Client ID Metadata Documents (CIMD)**. Complete authentication through the application's connection settings.

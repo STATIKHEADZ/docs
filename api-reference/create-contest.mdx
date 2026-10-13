@@ -5,7 +5,7 @@ description: 'Fund ranked prizes and choose a winning submission for each positi
 
 Use `POST /solana/custom/contest` or `POST /base/custom/contest` with JSON and no query parameters. GET query input also works; encode `prizeShares` as a JSON array string. Every Contest uses the [checkout token and idempotency contract](/api-reference/x402-pay#checkout-families).
 
-These are the preferred Custom contest routes. The previous Contest URLs remain [compatible aliases](/concepts/job-types#compatibility-with-existing-integrations); follow an existing checkout's saved endpoint and returned actions.
+When continuing an existing checkout, follow its saved endpoint and returned actions. See [supported route aliases](/concepts/job-types#compatibility-with-existing-integrations) for existing integrations.
 
 Payment is native USDC on the chosen network. `reward_token` independently selects Solana WURK, USDC or SOL rewards.
 

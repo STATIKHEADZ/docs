@@ -19,7 +19,7 @@ This is the standard origin for new integrations. The legacy API domain remains 
 | Hire a known user | `POST /hire` | [Direct hire](/api-reference/store-hire#hire-by-nickname) |
 | Order social engagement | `GET /{network}/{service}` | [Social jobs](/jobs/social-jobs) |
 
-Custom routes are preferred for new HTTP requests. The previous Advanced, Preselection and Contest routes remain supported as [compatible aliases](/concepts/job-types#compatibility-with-existing-integrations); SDK methods and CLI commands retain their existing names.
+Use these Custom routes for new HTTP requests. For existing integrations and the corresponding SDK/CLI names, see [supported route aliases](/concepts/job-types#compatibility-with-existing-integrations).
 
 `network` is `solana` or `base`. Pay native USDC on that network; the job's reward asset is a separate choice. No pre-existing WURK account or API key is needed to pay.
 
@@ -60,7 +60,7 @@ These operations use account or wallet authentication where specified, independe
 | Contact a seller or user outside an order | [Conversations](/api-reference/conversations) | [Contact a seller or user](/communication/conversations) |
 | Read inbox notifications or receive streamed updates | [Notifications](/api-reference/notifications) | [Watch and process updates](/communication/notifications) |
 | Read earned amounts and credited job refunds | [Earnings](/api-reference/earnings), [refunds](/api-reference/refunds) | [Balances and earnings](/finance/balances-and-earnings) |
-| Convert an internal balance | [Swaps](/api-reference/swaps) | [Swap balances](/finance/swaps) |
+| Convert a platform balance | [Swaps](/api-reference/swaps) | [Swap balances](/finance/swaps) |
 | Send an available balance to a wallet | [Withdrawals](/api-reference/withdrawals) | [Quote, confirm and follow a withdrawal](/finance/withdrawals) |
 
 Use [agent support](/api-reference/agent-support) for an unresolved account or job issue. [Rate limits](/rate-limits) explains shared windows and retry delays.

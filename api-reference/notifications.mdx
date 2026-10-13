@@ -86,17 +86,17 @@ This opens one connection and requests available retained history. The curl exam
 
 | Cursor input | Behavior |
 | --- | --- |
-| Omitted | Replay the latest five minutes of dispatch history, then follow new events. |
+| Omitted | Replay events added to the stream in the latest five minutes, then follow new events. |
 | `0` | Replay available history from at most the past seven days, then follow new events. |
 | Saved cursor | Resume strictly after that position. |
 
-The seven-day window is measured from stream dispatch history, not the notification's displayed creation time. An individual notification can expire or be deleted earlier. This is a replay limit, not a guarantee of seven days of complete account history; the paginated inbox has its separate 5,000-item bound.
+The seven-day window starts when a notification is added to the stream; its displayed creation time can differ. A notification can expire or be deleted earlier, so the stream may not contain a complete seven days of account history. The paginated inbox has its separate 5,000-item bound.
 
 Keep cursors as exact strings: canonical nonnegative decimal values from `0` to `9223372036854775807`, without signs or leading zeros. They are stream positions, not notification IDs. Scope saved progress to the same origin and account. A domain change does not migrate the cursor or a local consumer queue; follow [the client update guide](/guides/updating-clients) before starting a stream under another origin. Replays can repeat notification IDs; deduplicate and persist progress only after handling all preceding events.
 
 Without credentials, the endpoint returns a free 402 challenge with `accepts: []`. Wallet proofs bind GET, the exact URL and normalized cursor. Obtain and sign a new challenge for each connection; never replay an old SIWX proof during reconnect.
 
-Each API server permits **two concurrent streams per account**, shared across both aliases and all authentication methods. CLI watchers, SDK streams and short MCP event reads use the same allowance. Close unused streams before opening replacements. Saved CLI consumer names do not increase this allowance.
+Keep **at most two notification streams open per account**, counting CLI watchers, SDK streams and bounded MCP reads together. Close unused streams before opening replacements. Different aliases, credentials or saved CLI consumer names do not provide a separate allowance.
 
 ## SSE events
 
@@ -120,7 +120,7 @@ data: {"cursor":"9007199254740994"}
 
 | Event | Wire data and handling |
 | --- | --- |
-| `ready` | `expiresAt` and `replay: true`; updated servers include authenticated `accountId`. Durable collectors require that identity on every connection. |
+| `ready` | `expiresAt`, `replay: true` and authenticated `accountId` when supplied. Durable collectors require `accountId` on every connection; see the recovery table below if it is absent. |
 | `notification` | `notification` contains `id`, `message`, `messageTruncated`, nullable integer `notificationType`, and nullable UTC `createdAt`/`expiresAt`. Its cursor comes from the SSE `id` field. |
 | `checkpoint` | `cursor` matches the SSE `id`. Advance only after handling earlier notifications; it is not a work item. |
 | `reset` | `cursor` and `reason: "CURSOR_OUTSIDE_HISTORY"`, without an SSE `id`. The stream ends. Treat the cursor as diagnostic, not processed progress. |
@@ -157,7 +157,7 @@ Before streaming starts, errors are JSON HTTP responses. After HTTP 200, inspect
 | `429 AGENT_NOTIFICATION_STREAM_RATE_LIMITED` | Too many connection attempts. Honor `Retry-After` and avoid rapid reconnect loops. |
 | `503` unavailable or busy | Honor `Retry-After` when supplied. For an inbox request, the visit may already have committed. |
 | `AGENT_NOTIFICATION_STREAM_REAUTHENTICATE` in a stream error | Reconnect with fresh authentication and the saved progress cursor. |
-| `NOTIFICATION_COLLECTOR_IDENTITY_REQUIRED` in the client | The server lacks the identity needed for durable collection. Use ordinary watch with application-owned progress handling. |
+| `NOTIFICATION_COLLECTOR_IDENTITY_REQUIRED` in the client | The stream did not supply `accountId`. Use ordinary watch with application-owned progress handling. |
 | `NOTIFICATION_COLLECTOR_SCOPE_CONFLICT` in the client | Inspect the consumer's origin/account; use a different consumer for another account. |
 | `NOTIFICATION_COLLECTOR_CURSOR_CONFLICT` in the client | Inspect current local state, stop competing watchers and omit `--after` on a normal restart. |
 | `NOTIFICATION_COLLECTOR_FULL` in the client | Process and acknowledge pending local work, then restart collection. |
