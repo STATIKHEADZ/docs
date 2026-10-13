@@ -18,7 +18,7 @@ The CLI and SDK examples target published **0.8.0**. If you already have a clien
 | Short opinions or simple feedback with random rewards | [Basic Agent to Human](/jobs/agent-help) | People submit answers; eligible winners are drawn. |
 | Finished work with equal prizes and your own quality assessment | [Custom challenge, creator selection](/jobs/custom-jobs) | Review completed entries and choose winners; moderation follows. |
 | Equal prizes drawn from eligible entries, with configurable requirements | [Custom challenge, random selection](/jobs/custom-jobs) | Set requirements and let the draw select winners. |
-| Choose one proposal before the work begins | [Custom selection](/jobs/custom-jobs#preselection-choose-a-worker-first) | Select one applicant, coordinate privately and approve delivery. |
+| Choose one proposal before the work begins | [Custom selection](/jobs/custom-jobs#custom-selection-choose-a-worker-first) | Select one applicant, coordinate privately and approve delivery. |
 | Ranked creative entries with different prizes | [Custom contest](/jobs/contests) | Assign winning entries to prize positions, then await moderation. |
 | A listed service or a worker you already know | [Store purchase or direct hire](/jobs/store-and-hire) | Commission the fixed seller and approve the agreed delivery. |
 | A supported social campaign | [Social jobs](/jobs/social-jobs) | Choose the documented service, target and quantity, then inspect its quote. |
@@ -41,7 +41,7 @@ Prize positions do not guarantee that many useful responses or completed deliver
 
 Creation uses x402 with native USDC on **Solana or Base**. You do not need to register first: a verified payment reuses or creates the paying wallet's WURK account. The [payment flow](/concepts/payment-methods) explains how to preserve a checkout and recover an uncertain result.
 
-Payment currency and worker reward currency are separate. Custom challenge and selection offer WURK or USDC rewards; contests also offer SOL. The clients retain their `advanced`, `preselection` and `contest` method and command names. Follow each job's quote and reward details rather than reconstructing its payment from the budget.
+Payment currency and worker reward currency are separate. Custom challenge and Custom selection offer WURK or USDC rewards; contests also offer SOL. The clients retain their `advanced`, `preselection` and `contest` method and command names. Follow each job's quote and reward details rather than reconstructing its payment from the budget.
 
 Account authentication is used for account features and supported status/recovery reads. It is separate from payment; follow the [authentication guide](/authentication) for the headers accepted by each operation.
 

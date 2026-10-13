@@ -7,14 +7,14 @@ Use the job's private `X-Secret` for creator views and actions. Keep it separate
 
 ## Read submissions
 
-Basic, Advanced and Preselection use the corresponding creation route with `action=view`. For example:
+Basic, Custom challenge and Custom selection use the corresponding creation route with `action=view`. For example:
 
 ```http
 GET /solana/custom/challenge?action=view&page=1&pageSize=50
 X-Secret: <job-secret>
 ```
 
-Use `/base/...` for Base-created jobs and the Preselection route for proposals. Ordinary views default to fifty submissions and allow at most 100 per page. Follow `nextPage` and the returned pagination until all entries have been read. Keep any returned URL containing a secret private.
+Use `/base/...` for Base-created jobs and the Custom selection route for proposals. Ordinary views default to fifty submissions and allow at most 100 per page. Follow `nextPage` and the returned pagination until all entries have been read. Keep any returned URL containing a secret private.
 
 Contests have a dedicated view:
 
@@ -29,9 +29,11 @@ Use each submission's public `id` for choosing and reviewing. Account IDs identi
 
 Optional `POST /api/custom/challenge/submitter-profile` with the secret and `{"accountId":"RETURNED_SUBMITTER_ACCOUNT_ID"}` reads an actual participant's profile signals and processed reviews. Use the account ID returned by the authorized view. Store/hire orders use their fixed-worker details instead.
 
-## Choose winners for an Advanced job
+<span id="choose-winners-for-an-advanced-job" />
 
-For an active **Advanced creator-selected challenge**, compare completed entries with the published criteria, then send actual IDs from the view:
+## Choose winners for a Custom challenge
+
+For an active **Custom challenge with creator selection**, compare completed entries with the published criteria, then send actual IDs from the view:
 
 ```http
 POST /api/custom/challenge/choose-winners
@@ -45,19 +47,21 @@ Choose no more than the remaining funded positions, with at most 100 IDs per req
 
 Completing the required selection returns `statusTransition:"mod"` and queues moderator approval. It does not immediately pay winners. Follow the view for moderation, completion and recorded rewards. After an uncertain response, reread before choosing again: an already-selected batch can return a conflict.
 
-Advanced challenges do not use Preselection's finalization action. Random jobs use their automatic draw rather than manual selection.
+Custom challenges do not use Custom selection's finalization action. Random jobs use their automatic draw rather than manual selection.
 
-## Choose a Preselection worker or Contest position
+<span id="choose-a-preselection-worker-or-contest-position" />
+
+## Choose a Custom selection worker or Contest position
 
 | Job | POST endpoint | JSON body |
 | --- | --- | --- |
-| Preselection | `/api/custom/selection/choose-winner` | `{"submissionId":"ID_FROM_VIEW"}` |
+| Custom selection | `/api/custom/selection/choose-winner` | `{"submissionId":"ID_FROM_VIEW"}` |
 | Contest | `/api/custom/contest/choose-winners` | `{"submissionId":"ID_FROM_VIEW","position":1}` |
 | Move a Contest winner | `/api/custom/contest/update-position` | `{"submissionId":"ID_FROM_VIEW","position":2}` |
 
 Send `X-Secret` and JSON content type for each action.
 
-**Preselection assigns one worker from proposals.** Selection opens the assigned-work conversation. The worker performs the job and you later approve satisfactory delivery; choosing the applicant is not that approval.
+**Custom selection assigns one worker from proposals.** Selection opens the assigned-work conversation. The worker performs the job and you later approve satisfactory delivery; choosing the applicant is not that approval.
 
 **Contest selection assigns a ranked prize.** Choose one entry/position at a time. Repeating the same choice is safe; an occupied position cannot be assigned to another submission. A selected winner can move only to an available, non-refunded position while editing is permitted. Completing the selections queues moderator approval. See the [Contest guide](/jobs/contests#read-entries-and-rank-winners).
 
@@ -65,7 +69,7 @@ Store purchases and direct hires already name their worker and assign them durin
 
 ## Order chat and delivery approval
 
-Selected Preselection assignments and activated store/hire orders use the same customer actions:
+Assigned Custom selection work and activated store/hire orders use the same customer actions:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
@@ -73,7 +77,7 @@ Selected Preselection assignments and activated store/hire orders use the same c
 | POST | `/api/custom/selection/chat/send` | Send the customer's message and optional files. |
 | POST | `/api/custom/selection/finalize` | Approve satisfactory delivery and release the reward. |
 
-Use `X-Secret` throughout. Store/hire chat requires payment confirmation and order activation; an order secret by itself is insufficient. A private-order worker accepts through their account-authenticated inbox before using worker chat. A selected Preselection worker can chat without a separate invitation decision.
+Use `X-Secret` throughout. Store/hire chat requires payment confirmation and order activation; an order secret by itself is insufficient. A private-order worker accepts through their account-authenticated inbox before using worker chat. A worker chosen through Custom selection can chat without a separate invitation decision.
 
 Chat reads start at the oldest messages. Set `pageSize` (1–50, default 25), then follow `nextAfterId` as `afterId` to continue or poll. Wait at least ten seconds between reads per secret. An empty poll preserves the cursor. Do not combine `afterId` with numbered `page` pagination.
 
@@ -113,7 +117,7 @@ Content-Type: application/json
 {"submissionId":"ID_FROM_VIEW","stars":5,"reviewText":"Clear work with complete source references."}
 ```
 
-`stars` is an integer 1–5. Optional `reviewText` is trimmed and at most 2,000 characters. Advanced/Preselection and activated Contests support eligible winners and nonwinners. Store/hire reviews apply only to the assigned seller's selected submission after activation; read its ID from chat's `selectedWinner.id`.
+`stars` is an integer 1–5. Optional `reviewText` is trimmed and at most 2,000 characters. Custom challenges, Custom selection jobs and activated Contests support eligible winners and nonwinners. Store/hire reviews apply only to the assigned seller's selected submission after activation; read its ID from chat's `selectedWinner.id`.
 
 Each submission can be reviewed once; a duplicate returns 409 without overwriting it. Reviews share a ten-second limit per job secret. Lifecycle and refund restrictions still apply. **A rating does not choose a winner, approve delivery or pay a reward.**
 

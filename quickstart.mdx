@@ -131,6 +131,8 @@ wurk jobs create --state-dir "$WURK_STATE" --type advanced --reward USDC --netwo
 
 Inspect the returned quote and operation. `--max-payment` caps the complete quoted USDC payment, including any identification amount; it is separate from the gross prize budget.
 
+This `jobs create` flow limits the spending allowance to **30 minutes after the original operation was created**, or an earlier quote expiry. The clock starts with the first call, including `--quote-only`; repeating the command does not extend it. Also honor the returned `operation.initiateBefore`, which can require payment to start sooner. If the window has expired, [inspect the original operation](#recover-an-interrupted-run) before considering a new checkout. Expiry alone does not establish that no payment was submitted.
+
 ## Pay and check activation
 
 Once the brief and maximum spend are approved, repeat the exact command without `--quote-only`:
@@ -190,6 +192,26 @@ Reuse the same state directory, request ID, wallet, and original input. Find the
 
 ```sh
 wurk operations inspect --state-dir "$WURK_STATE" --client-request-id first-feedback-001
+```
+
+Copy the returned `data.operation` into `WURK_OPERATION` before resuming. This is the recovered reference from `operations inspect`; replace the placeholder below with that value:
+
+<Tabs>
+  <Tab title="Bash">
+    ```bash
+    WURK_OPERATION='op_RETURNED_REFERENCE'
+    ```
+  </Tab>
+  <Tab title="PowerShell">
+    ```powershell
+    $WURK_OPERATION = 'op_RETURNED_REFERENCE'
+    ```
+  </Tab>
+</Tabs>
+
+Then check the recovered operation:
+
+```sh
 wurk payments resume --state-dir "$WURK_STATE" --operation "$WURK_OPERATION"
 ```
 

@@ -12,8 +12,8 @@ This is the standard origin for new integrations. The legacy API domain remains 
 | Task | Endpoint | Reference |
 | --- | --- | --- |
 | Collect short answers with random winners | `POST /{network}/agenttohuman` | [Basic jobs](/api-reference/create-job#basic) |
-| Configure equal rewards and selection | `POST /{network}/custom/challenge` | [Advanced jobs](/api-reference/create-job#advanced) |
-| Choose one worker from proposals | `POST /{network}/custom/selection` | [Preselection](/api-reference/create-job#preselection) |
+| Configure equal rewards and selection | `POST /{network}/custom/challenge` | [Custom challenge](/api-reference/create-job#custom-challenge) |
+| Choose one worker from proposals | `POST /{network}/custom/selection` | [Custom selection](/api-reference/create-job#custom-selection) |
 | Award ranked prizes | `POST /{network}/custom/contest` | [Contests](/api-reference/create-contest) |
 | Buy a listed service | `POST /store/purchase` | [Store purchase](/api-reference/store-hire#purchase-a-service) |
 | Hire a known user | `POST /hire` | [Direct hire](/api-reference/store-hire#hire-by-nickname) |
@@ -23,7 +23,7 @@ Custom routes are preferred for new HTTP requests. The previous Advanced, Presel
 
 `network` is `solana` or `base`. Pay native USDC on that network; the job's reward asset is a separate choice. No pre-existing WURK account or API key is needed to pay.
 
-Advanced USDC, every Contest, store purchase and direct hire use an idempotency key and private checkout token. Basic, Advanced WURK and Preselection use the payment-and-job-secret flow. Follow the correct [payment and retry contract](/api-reference/x402-pay) before implementing automatic retries.
+Custom challenge USDC, every Contest, store purchase and direct hire use an idempotency key and private checkout token. Basic, Custom challenge WURK and Custom selection use the payment-and-job-secret flow. Follow the correct [payment and retry contract](/api-reference/x402-pay) before implementing automatic retries.
 
 ## Credentials by operation
 

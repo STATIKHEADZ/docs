@@ -7,9 +7,11 @@ Creator actions use the job's `X-Secret`. Read the actual submissions first and 
 
 Random-selection jobs use their draw. Store/direct-hire orders assign the fixed seller automatically.
 
-## Advanced
+<span id="advanced" />
 
-For an Advanced job created with `selectionType:"creator"`:
+## Custom challenge
+
+For a Custom challenge job created with `selectionType:"creator"`:
 
 ```http
 POST /api/custom/challenge/choose-winners
@@ -35,11 +37,13 @@ A successful response includes `updated`, `winnersNow`, `winnerCap`, `remainingS
 }
 ```
 
-Selecting all required winners queues moderation with `statusTransition:"mod"`. It does not transfer the rewards immediately. Advanced Challenges do not use the Preselection finalize action.
+Selecting all required winners queues moderation with `statusTransition:"mod"`. It does not transfer the rewards immediately. Custom challenge jobs do not use the Custom selection finalize action.
 
 After a timeout, reread the view before selecting again. A repeat containing only existing winners can return 409; do not assume every family has the same duplicate behavior.
 
-## Preselection
+<span id="preselection" />
+
+## Custom selection
 
 Choose exactly one proposal when the reward is ready:
 

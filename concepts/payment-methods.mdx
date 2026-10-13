@@ -12,9 +12,9 @@ WURK accepts **x402 v2 payments in native USDC on Solana and Base mainnet**. Cho
 | Solana | `/solana/` | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
 | Base | `/base/` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
 
-The payment network and worker reward are separate choices. Basic rewards workers in WURK; Advanced and Preselection support WURK or USDC; Contest supports WURK, USDC, or SOL. Store purchases and direct hire reward USDC. A Base payment can fund a worker's Solana USDC platform balance.
+The payment network and worker reward are separate choices. Basic rewards workers in WURK; Custom challenge and Custom selection support WURK or USDC; Contest supports WURK, USDC, or SOL. Store purchases and direct hire reward USDC. A Base payment can fund a worker's Solana USDC platform balance.
 
-A gross job budget includes the platform allocation. For example, an Advanced job with two positions at `perUser: "1.00"` has a 2.00 USDC gross reward budget and pays each approved winner 0.900000 USDC internally. The complete payable quote can also include an identification amount. Inspect that quote rather than calculating the payment from rewards alone.
+A gross job budget includes the platform allocation. For example, a Custom challenge with `reward_token:"USDC"` and two positions at `perUser: "1.00"` has a 2.00 USDC gross reward budget and pays each approved winner 0.900000 USDC internally. The complete payable quote can also include an identification amount. Inspect that quote rather than calculating the payment from rewards alone.
 
 ## x402 payment flow
 
@@ -32,7 +32,7 @@ Use the exact quoted amount, recipient, asset, network, resource, and metadata. 
 
 ## Checkout families
 
-Advanced with USDC rewards, every Contest, Store purchases, and direct hire use this sequence:
+Custom challenges with USDC rewards, every Contest, Store purchases, and direct hire use this sequence:
 
 1. Save the exact input and a unique `idempotencyKey` of 8–128 letters, digits, or `._:-` characters. Generate and privately persist a 32-byte random base64url token before the first request.
 2. Send `X-Checkout-Token` with the creation request. The unpaid response contains `checkout` and payable requirements. A canonical job or purchase appears after verified payment.
@@ -43,7 +43,7 @@ The [WURK SDK and CLI](/sdks/node) preserve the token, exact payment, and operat
 
 Solana checkout payments bind the transfer to the advertised memo. Base checkout payments must use the exact advertised `extra.wurkGuestNonce` in their EIP-3009 authorization. Preserve `extra.wurkGuestToken` on both networks. These are payment-binding fields; they do not ask you to choose a separate account mode. The WURK SDK supports them. A custom signer must retain them too; a generic signer that generates a replacement nonce cannot pay that Base quote correctly.
 
-Basic, Advanced WURK, and Preselection use a payment-and-job-secret flow. Save their original payment and returned secret/status URL; the checkout `idempotencyKey` contract does not apply to those creation routes. Follow their [job-specific instructions](/concepts/job-types).
+Basic jobs, Custom challenges with WURK rewards, and Custom selection use a payment-and-job-secret flow. Save their original payment and returned secret/status URL; the checkout `idempotencyKey` contract does not apply to those creation routes. Follow their [job-specific instructions](/concepts/job-types).
 
 ## Quote deadlines and recovery
 

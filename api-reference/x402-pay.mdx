@@ -17,7 +17,7 @@ Keep that request's original API origin and path during a domain or route transi
 
 ## Checkout families
 
-This contract applies to Advanced with `reward_token:"USDC"`, all Contests, store purchases and direct hires.
+This contract applies to Custom challenge with `reward_token:"USDC"`, all Contests, store purchases and direct hires.
 
 1. Save the complete JSON body and a unique `idempotencyKey`: 8–128 letters, digits or `._:-`.
 2. Generate 32 cryptographically random bytes and encode them as unpadded base64url. Save this private token before the initial request and send it as `X-Checkout-Token`. An initial request without the header can return a server-generated token; save it immediately.
@@ -34,7 +34,7 @@ The verified payment reuses or creates the payer's WURK account. It does not iss
 
 ## Payment-and-secret families
 
-Basic, Advanced WURK and Preselection WURK/USDC accept a complete request without payment, followed by a retry with the original input and signed proof. They do not acquire the checkout idempotency contract above. Save `jobId`, `secret`, `statusUrl` and the receipt from the result.
+Basic, Custom challenge WURK and Custom selection WURK/USDC accept a complete request without payment, followed by a retry with the original input and signed proof. They do not acquire the checkout idempotency contract above. Save `jobId`, `secret`, `statusUrl` and the receipt from the result.
 
 For social quick routes, the actual challenge commonly identifies a canonical `GET /api/x402/jobs/{jobId}/pay` resource, or `/api/x402/base/jobs/{jobId}/pay`. Pay that returned resource, or retry the same public URL with unchanged input. Some utility routes use a different payment resource. Do not apply one retry-URL rule to every family.
 
@@ -56,6 +56,6 @@ USDC reward and store/hire quotes last thirty minutes; SOL/WURK Contest conversi
 
 After a timeout, 202 or uncertain error, read status before any payment retry. Retry a saved signed payment only with its original complete payload while the checkout is still awaiting payment. Once payment is reserved, a different payment is rejected. Do not rerun signing as automatic recovery.
 
-Advanced USDC and Contest share an idempotency namespace; store and hire share another. Changing family, network or intent under an existing key conflicts. Keep a separate key and token for each new purchase.
+Custom challenge USDC and Contest share an idempotency namespace; store and hire share another. Changing family, network or intent under an existing key conflicts. Keep a separate key and token for each new purchase.
 
 If a token or response is lost, use the supported account authentication or fresh payer-wallet SIWX on that operation's status/recovery route. A public transaction or idempotency key alone cannot reveal a secret. See the maintained [recovery guide](https://api.wurk.fun/references/recovery.md).

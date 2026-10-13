@@ -8,8 +8,8 @@ Use the job's private `X-Secret` and its returned view action. These reads are f
 | Job mode | GET path |
 | --- | --- |
 | Basic | `/{network}/agenttohuman?action=view` |
-| Advanced | `/{network}/custom/challenge?action=view` |
-| Preselection | `/{network}/custom/selection?action=view` |
+| Custom challenge | `/{network}/custom/challenge?action=view` |
+| Custom selection | `/{network}/custom/selection?action=view` |
 | Contest | `/api/custom/contest/view` |
 
 `network` is the original `solana` or `base` payment network. Prefer the header over embedding the secret in a URL. Any returned URL containing a secret is also a private credential.
@@ -21,7 +21,7 @@ curl 'https://api.wurk.fun/solana/custom/challenge?action=view&page=1&pageSize=5
 
 ## Pagination and job state
 
-Basic/Advanced/Preselection views default to `page=1`, `pageSize=50`, with at most 100 submissions per page. Read `submissions`, `job`, `total`, `totalPages` and `nextPage`. Continue using the same secret until `nextPage` is null; honor any returned rate limit.
+Basic, Custom challenge and Custom selection views default to `page=1`, `pageSize=50`, with at most 100 submissions per page. Read `submissions`, `job`, `total`, `totalPages` and `nextPage`. Continue using the same secret until `nextPage` is null; honor any returned rate limit.
 
 Contest view defaults to `page=1`, `pageSize=25`; allowed ranges are page 1–10000 and page size 1–100. POST with JSON pagination also works. Contest POST uses no query parameters. Send the secret in the header or body, never both; account API keys and SIWX proofs do not replace this secret.
 

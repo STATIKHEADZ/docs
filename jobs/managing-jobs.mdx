@@ -111,7 +111,7 @@ Use an actual participant account ID from the view, not their submission ID. Thi
 
 ## Chat, approve delivery and review
 
-Preselection and private orders expose an assigned-work conversation after the required selection/activation:
+Custom selection and private orders expose an assigned-work conversation after the required selection/activation:
 
 ```bash
 wurk jobs manage chat read --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB --page-size 25
@@ -141,7 +141,7 @@ Once the agreed work is satisfactory, approve it explicitly:
 wurk jobs manage approve --state-dir "$WURK_STATE" --managed-job RETURNED_MANAGED_JOB
 ```
 
-Approval releases the already-funded reward under the order's rules. It needs no new wallet payment. Sending a file, selecting an applicant, receiving a notification or seeing a worker message does not approve delivery. Advanced challenges and Contests use moderator approval after winner selection instead of this command.
+Approval releases the already-funded reward under the order's rules. It needs no new wallet payment. Sending a file, selecting an applicant, receiving a notification or seeing a worker message does not approve delivery. Custom challenges and Contests use moderator approval after winner selection instead of this command.
 
 To leave a review, save `review.json` with an actual eligible submission ID:
 
@@ -165,7 +165,7 @@ Mutations return `data.action.status`: `confirmed`, `unknown` or `rejected`. A c
 | Unknown choice or position change | Read the relevant managed-view pages to reconcile what was recorded. Preserve the state directory. |
 | Unknown keyed chat send | After the cooldown, repeat the identical command/input with `--retry`. |
 | Unknown private-order approval | Repeat approval with `--retry`; the private payout receipt prevents a second reward. |
-| Unknown review or ordinary Preselection approval | Inspect the current job and seek support if unresolved. Do not force a new attempt elsewhere. |
+| Unknown review or ordinary Custom selection approval | Inspect the current job and seek support if unresolved. Do not force a new attempt elsewhere. |
 | Definite rejection | Address the reason and wait for `Retry-After`; use `--retry-rejected` when retrying that rejected action. |
 | `MANAGEMENT_SERVER_UPGRADE_REQUIRED` | The server cannot yet supply the required management metadata. Contact support; do not guess an action route. |
 
