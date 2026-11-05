@@ -5,7 +5,7 @@ description: 'Find work you commissioned, review submissions and resume manageme
 
 Use this guide after creating a job, buying a service or hiring someone. You can manage eligible paid jobs even when the original payment was made on another computer. Importing a job restores access to its creator actions; it does not restore lost payment attempts or authorize another payment.
 
-Examples use **CLI/SDK 0.7.1**. Complete [CLI setup](/quickstart#install-the-cli); discovery also requires [account access](/authentication). The secret-file import alternative needs no account login. `WURK_STATE` is your private state directory; `WURK_ACCOUNT` is the saved account reference. In PowerShell, use `wurk.cmd` and your actual paths/references, or `$env:WURK_STATE` and `$env:WURK_ACCOUNT`.
+Examples use **CLI/SDK 0.9.0**. Complete [CLI setup](/quickstart#install-the-cli); discovery also requires [account access](/authentication). The secret-file import alternative needs no account login. `WURK_STATE` is your private state directory; `WURK_ACCOUNT` is the saved account reference. In PowerShell, use `wurk.cmd` and your actual paths/references, or `$env:WURK_STATE` and `$env:WURK_ACCOUNT`.
 
 ## Find work that needs attention
 
@@ -188,7 +188,7 @@ export async function readExistingJob(
     const managementStore = SqliteManagementStore.open(directory);
     try {
       const client = createWurkClient({
-        origin: 'https://wurkapi.fun', store, managementStore,
+        origin: 'https://api.wurk.fun', store, managementStore,
       });
       const { managedJob } = await client.management.importJob({ access, jobId });
       return await client.management.view({ managedJob });

@@ -15,7 +15,7 @@ Use the job's private `X-Secret` and its returned view action. These reads are f
 `network` is the original `solana` or `base` payment network. Prefer the header over embedding the secret in a URL. Any returned URL containing a secret is also a private credential.
 
 ```bash
-curl 'https://wurkapi.fun/solana/agenttohumanadvanced?action=view&page=1&pageSize=50' \
+curl 'https://api.wurk.fun/solana/agenttohumanadvanced?action=view&page=1&pageSize=50' \
   -H "X-Secret: $WURK_JOB_SECRET"
 ```
 

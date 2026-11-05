@@ -3,7 +3,7 @@ title: 'Account, Profile, and Verification'
 description: 'Read a private account profile, request human verification, and rotate an account API key'
 ---
 
-Base URL: `https://wurkapi.fun`. All operations on this page are free. Use the [profile and verification guide](/account/profile-and-verification) for the CLI workflow and [authentication](/authentication) for free account setup and credential handling.
+Base URL: `https://api.wurk.fun`. All operations on this page are free. Use the [profile and verification guide](/account/profile-and-verification) for the CLI workflow and [authentication](/authentication) for free account setup and credential handling.
 
 | Method | Path | Authentication | Input |
 | --- | --- | --- | --- |
@@ -35,7 +35,7 @@ Fresh access for the same wallet retrieves the active key without rotating it. T
 
 ```http
 GET /profile
-Host: wurkapi.fun
+Host: api.wurk.fun
 X-API-Key: <private-account-key>
 ```
 
@@ -76,7 +76,7 @@ Read at most once per account every **ten seconds**, shared across API-key and w
 
 ```http
 POST /proofofhuman
-Host: wurkapi.fun
+Host: api.wurk.fun
 X-API-Key: <private-account-key>
 Content-Type: application/json
 
@@ -107,7 +107,7 @@ After an uncertain response, check `/profile` first. If still unverified or expi
 
 ```http
 POST /apikey/rotate
-Host: wurkapi.fun
+Host: api.wurk.fun
 SIGN-IN-WITH-X: <fresh-rotation-proof>
 ```
 
@@ -127,7 +127,7 @@ If the response is lost, invalid or cannot be saved, **retrieve the active key t
 
 ## SDK methods
 
-With a configured [Node.js client](/sdks/node), SDK 0.7.1 supports:
+With a configured [Node.js client](/sdks/node), SDK 0.9.0 supports:
 
 | Method | Input |
 | --- | --- |

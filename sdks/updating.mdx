@@ -1,0 +1,55 @@
+---
+title: 'Update the CLI, SDK and skill'
+description: 'Install WURK 0.9.0 while preserving wallets, payment history and the original API origin'
+---
+
+**`@wurk/cli` and `@wurk/sdk` 0.9.0 are published on npm.** The CLI includes the matching SDK. A skill update, npm update and hosted MCP update are separate: updating one does not update the others.
+
+## Upgrade an existing installation
+
+1. Stop CLI commands, notification watchers, local MCP hosts and other applications writing to the same state directory.
+2. Back up the **entire original private state directory**, including SQLite sidecar files. Preserve wallets, accounts, spending grants, payment history, media records and notification cursors together. Keep the backup private and outside Git.
+3. In the existing CLI installation directory, update the exact package:
+
+```bash
+npm install --save-exact --ignore-scripts @wurk/cli@0.9.0
+```
+
+On Windows, use `npm.cmd`. If your application explicitly installs both packages, update them together:
+
+```bash
+npm install --save-exact --ignore-scripts @wurk/sdk@0.9.0 @wurk/cli@0.9.0
+```
+
+4. Check `./node_modules/.bin/wurk --version` on Linux/macOS, or `./node_modules/.bin/wurk.cmd --version` on Windows. Expect `0.9.0` and keep the updated application lockfile.
+5. Inspect the original state before restarting automation: use `config inspect`, `wallet list`, `account list` and `operations list` with `--state-dir ORIGINAL_STATE_DIR`. Inspect unresolved operations and reconcile payment, finance and creator actions using their original references. Opening the payment journal performs the version 2 migration described below.
+6. Resume using the **same state directory, origin, wallet and operation/request IDs**. Update every writer sharing this state before restarting it. Do not run `config init` again or reimport wallets to replace existing state.
+
+The supported Node versions are `>=22.22.0 <23`, `>=24.12.0 <25`, and `>=26.0.0 <27`. Native Windows x64 and ARM64 installs do not require compiling the SQLite adapter.
+
+<Warning>
+  Version 0.9.0 upgrades the local payment journal from SQLite schema 1 to 2 when opened. Older clients cannot safely reopen that upgraded journal. Do not downgrade or use a copied old database to bypass a pending payment or spent allowance. Restoring an old snapshot also omits any payments made after that snapshot.
+</Warning>
+
+New installations use `https://api.wurk.fun`. Existing saved operations and grants remain bound to their original origin, including `https://wurkapi.fun`. Keep that configured origin for recovery; do not rewrite an existing journal or silently switch its origin because a documentation example changed.
+
+## What changes in 0.9.0
+
+| Change | What it means for your application |
+| --- | --- |
+| Bound payment rejections | A verified pre-settlement failure keeps its reason, such as `insufficient_funds`. The SDK does not scan users' wallet balances. |
+| Explicit rejected-payment recovery | After correcting the cause, eligible Advanced USDC, Contest USDC, Store and hire checkouts can use [the same operation again](/api-reference/x402-pay#retry-a-proven-payment-rejection) within its original quote and allowance. Unknown payments remain status-only. |
+| Fewer Solana RPC reads | A fast new locally signed payment uses two reads with sponsored fees, or three with wallet-paid SOL fees. Slower or resumed signing revalidates current data. |
+| Payment request deadline | Signed-payment HTTP defaults to 60 seconds; ordinary API requests retain 15 seconds. Timeout recovery still uses the original operation. |
+| Unlimited Advanced entries | The updated API and client accept `maxEntries: 0` or `"unlimited"` from $1 gross total. Funded winners and the approved budget stay fixed. |
+| New Preselection checkout | New WURK/USDC Preselection jobs preserve a checkout token and idempotency key. Previously saved jobs retain their original payment and recovery route. |
+
+Successful payment can release the associated checkout creation/payment cooldowns for the supported families. Status polling and unpaid-attempt limits remain; follow [rate limits](/rate-limits) instead of sleeping after every confirmed job or retrying blindly.
+
+## Refresh agent instructions and MCP
+
+Read the [current skill metadata](https://api.wurk.fun/skill.json) and [release guide](https://api.wurk.fun/references/releases.md). The documentation release accompanying these clients is **skill 1.5.12**; it is a separate version from npm 0.9.0. Check what your server actually serves before assuming its rollout is complete.
+
+If your agent stores a local copy of the skill, refresh its complete bundle using the release guide's installer. Updating only the entry `SKILL.md` can leave linked references stale. Updating a repository or the HTTP skill does not automatically update copies installed from another registry.
+
+Restart a local MCP host after updating its CLI installation, keeping its original policy, grants and state. Hosted MCP is supplied by the API deployment: it does not upgrade when you run npm locally. Use the tools advertised by the connected server; `wurk_payment_retry_rejected` requires current host permission and, on hosted MCP, a new browser-wallet signature.

@@ -12,7 +12,7 @@ Connect WURK to your agent's application to hire people for feedback, research, 
 Use **Streamable HTTP** with **OAuth** at:
 
 ```text
-https://wurkapi.fun/mcp
+https://api.wurk.fun/mcp
 ```
 
 Choose your application below. Use its current release and merge examples into existing configuration rather than replacing other servers.
@@ -22,7 +22,7 @@ Choose your application below. Use its current release and merge examples into e
     Add WURK from a terminal:
 
     ```bash
-    claude mcp add --transport http wurk https://wurkapi.fun/mcp
+    claude mcp add --transport http wurk https://api.wurk.fun/mcp
     ```
 
     Open Claude Code, run `/mcp`, select WURK, and authenticate. Follow the browser wallet step below. Current Claude Code supports automatic client registration through WURK's advertised CIMD flow.
@@ -33,7 +33,7 @@ Choose your application below. Use its current release and merge examples into e
     Add WURK using the Codex CLI:
 
     ```bash
-    codex mcp add wurk --url https://wurkapi.fun/mcp
+    codex mcp add wurk --url https://api.wurk.fun/mcp
     ```
 
     Complete the browser login when prompted. If login did not start or needs retrying:
@@ -54,7 +54,7 @@ Choose your application below. Use its current release and merge examples into e
       "servers": {
         "wurk": {
           "type": "http",
-          "url": "https://wurkapi.fun/mcp"
+          "url": "https://api.wurk.fun/mcp"
         }
       }
     }
@@ -65,7 +65,7 @@ Choose your application below. Use its current release and merge examples into e
     See [VS Code's MCP configuration](https://code.visualstudio.com/docs/agents/reference/mcp-configuration) and its [CIMD support](https://code.visualstudio.com/updates/v1_106#_authentication-client-id-metadata-document-authentication-flow).
   </Tab>
   <Tab title="Cursor / other apps">
-    Add `https://wurkapi.fun/mcp` as a remote OAuth connection if your application supports **Client ID Metadata Documents (CIMD)**. Complete authentication through the application's connection settings.
+    Add `https://api.wurk.fun/mcp` as a remote OAuth connection if your application supports **Client ID Metadata Documents (CIMD)**. Complete authentication through the application's connection settings.
 
     Cursor's published OAuth guide also supports predefined public client IDs. If automatic login fails or an ID is required, contact [WURK support](/project/support) with your application and version for a compatible connection setup. Do not invent a client ID or use your account API key as an application secret.
 
@@ -150,11 +150,13 @@ Or, if the operation reference was lost:
 {"clientRequestId":"onboarding-feedback-001"}
 ```
 
-Then call **`wurk_payment_resume`** with the recovered operation reference and follow its result. `inspect` alone reads saved state. A pending/review result, expired signing link, or lost response does not authorize a replacement payment. Preserve the original identifiers and follow the [recovery guide](https://wurkapi.fun/references/recovery.md).
+Then call **`wurk_payment_resume`** with the recovered operation reference and follow its result. `inspect` alone reads saved state. A pending/review result, expired signing link, or lost response does not authorize a replacement payment. Preserve the original identifiers and follow the [recovery guide](https://api.wurk.fun/references/recovery.md).
+
+On a server advertising **`wurk_payment_retry_rejected`**, a supported, bound `payment_rejected` can be retried explicitly after correcting its cause. The tool checks the original checkout and current permission, then asks for a new browser-wallet payment signature within the original quote and allowance. A generic error or unknown/review outcome cannot use it. Follow [rejected-payment recovery](/api-reference/x402-pay#retry-a-proven-payment-rejection); do not call it as a polling tool. Hosted availability depends on the API deployment, separately from the npm version installed locally.
 
 ## Other actions and permissions
 
-Your connection can also provide worker, seller, account, and file tools. Follow the [worker guide](https://wurkapi.fun/references/worker.md) to earn and the [store guide](https://wurkapi.fun/references/store.md) to list services. The [WURK skill](https://wurkapi.fun/skill.md) links to each workflow; use it with the tool descriptions.
+Your connection can also provide worker, seller, account, and file tools. Follow the [worker guide](https://api.wurk.fun/references/worker.md) to earn and the [store guide](https://api.wurk.fun/references/store.md) to list services. The [WURK skill](https://api.wurk.fun/skill.md) links to each workflow; use it with the tool descriptions.
 
 <Accordion title="Which permissions does an action need?">
   The login page shows the permissions requested by your application. Change the application's requested permissions and reconnect to update access. Tool availability also depends on the features enabled for the connection.

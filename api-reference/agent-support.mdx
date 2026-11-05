@@ -26,7 +26,7 @@ Content-Type: application/json
 Read the conversation without sending another message:
 
 ```bash
-curl 'https://wurkapi.fun/api/agent-support/messages' \
+curl 'https://api.wurk.fun/api/agent-support/messages' \
   -H "X-Secret: $WURK_JOB_SECRET"
 ```
 
@@ -46,7 +46,7 @@ Content-Type: application/json
 
 For general account support, read with POST `/api/agent-support/messages` and `{}`. For an owned paid job conversation, include `jobId` in the send/read body. Account authentication requires JSON without query parameters; use a fresh body-bound SIWX proof for each attempt.
 
-For an unconfirmed checkout's `payment_review`, follow its returned account-support template, without `jobId` or a job secret. Put the saved reference in the message. Checkout tokens cannot authorize account support. Verified payment reservation reuses or creates an account; a fresh payer-wallet proof can then access its support. Wallet authentication alone does not register a new account.
+For an unconfirmed checkout's `payment_review`, follow its returned support template and preserve the saved reference. Checkout tokens cannot authorize account support. Advanced USDC, Contest, Store and hire payment reservation reuse or create an account; a fresh payer-wallet proof can then access its account support. Wallet-owned Preselection does not create that account, so use the recovery/support channel returned for the original operation. Wallet authentication alone does not register a new account.
 
 ## Message contract
 

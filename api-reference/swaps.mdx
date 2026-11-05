@@ -3,7 +3,7 @@ title: 'Swaps'
 description: 'Create an internal balance swap, read its settled output, and paginate account swap history'
 ---
 
-These endpoints use `https://wurkapi.fun`. A swap reserves the source **platform balance**, queues conversion, and credits the destination platform balance after completion. External wallet payouts use [withdrawals](/api-reference/withdrawals). For the complete CLI workflow, see [Swap balances](/finance/swaps).
+These endpoints use `https://api.wurk.fun`. A swap reserves the source **platform balance**, queues conversion, and credits the destination platform balance after completion. External wallet payouts use [withdrawals](/api-reference/withdrawals). For the complete CLI workflow, see [Swap balances](/finance/swaps).
 
 | Method and path | Purpose | Alias |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ API-key headers are trimmed, must be nonempty, and must not exceed 512 character
 
 ```http
 POST /swap
-Host: wurkapi.fun
+Host: api.wurk.fun
 Content-Type: application/json
 X-API-Key: <private-account-key>
 
@@ -103,7 +103,7 @@ Use exactly one selector:
 
 ```http
 POST /swap/status
-Host: wurkapi.fun
+Host: api.wurk.fun
 Content-Type: application/json
 X-API-Key: <private-account-key>
 
@@ -142,7 +142,7 @@ Success is `{"ok":true,"swap":{...}}`. Each swap record has:
 
 ```http
 POST /swaps
-Host: wurkapi.fun
+Host: api.wurk.fun
 Content-Type: application/json
 X-API-Key: <private-account-key>
 

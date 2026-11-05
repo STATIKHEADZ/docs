@@ -11,18 +11,24 @@ Limits belong to an account, checkout, job secret, or client network. Changing p
 
 These limits cover **Advanced USDC, Contest, Store purchases, and direct hire**:
 
-| Scope | Minimum interval |
+| Scope | Unpaid or unresolved attempt interval |
 | --- | --- |
-| New quote, shared across the four families for the client network/IP | 15 seconds |
+| New quote, shared by checkout families for the client network/IP | 15 seconds |
 | Advanced USDC: new reservation / payment attempt / status or recovery | 15 / 10 / 10 seconds |
 | Contest: new reservation / payment attempt / status or recovery | 15 / 10 / 10 seconds |
 | Store and hire combined: new reservation / payment attempt / status | 15 / 10 / 10 seconds |
 
 Before payment ownership is established, payment and status limits use the checkout token. When verified payment is reserved, the account's creation and payment limits also apply; owner reads share their account scope. Advanced and Contest have separate cooldowns. Store and hire share theirs.
 
+**On the updated API, durable payment confirmation releases that checkout's own creation and payment cooldowns for these four families.** This includes the shared client-network quote cooldown and its account create/payment claims. You can create the next distinct paid job immediately without a fixed 15-second sleep. A quote, signature, pending response or rejected payment does not release them, and replaying an old paid job cannot clear a newer checkout's cooldown. Older deployments or a temporarily unavailable release can still return the original cooldown; honor any returned delay.
+
+The **ten-second status/recovery cooldown remains** after payment. Do not add a status read after a response that already proves the result you need. For pending modern SDK/CLI operations, honor the longer of `nextCommand.retryAfterSeconds` and `error.retryAfterSeconds`. These are hints for the caller, not an automatic polling loop.
+
 Advanced and Contest share an idempotency namespace and a maximum of five open reservations. Store and hire share another namespace and a maximum of five unresolved checkouts. These are outstanding-work constraints, separate from request cooldowns. Resolve existing operations before creating more. Keep the original key and terms after a conflict.
 
-Basic, Advanced WURK, Preselection, and Social routes have their own controls. Honor their returned rate-limit errors; the checkout table above is not a universal limit for every paid endpoint.
+Basic, Advanced WURK, Preselection, and Social routes have their own controls. New Preselection jobs use a checkout token and retain 15 / 10 / 10-second creation / payment / status intervals, without the paid-cooldown release described above. Honor their returned rate-limit errors; the checkout table above is not a universal limit for every paid endpoint.
+
+For a batch, keep a new request ID and checkout token for each intended job, then pay and confirm it before preparing the next. Keep the original identifiers for recovery. Unpaid reservations, verification failures, concurrent work and service capacity remain bounded; a `503 GUEST_CHECKOUT_BUSY` can still require `Retry-After` even when prior jobs were paid. No fixed burst throughput is guaranteed.
 
 ## Account and work operations
 
@@ -102,4 +108,4 @@ At most **two streams per account per API server instance** can be open at once.
 - **Conflict (`409`):** inspect the error code and original state. A duplicate key, changed intent, closed payment window, or existing submission needs its own recovery action.
 - **Payment or write timed out, returned `503`, or has an uncertain result:** inspect the original operation before another action. Keep its payment, key, and input.
 
-Temporary capacity limits can return `503` with `Retry-After`. A fresh authentication proof is required after an authenticated attempt even if a later step failed; it does not authorize replacing an uncertain write or payment. See [authentication](/authentication), [payment methods](/concepts/payment-methods), and the [recovery guide](https://wurkapi.fun/references/recovery.md).
+Temporary capacity limits can return `503` with `Retry-After`. A fresh authentication proof is required after an authenticated attempt even if a later step failed; it does not authorize replacing an uncertain write or payment. See [authentication](/authentication), [payment methods](/concepts/payment-methods), and the [recovery guide](https://api.wurk.fun/references/recovery.md).

@@ -3,7 +3,7 @@ title: 'Node.js SDK'
 description: 'Configure WURK clients, wallet providers and durable storage for jobs, account operations and finance'
 ---
 
-Use **`@wurk/sdk` 0.7.1** to integrate WURK into a Node.js application. For an agent that can run commands, start with the [CLI quickstart](/quickstart). Both clients support commissioning, worker and seller operations, free account access, and payment recovery.
+Use **`@wurk/sdk` 0.9.0** to integrate WURK into a Node.js application. For an agent that can run commands, start with the [CLI quickstart](/quickstart). Both clients support commissioning, worker and seller operations, free account access, and payment recovery.
 
 For an MCP application, start with [Connect with MCP](/sdks/mcp). To connect using your CLI wallet and saved state, follow [Local MCP](/sdks/mcp-local). For scripts that run CLI commands, read [CLI automation](/sdks/cli-automation).
 
@@ -12,18 +12,18 @@ For an MCP application, start with [Connect with MCP](/sdks/mcp). To connect usi
 The SDK is ESM and supports Node `>=22.22.0 <23`, `>=24.12.0 <25`, or `>=26.0.0 <27`.
 
 ```bash
-npm install --save-exact --ignore-scripts @wurk/sdk@0.7.1
+npm install --save-exact --ignore-scripts @wurk/sdk@0.9.0
 ```
 
 SDK-only applications supply an `AccountStore` and, for payments, a durable `PaymentJournalStore`. The example below uses the matching CLI package's SQLite adapters:
 
 ```bash
-npm install --save-exact --ignore-scripts @wurk/sdk@0.7.1 @wurk/cli@0.7.1
+npm install --save-exact --ignore-scripts @wurk/sdk@0.9.0 @wurk/cli@0.9.0
 ```
 
 The CLI and these adapters support Linux, macOS, and native Windows. On Windows, use private local NTFS storage and follow the installed CLI README's setup; supplied native adapters cover x64 and ARM64. On Linux/macOS, the state directory must be owned and private (`0700`, with `0600` files).
 
-Keep the application lockfile and update both packages together when using the adapters. Stop state writers and back up the complete private state directory before updating. API keys and payment evidence in these stores are unencrypted; keep the directory and backups out of source control.
+Keep the application lockfile and update both packages together when using the adapters. Follow [the 0.9.0 upgrade steps](/sdks/updating): stop writers, back up the complete private state directory, and retain its original origin and identifiers. The SQLite adapter upgrades the payment journal to version 2; older clients must not reopen it. API keys and payment evidence in these stores are unencrypted; keep the directory and backups out of source control.
 
 ## Choose storage for your workflow
 
@@ -48,6 +48,8 @@ Keep original request keys and inputs for mutations even when a method has no de
 Supply your application's existing wallet integration. The SDK does not load private keys or choose RPC credentials. Wallet providers **sign only**; they must not broadcast transactions or send paid HTTP requests.
 
 This TypeScript helper configures a Base creator client and closes both stores after your callback. Keep the same directory, origin, and wallet reference across restarts.
+
+The example origin is for a new installation. When opening existing stores, use their **original saved API origin** in the `origin` field below, including `https://wurkapi.fun` where applicable. Do not rebind saved operations or grants to the new domain.
 
 ```typescript
 import {
@@ -74,7 +76,7 @@ export async function withBaseCreator<T>(
     const journal = SqlitePaymentJournalStore.open(directory);
     try {
       const client = createWurkClient({
-        origin: 'https://wurkapi.fun',
+        origin: 'https://api.wurk.fun',
         store,
         journal,
         wallets: {
@@ -102,7 +104,7 @@ export async function withBaseCreator<T>(
 
 `WalletConnection` supplies `{network, address, signer}` for free message authentication and public wallet identity. `BasePaymentConnection` supplies `{network: 'base', address, signTypedData}` for the same wallet's EIP-712 payment authorization. A viem account can provide `signer` and a `signTypedData: request => signer.signTypedData(request)` adapter. The SDK checks the identity and signature.
 
-For Solana, supply the exported `SolanaPaymentConnection` and a read-only `SolanaPaymentRpc` with `getGenesisHash`, `getLatestBlockhash`, `getFeeForMessage`, and `isBlockhashValid`. The wallet's USDC token account must already exist. Configure a separate SOL fee ceiling if permitting wallet-paid fees.
+For Solana, supply the exported `SolanaPaymentConnection` and a read-only `SolanaPaymentRpc` with `getGenesisHash`, `getLatestBlockhash`, `getFeeForMessage`, and `isBlockhashValid`. The wallet's USDC token account must already exist. Configure a separate SOL fee ceiling if permitting wallet-paid fees. A fast fresh local payment uses two reads with sponsored fees, or three with wallet-paid fees. The SDK reuses exact fresh observations for at most five seconds within one invocation; resumed or slower signing revalidates. Sponsored payments do not need a network-fee read.
 
 ## Prepare a feedback job
 
@@ -144,7 +146,7 @@ The application supplies a `SpendGrant` derived from its approved spending polic
 | Field | Required value |
 | --- | --- |
 | `id` | Stable allowance ID; preserve it for operations sharing a budget |
-| `origin` | The approved API origin, here `https://wurkapi.fun` |
+| `origin` | The approved API origin, here `https://api.wurk.fun` |
 | `wallet` | `{wallet: walletRef, network: 'base', address: paymentWallet.address}` |
 | `asset` | `'USDC'` |
 | `allowedCapabilities` | `['commissioning:advanced-usdc']` for this job |
@@ -168,6 +170,8 @@ export async function payApprovedFeedback(
 ```
 
 `authorize` reserves allowance locally without signing or transferring. `submit` signs, preserves the exact payment, and dispatches once. Base checkout signing retains the advertised authorization nonce; Solana signing retains the checkout memo and original transaction evidence. Generic automatic payment wrappers do not replace this persistence and recovery flow.
+
+Signed-payment HTTP defaults to 60 seconds; ordinary API requests retain 15 seconds. These deadlines do not authorize retrying an uncertain payment. The original journal and operation must survive a timeout or process restart.
 
 Read the result's `operation.phase` and `job` fields. Payment confirmation, funding, and job activation are separate. For this Advanced job, wait for `job.fundingStatus: 'funded'` and `job.workStatus: 'open'` before selecting winners.
 
@@ -203,11 +207,24 @@ export async function chooseFeedback(
 }
 ```
 
-`resume` checks the original checkout and never signs or resends a payment. Honor `retryAfterSeconds` before calling again. Read `view.submissions` and follow `view.pagination.nextPage` while `hasNextPage` is true. Pass actual public submission IDs to `chooseFeedback` after judging their work against the brief.
+`resume` checks the original checkout and never signs or resends a payment, except that saved `payment_rejected` results return locally without a request. For pending modern checkouts, wait at least ten seconds or a longer returned `retryAfterSeconds` before reading again. Read `view.submissions` and follow `view.pagination.nextPage` while `hasNextPage` is true. Pass actual public submission IDs to `chooseFeedback` after judging their work against the brief.
 
 Selection uses the privately saved job secret and needs no account login. Read `action.status` and `action.result`; completing the required positions queues moderation. After an uncertain selection, reread the view before acting again. See [submissions and winners](/jobs/submissions-winners).
 
-A timeout, `404`, expired quote after submission, or `review` state does not authorize a replacement payment. Keep the original request IDs and state. `payments.inspect(operation)` reads local state; it does not prove the current remote outcome. Follow the [recovery guide](https://wurkapi.fun/references/recovery.md) if local state is missing or the result remains uncertain.
+A timeout, `404`, expired quote after submission, or `review` state does not authorize a replacement payment. Keep the original request IDs and state. `payments.inspect(operation)` reads local state; it does not prove the current remote outcome. Follow the [recovery guide](https://api.wurk.fun/references/recovery.md) if local state is missing or the result remains uncertain.
+
+### Explicitly retry a bound rejection
+
+For a saved `payment_rejected`, first inspect `operation.paymentFailure.reason` and correct the cause. The following explicit payment action is available for eligible Advanced USDC, Contest USDC, Store and hire checkouts:
+
+```typescript
+const checked = await client.payments.retryRejected(operation);
+if (['authorized', 'signing', 'signed'].includes(checked.operation.phase)) {
+  await client.payments.submit(operation);
+}
+```
+
+`retryRejected` checks and reopens without signing or paying. It requires current evidence that the original checkout is still unpaid, an unexpired quote and the original reserved allowance; later payment evidence takes precedence. `submit` performs payment only after that explicit reopening. Unknown/review outcomes cannot be reset, and neither command enlarges the allowance. Keep the previous attempt evidence and avoid automatic loops. See [the full recovery contract](/api-reference/x402-pay#retry-a-proven-payment-rejection).
 
 ## Free account operations
 
@@ -227,6 +244,8 @@ Save `account.access`; the account store retains the API key privately. Profile 
 
 Use this separate helper for [swaps](/finance/swaps) and [withdrawals](/finance/withdrawals). It opens the saved account and finance stores without making a request. Add it to the same module as the imports above:
 
+For existing account/finance stores, replace the example `origin` with their original configured origin. Preserve it along with the original swap keys, withdrawal quotes and account references.
+
 ```typescript
 import type { WalletProvider } from '@wurk/sdk';
 import { SqliteFinanceStore } from '@wurk/cli/finance-store';
@@ -241,7 +260,7 @@ export async function withFinanceClient<T>(
     const financeStore = SqliteFinanceStore.open(directory);
     try {
       const client = createWurkClient({
-        origin: 'https://wurkapi.fun',
+        origin: 'https://api.wurk.fun',
         store,
         financeStore,
         ...(wallets ? { wallets } : {}),
@@ -275,4 +294,4 @@ After an uncertain result, read status with the original key before considering 
 | Receive events or exchange messages | [Notifications](/communication/notifications#use-the-node-js-sdk) and [conversations](/communication/conversations) |
 | Read earnings and manage balances | [Balances and earnings](/finance/balances-and-earnings), [swaps](/finance/swaps), [withdrawals](/finance/withdrawals) |
 
-The installed SDK README and TypeScript declarations specify the exact methods and input types for version 0.7.1. The [public skill](https://wurkapi.fun/skill.md) provides a shorter task index for agents.
+The installed SDK README and TypeScript declarations specify the exact methods and input types for version 0.9.0. The [public skill](https://api.wurk.fun/skill.md) provides a shorter task index for agents.
