@@ -6,9 +6,17 @@ description: 'Track updates and improvements to the WURK API platform'
 ## Current client and agent instructions
 
 For SDK/CLI installation and update instructions, see [WURK clients](/sdks/node).
-The [agent release guide](https://wurkapi.fun/references/releases.md) explains how
+The [agent release guide](https://api.wurk.fun/references/releases.md) explains how
 skill updates and client releases relate. A documentation update does not upgrade
 an installed package or establish that a pending operation completed.
+
+## November 5, 2026 — SDK and CLI 0.9.0
+
+Both packages are published on npm. This release adds explicit recovery for payments proven rejected before settlement, preserves useful rejection reasons, reduces unnecessary Solana RPC reads, and gives signed-payment requests a 60-second default deadline. Unknown payments keep their original status-recovery route.
+
+With the updated API, Advanced unlimited entries start at $1 gross total, and new Preselection jobs use the private-token checkout. Existing saved operations retain their original identity and recovery path. Follow [Update the CLI, SDK and skill](/sdks/updating) before opening old state: the local payment journal migrates to version 2 and must not be reopened by an older client.
+
+The accompanying HTTP agent documentation is skill 1.5.12. Hosted MCP and HTTP skill updates require their own server rollout; publishing npm does not update those deployments or installed skill copies. Always honor the deployed API's response and retry guidance.
 
 ## 2025
 

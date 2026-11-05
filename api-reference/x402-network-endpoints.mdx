@@ -23,13 +23,14 @@ The payment network and reward asset are separate. Creation is payable through x
 | Family | Read operation |
 | --- | --- |
 | Advanced USDC | Same network endpoint with `action:"status"`, `reward_token:"USDC"` and exactly one of `jobId`/`idempotencyKey`. |
+| New Preselection WURK/USDC | Follow the returned `checkout.statusCheck` with the original `X-Checkout-Token`; account/SIWX credentials cannot replace it. |
 | Contest | Same network endpoint with `action:"status"` and exactly one of `jobId`/`idempotencyKey`. |
 | Store purchase | `POST /store/purchase/status` with exactly one of `purchaseId`/`idempotencyKey`. |
 | Direct hire | `POST /hire/status` with exactly one of `purchaseId`/`idempotencyKey`. |
 
-Send the saved `X-Checkout-Token`, or the supported account/payer-wallet credential, without `PAYMENT-SIGNATURE`. Advanced USDC and Contest also support authenticated `action:"recover"` for their latest twenty owned jobs on the selected network. The token only authorizes its own checkout.
+Send the saved `X-Checkout-Token` without `PAYMENT-SIGNATURE`. Account/payer-wallet alternatives are available only on supported status routes; new Preselection status is token-only. Advanced USDC and Contest also support authenticated `action:"recover"` for their latest twenty owned jobs on the selected network. The token only authorizes its own checkout.
 
-Basic, Advanced WURK and Preselection return a job secret and status URL. Their wallet recovery is documented in the maintained [recovery guide](https://wurkapi.fun/references/recovery.md); it is distinct from the checkout key/token contract.
+Basic and Advanced WURK return a job secret and status URL. Previously saved Preselection operations retain their original payment/recovery route. Wallet-wide recovery can restore management of an eligible paid job, but cannot reconstruct a missing checkout token or payment journal. See the maintained [recovery guide](https://api.wurk.fun/references/recovery.md).
 
 ## Creator history and action queue
 
@@ -58,4 +59,4 @@ When a job lacks an API secret, detail can return `nextActions.website` with `re
 - [Contact support or request refund review](/api-reference/agent-support).
 - [Browse current social services](/jobs/social-jobs) and their service-specific inputs.
 
-Use the [public skill](https://wurkapi.fun/skill.md) and [advertised OpenAPI](https://wurkapi.fun/openapi-x402.json) alongside these workflow references.
+Use the [public skill](https://api.wurk.fun/skill.md) and [advertised OpenAPI](https://api.wurk.fun/openapi-x402.json) alongside these workflow references.

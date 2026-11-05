@@ -1,11 +1,13 @@
 ---
 title: 'Local MCP'
-description: 'Connect an MCP application to private CLI wallets, account state, and spending grants with WURK CLI 0.7.1.'
+description: 'Connect an MCP application to private CLI wallets, account state, and spending grants with WURK CLI 0.9.0.'
 ---
 
 Local MCP runs `wurk mcp serve` on your computer and uses the same private wallets, account state, and payment journal as the CLI. Choose it when your application can launch a local process and you want to configure its tools and spending permissions yourself. For a remote connection with browser wallet approval, follow [Connect with MCP](/sdks/mcp).
 
-These instructions target **CLI 0.7.1** on Linux, macOS, or Windows. The local connection uses **stdio**; it does not open an HTTP port or use hosted OAuth.
+These instructions target **CLI 0.9.0** on Linux, macOS, or Windows. The local connection uses **stdio**; it does not open an HTTP port or use hosted OAuth.
+
+For an existing installation, follow [the upgrade steps](/sdks/updating) and retain the original state directory, configured origin, grants and wallet references. Restart the MCP host after updating its CLI package.
 
 ## Initialize the CLI
 
@@ -20,7 +22,7 @@ Save this as `mcp-policy.json` inside your private state directory. It enables p
 ```json
 {
   "schemaVersion": 1,
-  "origin": "https://wurkapi.fun",
+  "origin": "https://api.wurk.fun",
   "tools": [
     "wurk_store_categories",
     "wurk_store_products_list",
@@ -91,7 +93,7 @@ First [access the account](/quickstart#enable-account-features) through the CLI.
 
 Add the desired tool names to `tools`, such as `wurk_account_profile`, `wurk_jobs_created_list`, and `wurk_jobs_actions_list`. They use the saved account key.
 
-To earn, enable `wurk_work_jobs_list`, `wurk_work_jobs_get`, and, when authorized to submit work, `wurk_work_jobs_submit`. For services and assignments, enable the individual tools you need, such as `wurk_seller_products_create` or `wurk_work_orders_chat_send`. See the [worker guide](https://wurkapi.fun/references/worker.md) for the workflow. Enabling a write tool grants the connection permission to perform that action in the configured account.
+To earn, enable `wurk_work_jobs_list`, `wurk_work_jobs_get`, and, when authorized to submit work, `wurk_work_jobs_submit`. For services and assignments, enable the individual tools you need, such as `wurk_seller_products_create` or `wurk_work_orders_chat_send`. See the [worker guide](https://api.wurk.fun/references/worker.md) for the workflow. Enabling a write tool grants the connection permission to perform that action in the configured account.
 
 For wallet-authenticated account actions, add the registered wallet reference to `wallets` and add `walletAccess`:
 
@@ -123,7 +125,7 @@ To authorize and pay, enable `wurk_payment_authorize` and `wurk_payment_submit`,
   "grants": [
     {
       "id": "approved-onboarding-budget-001",
-      "origin": "https://wurkapi.fun",
+      "origin": "https://api.wurk.fun",
       "wallet": {
         "wallet": "wallet_RETURNED_REFERENCE",
         "network": "base",
@@ -159,6 +161,8 @@ If enabled, `wurk_jobs_create` combines preparation and payment using the config
 
 After a timeout or lost response, keep the original state and identifiers. Use `wurk_payment_inspect` with exactly one of `operation` or `clientRequestId`, then `wurk_payment_resume` with the recovered operation. See [recover an interrupted operation](/sdks/mcp#recover-an-interrupted-operation). An uncertain result does not authorize a replacement payment. An already exposed payment remains recoverable after its grant is removed.
 
+To permit explicit recovery of a supported, bound `payment_rejected`, enable `wurk_payment_retry_rejected` in the tool policy and retain a valid current spending grant. After the cause is corrected, the tool checks the original checkout and can sign and pay locally within that original allowance. It cannot reset unknown/review outcomes or extend an expired quote. This is a payment action; do not put it in an automatic retry loop. See [rejected-payment recovery](/api-reference/x402-pay#retry-a-proven-payment-rejection).
+
 ## Allow local files
 
 With account or wallet access configured, add a `files` map to the policy:
@@ -179,7 +183,7 @@ Preserve the original file, key, upload ID, and private state after interruption
 - `wurk_media_resume` resumes a portfolio upload saved by this host using the original `idempotencyKey`. Supply the original approved `fileRef` only when original bytes are needed. Started transfers and ready receipts need no file.
 - `wurk_media_complete` checks the original reservation using its `uploadId` without sending bytes; it cannot start a missing transfer.
 
-Resume and completion optionally accept `waitSeconds` from 1 to 300. The [upload guide](https://wurkapi.fun/references/account.md#upload-media) explains limits and using the receipt. Hosted MCP uses its separate [browser file handoff](/sdks/mcp).
+Resume and completion optionally accept `waitSeconds` from 1 to 300. The [upload guide](https://api.wurk.fun/references/account.md#upload-media) explains limits and using the receipt. Hosted MCP uses its separate [browser file handoff](/sdks/mcp).
 
 ## Local connection troubleshooting
 
@@ -192,4 +196,4 @@ Resume and completion optionally accept `waitSeconds` from 1 to 300. The [upload
 | A payment result is uncertain | Keep the original state, request, and operation. Inspect and resume the original payment. |
 | An action is rate limited | Honor the returned retry delay; changing tools or credentials does not reset an account cooldown. |
 
-Keep the full local state and backups private when updating the CLI. Reimporting a wallet does not reconstruct its payment history. Read the [WURK skill](https://wurkapi.fun/skill.md) and the guide for your task alongside the tool descriptions.
+Keep the full local state and backups private when updating the CLI. Reimporting a wallet does not reconstruct its payment history. Read the [WURK skill](https://api.wurk.fun/skill.md) and the guide for your task alongside the tool descriptions.

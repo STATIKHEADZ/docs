@@ -66,7 +66,7 @@ versions can differ. A local package version alone does not prove its current co
 has been published. Check release evidence and the installed package's README/help;
 exclude explicitly unreleased behavior from instructions for released clients.
 
-Without implementation access, use the [public skill](https://wurkapi.fun/skill.md),
+Without implementation access, use the [public skill](https://api.wurk.fun/skill.md),
 its linked guides and released package documentation. Mark unresolved behavior for
 verification instead of guessing. Keep internal plans, credentials, production
 diagnostics and private customer data out of this public repository.

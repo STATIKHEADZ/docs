@@ -28,11 +28,11 @@ flowchart TD
 
 Choose a [job type](/concepts/job-types), describe the deliverable and evidence required, and publish the criteria you will use to judge it. Set the audience, reward asset and gross budget deliberately. A selection window is a submission period, not a response-count or completion guarantee.
 
-Use `https://wurkapi.fun` as the API origin. Creation accepts x402 payment, without an API key or separate login. Do not attach `X-API-Key`, `SIGN-IN-WITH-X`, `Authorization` or `X-WURK-Auth` to create/pay requests: they return `400 X402_PAYMENT_AUTH_FORBIDDEN`. Account authentication remains available for its documented read and management operations.
+Use `https://api.wurk.fun` as the API origin. Creation accepts x402 payment, without an API key or separate login. Do not attach `X-API-Key`, `SIGN-IN-WITH-X`, `Authorization` or `X-WURK-Auth` to create/pay requests: they return `400 X402_PAYMENT_AUTH_FORBIDDEN`. Account authentication remains available for its documented read and management operations.
 
 ## Checkout with an idempotency key
 
-Use this flow for **Advanced USDC, every Contest, store purchases and direct hire**.
+Use this flow for **Advanced USDC, new Preselection WURK/USDC jobs, every Contest, store purchases and direct hire**.
 
 1. Save the exact create body and a unique `idempotencyKey`: 8–128 letters, digits or `._:-`. Generate 32 cryptographically random bytes, encode them as unpadded base64url, and privately save the result as your checkout token.
 2. POST the body with `X-Checkout-Token` and `Content-Type: application/json`, initially without `PAYMENT-SIGNATURE`. The 402 response contains `checkout` and the payable x402 requirements. An initial request without a token can also return a server-generated token; save it immediately.
@@ -40,13 +40,13 @@ Use this flow for **Advanced USDC, every Contest, store purchases and direct hir
 4. Repeat the same endpoint, method, body, key and token with `PAYMENT-SIGNATURE`. Save the response and any `PAYMENT-RESPONSE` receipt privately.
 5. Follow `checkout.statusCheck` with the saved token and no payment header. Before verified payment, status may contain only `checkout`. After payment reservation it can also contain the canonical `job` or `purchase`.
 
-Verified payment binds ownership to the paying wallet, reusing or creating its WURK account. This does not issue an API key, browser session or public profile. The token accesses only its checkout; use account authentication or a fresh payer-wallet SIWX proof for supported account-wide history and recovery.
+Verified payment binds ownership to the paying wallet. Advanced USDC, Contest, Store and hire reuse or create its WURK account, without issuing an API key or browser session. New Preselection jobs remain wallet-owned and do not register or link an account. The token accesses only its checkout. Account or payer-wallet recovery is available only on supported routes; new Preselection status requires its original checkout token.
 
 Keep the original request/key/token for retries. A new job needs a new key. Advanced and Contest share a key namespace; store and direct hire share another. Reusing a key for a different family, network or brief conflicts.
 
 ## Payment-and-secret creation
 
-Use this flow for **Basic, Advanced WURK and Preselection WURK/USDC**.
+Use this flow for **Basic and Advanced WURK**. Previously saved Preselection operations retain their original route; new Preselection uses the token checkout above.
 
 1. Send the complete intended create request without a payment credential. A bare endpoint's discovery example is not a quote for your brief.
 2. Inspect the returned x402 requirements, sign them with a compatible payment client, then repeat the same creation input with `PAYMENT-SIGNATURE`.

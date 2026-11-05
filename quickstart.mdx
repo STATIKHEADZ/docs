@@ -3,13 +3,15 @@ title: 'Quickstart'
 description: 'Create a feedback job, review submissions, and choose winners with the WURK CLI'
 ---
 
-Create an Advanced job to get human feedback on a public demo. People submit completed feedback; you choose qualifying entries, and moderation precedes payout. This walkthrough uses the published **WURK CLI 0.7.1** with a Solana wallet. You do not need a WURK account login to create the job.
+Create an Advanced job to get human feedback on a public demo. People submit completed feedback; you choose qualifying entries, and moderation precedes payout. This walkthrough uses the published **WURK CLI 0.9.0** with a Solana wallet. You do not need a WURK account login to create the job.
 
 Using an MCP application? Follow [Connect with MCP](/sdks/mcp) to connect your wallet and prepare a first quote, or use [Local MCP](/sdks/mcp-local) with your CLI wallet.
 
 ## Install the CLI
 
 Use Node `>=22.22.0 <23`, `>=24.12.0 <25`, or `>=26.0.0 <27`. Install the CLI in a dedicated directory; it includes the matching SDK.
+
+Already have WURK installed? Follow [Update the CLI, SDK and skill](/sdks/updating) before opening existing state with 0.9.0. The setup below is for a new installation.
 
 <Tabs>
   <Tab title="Linux / macOS (Bash)">
@@ -18,11 +20,11 @@ Use Node `>=22.22.0 <23`, `>=24.12.0 <25`, or `>=26.0.0 <27`. Install the CLI in
     mkdir -p "$HOME/wurk-agent"
     cd "$HOME/wurk-agent"
     npm init -y
-    npm install --save-exact --ignore-scripts @wurk/cli@0.7.1
+    npm install --save-exact --ignore-scripts @wurk/cli@0.9.0
     export PATH="$PWD/node_modules/.bin:$PATH"
     WURK_STATE="$HOME/.local/share/wurk-agent"
     wurk --version
-    wurk config init --state-dir "$WURK_STATE" --origin https://wurkapi.fun
+    wurk config init --state-dir "$WURK_STATE" --origin https://api.wurk.fun
     ```
   </Tab>
   <Tab title="Windows (PowerShell)">
@@ -31,12 +33,12 @@ Use Node `>=22.22.0 <23`, `>=24.12.0 <25`, or `>=26.0.0 <27`. Install the CLI in
     New-Item -ItemType Directory -Force -Path $WURK_PROJECT | Out-Null
     Set-Location $WURK_PROJECT
     npm.cmd init -y
-    npm.cmd install --save-exact --ignore-scripts @wurk/cli@0.7.1
+    npm.cmd install --save-exact --ignore-scripts @wurk/cli@0.9.0
     $env:PATH = (Join-Path $PWD 'node_modules\.bin') + [IO.Path]::PathSeparator + $env:PATH
     $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
     $WURK_STATE = Join-Path $env:LOCALAPPDATA 'WURK\agent'
     wurk.cmd --version
-    wurk.cmd config init --state-dir $WURK_STATE --origin https://wurkapi.fun
+    wurk.cmd config init --state-dir $WURK_STATE --origin https://api.wurk.fun
     ```
 
     Use local NTFS storage outside OneDrive, network shares, and junctions. Let `config init` create the final state directory; keep its full paths within 240 characters. In later commands, run `wurk.cmd` instead of `wurk`.
@@ -99,6 +101,8 @@ wurk config rpc --state-dir "$WURK_STATE" --url "https://YOUR_SOLANA_MAINNET_RPC
 Fund `data.address` with native **USDC on Solana mainnet**. This example permits up to **2.01 USDC**. The wallet must already have its USDC token account; the CLI does not create it. Check the external wallet balance in your wallet application.
 
 The example uses sponsored fees. If wallet-paid Solana fees are needed, set a separate approved SOL limit using `--max-sol-fee` from the start and fund that amount. Preserve the original fee policy when recovering an operation.
+
+A fast new locally signed Solana payment uses two RPC reads with sponsored fees, or three with wallet-paid fees. The configured RPC is read-only; the facilitator submits the transaction. Slow or resumed signing may require additional validity checks.
 
 <Note>
   Already have a funded Base wallet? Import its `0x`-prefixed 32-byte hex private key with `wallet add --network base`, and use `--network base` for creation and account access. Pay with native Base USDC. Base needs no CLI RPC configuration.
@@ -191,7 +195,9 @@ wurk operations inspect --state-dir "$WURK_STATE" --client-request-id first-feed
 wurk payments resume --state-dir "$WURK_STATE" --operation "$WURK_OPERATION"
 ```
 
-`operations inspect` reads local state. `payments resume` checks the original outcome without another payment. Keep the state directory after a timeout, pending result, or review response. Follow `nextCommand` and `retryAfterSeconds`; see the [recovery guide](https://wurkapi.fun/references/recovery.md) for unresolved outcomes.
+`operations inspect` reads local state. `payments resume` checks the original outcome without another payment, except that a saved `payment_rejected` result returns locally. Keep the state directory after a timeout, pending result, or review response. Honor the longer of `nextCommand.retryAfterSeconds` and `error.retryAfterSeconds`; pending modern checkouts normally advise at least ten seconds. A repeated create command may already have checked status, so do not immediately follow it with another resume.
+
+If the operation reports `payment_rejected`, inspect `operation.paymentFailure.reason`. After resolving the cause, the explicit [rejected-payment retry](/api-reference/x402-pay#retry-a-proven-payment-rejection) can retry an eligible checkout within its original quote and allowance. It may sign and pay; never put it in an automatic retry loop. Unknown or review results remain status recovery. See the [recovery guide](https://api.wurk.fun/references/recovery.md) for unresolved outcomes.
 
 ## Enable account features
 

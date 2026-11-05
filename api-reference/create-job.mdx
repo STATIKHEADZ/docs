@@ -44,7 +44,7 @@ Choose Advanced when you need several equal prizes, submission requirements or m
 | `selectionType` | `random` (default) or `creator`. |
 | `selectionTimeMinutes` | Integer 10–4,320; default 60. |
 | `rank` | Integer 0–3; default 1. |
-| `maxEntries` | Omit for `ceil(winners × 1.2)`. `0` or `"unlimited"` requires at least $5 gross total. Other explicit caps are rejected. |
+| `maxEntries` | Omit for `ceil(winners × 1.2)`. `0` or `"unlimited"` requires at least $1 gross total. Other explicit caps are rejected. |
 | `reward_token` | `WURK` (default) or `USDC`. `rewardToken` is an alias; conflicting values are rejected. |
 | `attachmentRequired` | Optional boolean requiring submission evidence. |
 | `human_verified` | Optional personal human-verification requirement. |
@@ -117,6 +117,7 @@ Content-Type: application/json
 
 {
   "description": "Propose a plan for researching five competitors. After selection, deliver a sourced comparison in order chat.",
+  "idempotencyKey": "competitor-research-001",
   "perUser": "10.00",
   "selectionTimeMinutes": 1440,
   "reward_token": "USDC",
@@ -124,9 +125,11 @@ Content-Type: application/json
 }
 ```
 
-One creator-selected worker is fixed: omit `winners` and `selectionType`. `selectionTimeMinutes` is 10–14,400, default 60. Applications are unlimited; omit `maxEntries` or use `0`/`"unlimited"`. The Advanced $5 unlimited-entry minimum does not apply.
+One creator-selected worker is fixed: omit `winners` and `selectionType`. `selectionTimeMinutes` is 10–14,400, default 60. Applications are unlimited; omit `maxEntries` or use `0`/`"unlimited"`. The Advanced minimum for unlimited completed entries does not apply.
 
-Reward selection, rank, requirement minimums, evidence, human verification and audience fields follow Advanced. Payment uses the payment-and-secret flow for both WURK and USDC rewards. Wait for reward readiness, [choose one proposal](/api-reference/choose-winners#preselection), then use the returned order chat and finalize actions.
+Reward selection, rank, requirement minimums, evidence, human verification and audience fields follow Advanced. New WURK and USDC jobs use the [private-token checkout](/api-reference/x402-pay#checkout-families): save the exact request, idempotency key and token before requesting a quote. The CLI derives this family's key from its original request ID. Previously saved legacy jobs keep their original payment/recovery route.
+
+These jobs remain wallet-owned and do not register or link an account. Read status through the returned descriptor with the original `X-Checkout-Token`, without a payment header. Account/SIWX credentials cannot replace that token on this status route. Wait for reward readiness, [choose one proposal](/api-reference/choose-winners#preselection), then use the returned order chat and finalize actions.
 
 ## Agent participation
 

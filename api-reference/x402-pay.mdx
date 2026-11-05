@@ -15,7 +15,7 @@ Privately save the original request, full challenge and signed payment **before 
 
 ## Checkout families
 
-This contract applies to Advanced with `reward_token:"USDC"`, all Contests, store purchases and direct hires.
+This contract applies to Advanced with `reward_token:"USDC"`, new Preselection WURK/USDC jobs, all Contests, store purchases and direct hires.
 
 1. Save the complete JSON body and a unique `idempotencyKey`: 8–128 letters, digits or `._:-`.
 2. Generate 32 cryptographically random bytes and encode them as unpadded base64url. Save this private token before the initial request and send it as `X-Checkout-Token`. An initial request without the header can return a server-generated token; save it immediately.
@@ -24,19 +24,19 @@ This contract applies to Advanced with `reward_token:"USDC"`, all Contests, stor
 5. Repeat the **original endpoint, HTTP method and body/key**, retaining `X-Checkout-Token` and adding `PAYMENT-SIGNATURE`. The quote's `resource.url` can include a checkout identifier; it binds the signature and is not an instruction to replace the saved creation body.
 6. Follow `checkout.statusCheck` with the saved token and **no payment header**. After verified payment reservation the response includes the linked `job` or `purchase`; follow its funding and work state.
 
-The verified payment reuses or creates the payer's WURK account. It does not issue an API key or browser session. The checkout token authorizes only that checkout; it cannot read account history or send account support messages.
+For Advanced USDC, Contest, Store and hire, verified payment reuses or creates the payer's WURK account without issuing an API key or browser session. New Preselection jobs remain wallet-owned and do not register or link an account. The checkout token authorizes only that checkout; it cannot read account history or send account support messages.
 
 <Note>
-  A Base signer must preserve `extra.wurkGuestNonce`. The stock `@x402/evm` 2.28.0 signer generates its own nonce and needs an adapter for these checkouts. Follow the maintained [payment-client example](https://wurkapi.fun/references/payments.md#checkout-without-registration).
+  A Base signer must preserve `extra.wurkGuestNonce`. The stock `@x402/evm` 2.28.0 signer generates its own nonce and needs an adapter for these checkouts. Follow the maintained [payment-client example](https://api.wurk.fun/references/payments.md#checkout-without-registration).
 </Note>
 
 ## Payment-and-secret families
 
-Basic, Advanced WURK and Preselection WURK/USDC accept a complete request without payment, followed by a retry with the original input and signed proof. They do not acquire the checkout idempotency contract above. Save `jobId`, `secret`, `statusUrl` and the receipt from the result.
+Basic and Advanced WURK accept a complete request without payment, followed by a retry with the original input and signed proof. They do not acquire the checkout idempotency contract above. Save `jobId`, `secret`, `statusUrl` and the receipt from the result. Previously saved Preselection operations keep their original payment/recovery route; a new 0.9.0 Preselection operation uses the token checkout above.
 
 For social quick routes, the actual challenge commonly identifies a canonical `GET /api/x402/jobs/{jobId}/pay` resource, or `/api/x402/base/jobs/{jobId}/pay`. Pay that returned resource, or retry the same public URL with unchanged input. Some utility routes use a different payment resource. Do not apply one retry-URL rule to every family.
 
-Social SDK/CLI 0.7.1 `payments resume` reads only the local journal; it does not query remote payment or fulfillment status or recover missing job/raid IDs. For an unresolved social payment, preserve the original references and follow [social recovery](/jobs/social-jobs#recover-a-social-payment) before taking further action. Do not create a replacement payment.
+Social SDK/CLI 0.9.0 `payments resume` reads only the local journal; it does not query remote payment or fulfillment status or recover missing job/raid IDs. For an unresolved social payment, preserve the original references and follow [social recovery](/jobs/social-jobs#recover-a-social-payment) before taking further action. Do not create a replacement payment.
 
 A `PENDING_JOB_NOT_FOUND` response is not evidence that a previous payment failed. If payment was submitted, reconcile the saved job/payment before requesting a replacement. If nothing was signed or submitted, obtain a fresh challenge for the intended operation.
 
@@ -50,10 +50,32 @@ A `PENDING_JOB_NOT_FOUND` response is not evidence that a previous payment faile
 | `payment_confirmed` | Check `fundingStatus` and `workStatus` for activation. |
 | `expired` | Replace only when the original payment never submitted or entered settlement. |
 
-USDC reward and store/hire quotes last thirty minutes; SOL/WURK Contest conversion quotes last two minutes. Settlement must start with **more than sixty seconds remaining**. Use `payment.initiateBefore`, not merely `expiresAt`.
+USDC reward, Preselection WURK/USDC and store/hire quotes last thirty minutes; SOL/WURK Contest conversion quotes last two minutes. Settlement must start with **more than sixty seconds remaining**. Use `payment.initiateBefore`, not merely `expiresAt`.
 
-After a timeout, 202 or uncertain error, read status before any payment retry. Retry a saved signed payment only with its original complete payload while the checkout is still awaiting payment. Once payment is reserved, a different payment is rejected. Do not rerun signing as automatic recovery.
+After a timeout, 202 or uncertain error, read status before any payment retry. An `awaiting_payment` response alone does not authorize another signature or automatic replay of a dispatched payment. Follow the original client's recovery policy, preserving its complete payment and request. Once payment is reserved, a different payment is rejected.
 
 Advanced USDC and Contest share an idempotency namespace; store and hire share another. Changing family, network or intent under an existing key conflicts. Keep a separate key and token for each new purchase.
 
-If a token or response is lost, use the supported account authentication or fresh payer-wallet SIWX on that operation's status/recovery route. A public transaction or idempotency key alone cannot reveal a secret. See the maintained [recovery guide](https://wurkapi.fun/references/recovery.md).
+If a token or response is lost, use account authentication or fresh payer-wallet SIWX only on a route that supports that recovery. New Preselection status requires its original checkout token; account/SIWX cannot replace it. Wallet-wide recovery may recover management of an already paid job, but cannot reconstruct a missing token or payment journal or prove nonpayment. A public transaction or idempotency key alone cannot reveal a secret. See the maintained [recovery guide](https://api.wurk.fun/references/recovery.md).
+
+## Retry a proven payment rejection
+
+In SDK/CLI **0.9.0**, a verified failure bound to the exact payment header and checkout is saved as `operation.phase: "payment_rejected"`. `operation.paymentFailure.reason` distinguishes `insufficient_funds`, `blockhash_unavailable`, `invalid_signature` and `verification_failed`. The CLI reports `status: "rejected"` with exit code `7`; repeated creation and `payments resume` return that saved rejection without polling or paying.
+
+After correcting the cause, explicitly retry an eligible **Advanced USDC, Contest USDC, Store or hire** payment using its original state and operation:
+
+```sh
+wurk payments retry-rejected --state-dir "ORIGINAL_STATE_DIR" --operation OPERATION_REF
+```
+
+This command first checks the original checkout for a concurrent or late payment. It can reopen only an eligible rejected attempt within its unexpired quote and original spending allowance, then sign and submit payment. It preserves the request ID, checkout, previous evidence and reserved budget. Solana uses a fresh blockhash; Base retains the checkout nonce. It does not scan the wallet's balance or increase the approved spending limit.
+
+**This is a payment action, not a polling command.** Do not retry it automatically after rejection. If signing or RPC work is interrupted after explicit reopening, repeating it continues that saved authorized/signing/signed attempt. The SDK equivalent `payments.retryRejected(operation)` only checks and reopens; a separate explicit `payments.submit(operation)` performs payment. MCP `wurk_payment_retry_rejected` requires current host allowance, and hosted MCP requests a new browser-wallet signature.
+
+Timeouts, `429`, generic errors, unknown/review outcomes and old unbound errors cannot use this recovery route. An expired quote or grant cannot be extended. Keep the original operation for status/support recovery. To deliberately check a saved rejected Advanced payment for later evidence, use `jobs advanced status --operation OPERATION_REF --state-dir ORIGINAL_STATE_DIR`; later confirmed payment takes precedence.
+
+## Client deadlines and Solana RPC
+
+Signed-payment HTTP defaults to **60 seconds** in 0.9.0; ordinary API requests keep **15 seconds**. A fast new locally signed Solana payment makes **two read-only RPC calls with sponsored fees**, or **three with wallet-paid SOL fees**. No network-fee read is needed when the facilitator pays fees. Slower steps or resumed signing obtain fresh validity/fee evidence; these numbers are not a guarantee for every recovery path. The facilitator submits the payment transaction.
+
+Honor `Retry-After` and both CLI retry hints before another allowed request. Modern pending checkouts normally advise at least ten seconds between status reads. A repeated create command may already have fetched status; avoid following it immediately with another `payments resume`. See [batch creation and rate limits](/rate-limits#creation-and-checkout-status).

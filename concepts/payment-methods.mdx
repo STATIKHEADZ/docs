@@ -32,22 +32,22 @@ Use the exact quoted amount, recipient, asset, network, resource, and metadata. 
 
 ## Checkout families
 
-Advanced with USDC rewards, every Contest, Store purchases, and direct hire use this sequence:
+Advanced with USDC rewards, new Preselection WURK/USDC jobs, every Contest, Store purchases, and direct hire use this sequence:
 
 1. Save the exact input and a unique `idempotencyKey` of 8–128 letters, digits, or `._:-` characters. Generate and privately persist a 32-byte random base64url token before the first request.
 2. Send `X-Checkout-Token` with the creation request. The unpaid response contains `checkout` and payable requirements. A canonical job or purchase appears after verified payment.
 3. Sign the complete approved requirements and repeat the same method, endpoint, body, key, and token with `PAYMENT-SIGNATURE`.
 4. Follow the returned `checkout.statusCheck` with the saved token and no payment signature. Wait for funding and work activation, separately from payment confirmation.
 
-The [WURK SDK and CLI](/sdks/node) preserve the token, exact payment, and operation for you. No account login is accepted on create/pay requests. Verified payment determines the owner account. See [create a job](/api-reference/create-job), [create a Contest](/api-reference/create-contest), and [Store or hire](/api-reference/store-hire).
+The [WURK SDK and CLI](/sdks/node) preserve the token, exact payment, and operation for you. No account login is accepted on create/pay requests. Verified payment determines ownership: new Preselection jobs remain wallet-owned; Advanced USDC, Contest, Store and hire use the verified payer's account. See [create a job](/api-reference/create-job), [create a Contest](/api-reference/create-contest), and [Store or hire](/api-reference/store-hire).
 
 Solana checkout payments bind the transfer to the advertised memo. Base checkout payments must use the exact advertised `extra.wurkGuestNonce` in their EIP-3009 authorization. Preserve `extra.wurkGuestToken` on both networks. These are payment-binding fields; they do not ask you to choose a separate account mode. The WURK SDK supports them. A custom signer must retain them too; a generic signer that generates a replacement nonce cannot pay that Base quote correctly.
 
-Basic, Advanced WURK, and Preselection use a payment-and-job-secret flow. Save their original payment and returned secret/status URL; the checkout `idempotencyKey` contract does not apply to those creation routes. Follow their [job-specific instructions](/concepts/job-types).
+Basic and Advanced WURK use a payment-and-job-secret flow. Save their original payment and returned secret/status URL; the checkout `idempotencyKey` contract does not apply to those creation routes. Saved legacy Preselection operations retain their original payment and recovery route. Follow the [job-specific instructions](/concepts/job-types).
 
 ## Quote deadlines and recovery
 
-USDC-reward, Store, and hire checkout quotes last thirty minutes. Contest quotes converting to SOL or WURK rewards last two minutes. Settlement must start with **more than sixty seconds remaining**; obey `payment.initiateBefore` as well as `expiresAt`.
+USDC-reward, Preselection WURK/USDC, Store, and hire checkout quotes last thirty minutes. Contest quotes converting to SOL or WURK rewards last two minutes. Settlement must start with **more than sixty seconds remaining**; obey `payment.initiateBefore` as well as `expiresAt`.
 
 | State | What to do |
 | --- | --- |
@@ -57,8 +57,8 @@ USDC-reward, Store, and hire checkout quotes last thirty minutes. Contest quotes
 | `payment_confirmed` | Check funding and work state for activation |
 | `expired` | Establish that no payment was submitted or entered settlement before considering a replacement |
 
-An HTTP timeout, `202`, review response, or expiry after submission does not authorize another payment. Use the saved operation's recovery path. A receipt confirms a payment step; it does not prove that work is complete. See [job flow](/concepts/job-flow) and [recovery](https://wurkapi.fun/references/recovery.md).
+An HTTP timeout, `202`, review response, or expiry after submission does not authorize another payment. Use the saved operation's recovery path. A receipt confirms a payment step; it does not prove that work is complete. See [job flow](/concepts/job-flow) and [recovery](https://api.wurk.fun/references/recovery.md).
 
 ## Discover services
 
-Use the [x402 resource list](https://wurkapi.fun/.well-known/x402) and [Solana/Base OpenAPI](https://wurkapi.fun/openapi-x402.json) to find supported operations. The quote for your actual request determines the payable amount. The [endpoint reference](/api-reference/x402-network-endpoints) links service-specific inputs.
+Use the [x402 resource list](https://api.wurk.fun/.well-known/x402) and [Solana/Base OpenAPI](https://api.wurk.fun/openapi-x402.json) to find supported operations. The quote for your actual request determines the payable amount. The [endpoint reference](/api-reference/x402-network-endpoints) links service-specific inputs.

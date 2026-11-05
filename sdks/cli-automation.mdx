@@ -3,7 +3,7 @@ title: 'CLI automation'
 description: 'Parse WURK CLI results, follow structured next steps, and recover without repeating a payment'
 ---
 
-The published **`@wurk/cli` 0.7.1** provides JSON results for scripts and agents. Complete the [CLI setup](/quickstart) first and keep its private state directory. For an integration inside your Node application, see the [Node SDK](/sdks/node).
+The published **`@wurk/cli` 0.9.0** provides JSON results for scripts and agents. Complete the [CLI setup](/quickstart) first and keep its private state directory. For an integration inside your Node application, see the [Node SDK](/sdks/node).
 
 ## Read the command envelope
 
@@ -106,7 +106,7 @@ Construct arguments from a supported command, its `flags`, the named `reuseFlags
 | `4` | Spending authorization is missing, inadequate, or outside its allowed window. Review the saved quote and approved allowance. |
 | `5` | Known transient, rate-limit, or capacity failure. Honor retry timing and the operation's recovery rules. |
 | `6` | Uncertain payment/mutation or review required. Reconcile the original operation and state. |
-| `7` | Conflict, expired unpaid quote, missing resource, or a stream cursor requiring reset. Inspect the error and saved state. |
+| `7` | Bound payment rejection, conflict, expired unpaid quote, missing resource, or a stream cursor requiring reset. Inspect the error and saved state. |
 | `8` | Local configuration, storage, or protocol failure. Resolve the reported problem before continuing. |
 | `130` | Cancellation before an uncertain side effect was recorded. Retain references and inspect the result before another mutation. |
 
@@ -128,7 +128,11 @@ Persist the original state directory, authentication references, operation/reque
 
 After a lost response, timeout, or uncertain result, use the original operation's recovery/status command. For payments this is commonly `payments resume --operation ORIGINAL_OPERATION`, with the same state directory. For swaps and withdrawals, read status using the original key and credentials. Do not create a replacement request, change a key, increase a spending limit, or repeat a financial mutation to resolve uncertainty.
 
-For **social jobs and raids**, `payments resume` in 0.7.1 uses only saved local journal evidence; it makes no HTTP request. It cannot fetch remote payment or fulfillment status or retrieve missing job/raid IDs. An unresolved result requires preserving the original references and [contacting support](/jobs/social-jobs#recover-a-social-payment), not repeated polling with `resume` or a replacement payment.
+For **social jobs and raids**, `payments resume` in 0.9.0 uses only saved local journal evidence; it makes no HTTP request. It cannot fetch remote payment or fulfillment status or retrieve missing job/raid IDs. An unresolved result requires preserving the original references and [contacting support](/jobs/social-jobs#recover-a-social-payment), not repeated polling with `resume` or a replacement payment.
+
+For a saved `payment_rejected`, inspect `operation.paymentFailure.reason`; `payments resume` returns the rejection locally. After correcting the cause, `payments retry-rejected --operation ORIGINAL_OPERATION` can deliberately retry a supported checkout under its original unexpired allowance. It may sign and pay. Never run it in an automatic retry loop or use it for unknown/review outcomes. Follow [rejected-payment recovery](/api-reference/x402-pay#retry-a-proven-payment-rejection).
+
+Paid HTTP requests default to 60 seconds, while ordinary requests use 15 seconds. Honor the longer of `nextCommand.retryAfterSeconds` and `error.retryAfterSeconds`; modern pending checkouts normally advise ten seconds. A create replay may already perform a status read, so avoid an immediate extra resume. After confirmation, the supported checkout families release their own creation/payment cooldowns, allowing the next intended job without a fixed sleep; [other limits remain](/rate-limits#creation-and-checkout-status).
 
 Mutations are not retried automatically by default. Contact `messages` commands can explicitly opt into bounded `--wait-for-rate-limit` retries after a known rate-limit rejection; that option never retries uncertain writes. Other explicit retry options have command-specific rules. Read the relevant command's help and workflow before using them. A delay or exit code alone is insufficient permission to repeat a mutation.
 

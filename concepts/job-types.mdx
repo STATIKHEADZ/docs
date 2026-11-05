@@ -29,7 +29,9 @@ Replace `{network}` with `solana` or `base`. Prefer POST JSON for briefs; keep q
 | Store purchase | `/store/purchase` with `network` in the body |
 | Direct hire | `/hire` with `network` in the body |
 
-No pre-existing account or API key is required to pay. Verified payment reuses or creates the payer's WURK account. Advanced USDC, every Contest and store/hire use a private checkout token and an idempotency key; Basic, Advanced WURK and Preselection use the payment-and-secret flow. Follow the correct [creation workflow](/concepts/job-flow).
+No pre-existing account or API key is required to pay. Advanced USDC, new Preselection WURK/USDC jobs, every Contest and store/hire use a private checkout token and an idempotency key; Basic and Advanced WURK use the payment-and-secret flow. New Preselection jobs remain wallet-owned, while Advanced USDC, Contest and store/hire link to the verified payer's account. Previously saved operations retain their original route. Follow the correct [creation workflow](/concepts/job-flow).
+
+The current API names Advanced **Custom challenge**, Preselection **Custom selection**, and Contest **Custom contest**, with canonical `/{network}/custom/challenge`, `/{network}/custom/selection` and `/{network}/custom/contest` paths. The routes above remain compatible aliases. CLI commands and SDK method names retain `advanced`, `preselection` and `contest`. Preserve the original path for a saved checkout or signed authentication request.
 
 ## Job mode and selection type
 
@@ -51,7 +53,7 @@ Basic and Advanced are creation families, both using `challenge` mode. `creator`
 | Creation family | Entry limit |
 | --- | --- |
 | Basic | `ceil(winners × 1.2)` |
-| Advanced | The same default; omit `maxEntries` to use it. `0` or `"unlimited"` is available with at least $5 gross total. Arbitrary positive caps are not accepted. |
+| Advanced | The same default; omit `maxEntries` to use it. `0` or `"unlimited"` is available with at least $1 gross total. Arbitrary positive caps are not accepted. |
 | Preselection | Unlimited applications for one paid assignment. |
 | Contest | Unlimited entries; the number of ranked prizes is fixed by `winners`. |
 
